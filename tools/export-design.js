@@ -45,6 +45,53 @@ function page(file) {
   return html.replace(/(\w+)\.dc\.html/g, '$1.html');
 }
 
+// ---------- проверка: только то, что понимает dc-lite ----------
+
+// Возвращает список проблем в шаблоне. Всё, чего нет в dc-lite.js, на выгрузке молча не отрисуется.
+function lintTemplate(label, tpl) {
+  const bad = [];
+  for (const m of tpl.matchAll(/\{\{([^}]*)\}\}/g)) {
+    if (!/^\s*[\w$.]+\s*$/.test(m[1])) bad.push(`${label}: выражение {{${m[1]}}} — dc-lite понимает только путь вида a.b`);
+  }
+  for (const m of tpl.matchAll(/<([a-zA-Z][\w-]*)([^>]*)>/g)) {
+    const tag = m[1].toLowerCase();
+    if (tag.includes('-') && !['sc-for', 'dc-import', 'x-dc'].includes(tag)) {
+      bad.push(`${label}: тег <${tag}> не поддерживается`);
+    }
+    for (const a of m[2].matchAll(/([\w:-]+)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
+      const name = a[1].toLowerCase();
+      const val = a[3] ?? a[4];
+      if (/^on[a-z]+$/.test(name) && !/^\{\{\s*[\w$.]+\s*\}\}$/.test(val)) {
+        bad.push(`${label}: <${tag} ${name}> — обработчик должен быть целиком {{имя}}`);
+      }
+      if (/^(sc|dc)-/.test(name)) bad.push(`${label}: атрибут ${name} не поддерживается`);
+      if (tag === 'sc-for' && !['list', 'as', 'hint-placeholder-count'].includes(name)) bad.push(`${label}: у <sc-for> нет атрибута ${name}`);
+      if (tag === 'sc-for' && name === 'list' && !/^\{\{\s*[\w$.]+\s*\}\}$/.test(val)) {
+        bad.push(`${label}: <sc-for list> должен быть целиком {{имя}}`);
+      }
+    }
+  }
+  return bad;
+}
+
+function lint() {
+  const canvas = JSON.parse(read('canvas.json'));
+  const problems = [];
+  const comps = new Set();
+  for (const file of canvas.order) {
+    const html = read(file);
+    const tpl = /<x-dc>([\s\S]*?)<\/x-dc>/.exec(html);
+    if (!tpl) problems.push(`${file}: нет <x-dc>`);
+    else problems.push(...lintTemplate(file, tpl[1]));
+    for (const m of html.matchAll(/<dc-import name="(\w+)"/g)) comps.add(m[1]);
+  }
+  for (const name of comps) {
+    const tpl = /<x-dc>([\s\S]*?)<\/x-dc>/.exec(read(`${name}.dc.html`));
+    if (tpl) problems.push(...lintTemplate(`${name}.dc.html`, tpl[1]));
+  }
+  return problems;
+}
+
 // ---------- разбор sedmaya.css для каталога ----------
 
 function parseCss(css) {
@@ -90,12 +137,12 @@ function parseCss(css) {
   return { tokens, keyframes, usage, classes };
 }
 
-const SHELL_CSS = `:root{--bg:#10252a;--card:#1a3437;--text:#f3e9d2;--muted:#9fb3b3;--accent:#e8743b}
+const SHELL_CSS = `:root{--bg:#10252a;--card:#1a3437;--c-text:#f3e9d2;--c-muted:#9fb3b3;--accent:#e8743b}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--c-text);font:16px/1.5 system-ui,sans-serif}
 main{max-width:1280px;margin:0 auto;padding:32px 24px 64px}
 h1{margin:0 0 8px;font-size:32px}h2{margin:40px 0 12px;font-size:22px}
-p{margin:0 0 12px;color:var(--muted);max-width:75ch}
+p{margin:0 0 12px;color:var(--c-muted);max-width:75ch}
 a{color:var(--accent)}code,pre{font-family:ui-monospace,Consolas,monospace;font-size:13px}
 nav{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}`;
 
@@ -122,8 +169,11 @@ function catalog(css) {
       const u = usage.get(k.name);
       const spec = u ? u.spec : '2s ease-in-out infinite';
       const sels = u ? [...new Set(u.sels)].map((s) => `<code>${esc(s)}</code>`).join(' ') : '<em>не привязана</em>';
-      return `<div class="anim"><div class="stage"><i style="animation:${esc(k.name)} ${esc(spec)}"></i></div>
+      const dataSels = esc(JSON.stringify(u ? [...new Set(u.sels)] : []));
+      return `<div class="anim" data-sels="${dataSels}"><div class="stage"><i style="animation:${esc(k.name)} ${esc(spec)}"></i></div>
 <div><b>${esc(k.name)}</b> <code>${esc(spec)}</code><div class="sels">${sels}</div>
+<button type="button" class="show" hidden>Показать на башне</button>
+<span class="none" hidden>на этой башне такой детали нет</span>
 <details><summary>keyframes</summary><pre>@keyframes ${esc(k.name)} { ${esc(k.body)} }</pre></details></div></div>`;
     })
     .join('\n');
@@ -141,21 +191,30 @@ function catalog(css) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Седьмая — каталог</title>
+<link rel="stylesheet" href="sedmaya.css">
 <style>
 ${SHELL_CSS}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.towerbox{position:sticky;top:12px;background:#0b1a1d;border-top:4px solid var(--accent);padding:8px;overflow:hidden}
+.towerbox h3{margin:0 0 6px;font-size:14px;font-weight:600}
+.towerview{width:324px;height:660px;overflow:hidden}
+.show{font:inherit;font-size:13px;color:var(--bg);background:var(--accent);border:0;padding:2px 10px;cursor:pointer}
+.none{font-size:13px;color:var(--c-muted)}
+.anim.on{outline:2px solid var(--accent)}
+@media (max-width:900px){.split{grid-template-columns:1fr}.towerbox{position:static}}
 .sws{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .sw{display:flex;flex-direction:column;background:var(--card);padding:8px;font-size:13px}
-.sw i{height:44px;margin-bottom:6px;border:1px solid #fff2}.sw span{color:var(--muted)}
+.sw i{height:44px;margin-bottom:6px;border:1px solid #fff2}.sw span{color:var(--c-muted)}
 .font{background:var(--card);padding:10px 14px;margin-bottom:8px;display:flex;flex-direction:column;gap:2px}
 .font span{font-size:22px}
 .anim{display:flex;gap:16px;background:var(--card);padding:12px;margin-bottom:8px;align-items:flex-start;--lift:30px;--fall:50px;--walk:30px}
 .stage{flex:none;width:140px;height:80px;background:#0b1a1d;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .stage i{display:block;width:34px;height:34px;border-radius:6px;background:var(--accent);transform-origin:50% 0}
-.sels{margin:4px 0}.sels code{display:inline-block;margin:0 6px 2px 0;color:var(--muted)}
+.sels{margin:4px 0}.sels code{display:inline-block;margin:0 6px 2px 0;color:var(--c-muted)}
 .cls{background:var(--card);margin-bottom:4px;padding:6px 12px}.cls summary{cursor:pointer}
 pre{margin:8px 0 4px;white-space:pre-wrap;word-break:break-word;color:#d7e4e1}
 .tag{font-size:12px;color:var(--bg);background:var(--accent);padding:0 8px}
-#q{width:100%;max-width:420px;padding:8px 10px;font:inherit;background:var(--card);color:var(--text);border:1px solid #fff3}
+#q{width:100%;max-width:420px;padding:8px 10px;font:inherit;background:var(--card);color:var(--c-text);border:1px solid #fff3}
 @media (prefers-reduced-motion:reduce){.stage i{animation:none!important}}
 </style>
 </head>
@@ -167,13 +226,43 @@ pre{margin:8px 0 4px;white-space:pre-wrap;word-break:break-word;color:#d7e4e1}
 <h2>Цвета</h2><div class="sws">${swatches}</div>
 <h2>Шрифты</h2>${fonts}
 <h2>Анимации (${keyframes.length})</h2>
-<p>Каждая крутится с теми же временем и кривой, что в CSS. При <code>prefers-reduced-motion</code> движения нет.</p>
+<p>Каждая крутится с теми же временем и кривой, что в CSS. При <code>prefers-reduced-motion</code> движения нет. «Показать на башне» обводит на живой башне справа детали, которые используют эту анимацию.</p>
+<div class="split"><div>
 ${anims}
+</div><aside class="towerbox"><h3>Башня (preset good)</h3><div class="towerview">
+<x-dc><dc-import name="Tower" preset="good" width="900" topm="152" scale="0.36"></dc-import></x-dc>
+</div></aside></div>
 <h2>Классы деталей башни (${classes.size})</h2>
 <p><input id="q" type="search" placeholder="Поиск по имени класса" aria-label="Поиск по имени класса"></p>
 <div id="cls">${cls}</div>
 </main>
+${component('Tower')}<script src="./dc-lite.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+  var tower = document.querySelector('.towerview');
+  var hl = document.createElement('style');
+  document.head.appendChild(hl);
+  function found(sels) {
+    return sels.some(function (s) {
+      try { return !!tower.querySelector(s.replace(/^\\s*\\.tw\\s+/, '.tw ')); } catch (e) { return false; }
+    });
+  }
+  document.querySelectorAll('.anim').forEach(function (card) {
+    var sels = JSON.parse(card.dataset.sels || '[]');
+    var btn = card.querySelector('.show');
+    var none = card.querySelector('.none');
+    if (found(sels)) btn.hidden = false; else if (sels.length) none.hidden = false;
+    btn.addEventListener('click', function () {
+      var on = card.classList.contains('on');
+      document.querySelectorAll('.anim.on').forEach(function (c) { c.classList.remove('on'); });
+      hl.textContent = '';
+      if (on) return;
+      card.classList.add('on');
+      hl.textContent = sels.map(function (s) { return '.towerview ' + s; }).join(',') +
+        '{outline:2px solid #fff;outline-offset:3px;box-shadow:0 0 0 5px rgba(232,116,59,.8)!important}';
+    });
+  });
+});
 document.getElementById('q').addEventListener('input', function (e) {
   var v = e.target.value.trim().toLowerCase();
   document.querySelectorAll('.cls').forEach(function (d) { d.hidden = v && d.dataset.n.toLowerCase().indexOf(v) < 0; });
@@ -231,6 +320,8 @@ function zip(files) {
 // ---------- сборка ----------
 
 function build(outDir) {
+  const problems = lint();
+  if (problems.length) throw new Error(`макеты используют то, чего нет в dc-lite.js:\n  ${problems.join('\n  ')}`);
   const canvas = JSON.parse(read('canvas.json'));
   fs.mkdirSync(path.join(outDir, 'source'), { recursive: true });
   const boards = canvas.order.map((file) => ({ file, ...canvas.boards[file], out: file.replace('.dc.html', '.html') }));
@@ -279,7 +370,7 @@ ${SHELL_CSS}
 .shot{height:${BOX_H}px;overflow:hidden;position:relative;background:#0b1a1d}
 .shot iframe{border:0;transform-origin:0 0;pointer-events:none;background:#0b1a1d}
 .cap{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
-.cap span{color:var(--muted);font-size:13px}
+.cap span{color:var(--c-muted);font-size:13px}
 .tag{align-self:flex-start;font-size:12px;color:var(--bg);background:var(--accent);padding:0 8px}
 .src{columns:3 220px;margin:0;padding-left:18px}
 </style>
@@ -352,7 +443,14 @@ function serve(port) {
 }
 
 const args = process.argv.slice(2);
-if (args.includes('--serve')) {
+if (args.includes('--check')) {
+  const problems = lint();
+  if (problems.length) {
+    console.error(`ОШИБКА: макеты используют то, чего нет в dc-lite.js:\n  ${problems.join('\n  ')}`);
+    process.exit(1);
+  }
+  console.log('макеты: конструкции поддерживаются dc-lite');
+} else if (args.includes('--serve')) {
   serve(Number(process.env.PORT) || 5174);
 } else {
   const outDir = path.resolve(args[0] || path.join(root, 'design', 'export'));
