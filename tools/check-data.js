@@ -1,0 +1,89 @@
+// Проверка data/*.json: уникальные id, существующие отложенные события,
+// каждый читаемый флаг где-то ставится, сюжетные дни 1–20 покрыты.
+// Запуск: node tools/check-data.js
+const fs = require('fs');
+const path = require('path');
+
+const dir = path.join(__dirname, '..', 'data');
+const load = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+const balance = load('balance.json');
+const { events } = load('events.json');
+const endings = load('endings.json');
+
+const errors = [];
+const ids = new Set();
+const setFlags = new Set();
+const readFlags = new Map();
+const STAT_KEYS = ['pop', 'food', 'ether', 'mat', 'trust', 'solidarity', 'health', 'order', 'altitude', 'mist'];
+const FACTIONS = Object.keys(balance.start.factions);
+
+function readReq(req, where) {
+  if (!req) return;
+  for (const k of ['flags', 'notFlags', 'anyFlags']) {
+    for (const f of req[k] || []) readFlags.set(f, where);
+  }
+  for (const sub of req.any || []) readReq(sub, where);
+  for (const f of Object.keys(req.factions || {})) {
+    if (!FACTIONS.includes(f)) errors.push(`${where}: неизвестная фракция ${f}`);
+  }
+}
+
+for (const e of events) {
+  if (ids.has(e.id)) errors.push(`повтор id ${e.id}`);
+  ids.add(e.id);
+  if (!e.title || !e.text) errors.push(`${e.id}: нет title или text`);
+  if (!e.choices || e.choices.length < 1 || e.choices.length > 5) errors.push(`${e.id}: choices 1–5`);
+  readReq(e.requires, e.id);
+  for (const x of e.extraText || []) readReq(x.requires, e.id);
+  for (const c of e.choices || []) {
+    readReq(c.requires, e.id);
+    for (const x of c.extraEffects || []) readReq(x.requires, e.id);
+    for (const f of c.setFlags || []) setFlags.add(f);
+    for (const k of Object.keys(c.effects || {})) {
+      if (!STAT_KEYS.includes(k)) errors.push(`${e.id}: неизвестный эффект ${k}`);
+    }
+    for (const k of Object.keys(c.factions || {})) {
+      if (!FACTIONS.includes(k)) errors.push(`${e.id}: неизвестная фракция ${k}`);
+    }
+    if (c.ending && !['harbor', 'seal', 'hold'].includes(c.ending)) errors.push(`${e.id}: путь ${c.ending}`);
+    if (!c.log) errors.push(`${e.id}: у варианта «${c.label}» нет log`);
+  }
+}
+
+for (const e of events) {
+  for (const c of e.choices || []) {
+    for (const d of c.delayed || []) {
+      if (!ids.has(d.event)) errors.push(`${e.id}: отложенное событие ${d.event} не найдено`);
+    }
+  }
+}
+
+for (const [f, where] of readFlags) {
+  if (!setFlags.has(f)) errors.push(`${where}: флаг ${f} читается, но нигде не ставится`);
+}
+
+for (let d = 1; d <= balance.calendar.days; d++) {
+  const story = events.filter((e) => e.day === d);
+  if (!story.length) errors.push(`день ${d}: нет сюжетного события`);
+  else if (story[story.length - 1].requires) {
+    errors.push(`день ${d}: у последнего варианта есть requires — в какой-то партии день останется пустым`);
+  }
+}
+
+for (const list of Object.values(endings.fates)) {
+  for (const fate of list) for (const f of fate.flags || []) {
+    if (!setFlags.has(f)) errors.push(`судьба: флаг ${f} нигде не ставится`);
+  }
+}
+for (const x of endings.endings.flatMap((e) => e.extraText || [])) {
+  for (const f of x.requires.flags || []) if (!setFlags.has(f)) errors.push(`концовка: флаг ${f} нигде не ставится`);
+}
+
+const unused = [...setFlags].filter((f) => !readFlags.has(f) && !JSON.stringify(endings).includes(`"${f}"`));
+console.log(`событий: ${events.length}, флагов ставится: ${setFlags.size}, читается: ${readFlags.size}`);
+if (unused.length) console.log(`флаги без чтения (для эпилога и будущих событий): ${unused.join(', ')}`);
+if (errors.length) {
+  console.error(errors.map((x) => `ОШИБКА: ${x}`).join('\n'));
+  process.exit(1);
+}
+console.log('данные в порядке');

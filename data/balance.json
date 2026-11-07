@@ -1,0 +1,95 @@
+{
+  "calendar": { "firstDay": "1967-10-19", "days": 20, "finalDay": "1967-11-07" },
+  "start": {
+    "res": { "pop": 20, "food": 40, "ether": 30, "mat": 45 },
+    "stats": { "trust": 60, "solidarity": 60, "health": 60, "order": 60 },
+    "factions": { "stokers": 0, "institute": 10, "mistborn": -10, "sky": 0 },
+    "altitude": 60,
+    "mist": 20,
+    "engineMode": "hold",
+    "tiers": [
+      { "kind": "root", "slots": ["core", "catcher", null] },
+      { "kind": "tier", "slots": ["housing", "housing", "farm"] },
+      { "kind": "spire", "slots": ["council", null, null] }
+    ]
+  },
+  "tower": {
+    "tierHeight": 10,
+    "maxTiers": 8,
+    "slotsPerTier": 3,
+    "builtInHousing": { "root": 4, "spire": 4 },
+    "newTier": { "baseCost": 25, "costPerExtraTier": 5, "nights": 2 },
+    "dropTier": { "solidarityPerTierWithPeople": -15 },
+    "mistNightsToAbandon": 3,
+    "mistTierBuildingFactor": 0.5,
+    "mistTierHealth": -2,
+    "rootInMistNeedFactor": 1.25
+  },
+  "engine": {
+    "need": { "base": 3, "perTier": 2, "perTenPop": 1 },
+    "modes": {
+      "hold": { "burnFactor": 1.0, "altitude": 0 },
+      "climb": { "burnFactor": 1.5, "altitude": 10 },
+      "save": { "burnFactor": 0.5, "altitude": -10 }
+    },
+    "shortfallAltitudeLoss": 20
+  },
+  "mist": { "risePerNight": 2, "risePerEther": 0.1, "breathVisual": 3, "greyNightBonus": 10 },
+  "food": { "perPerson": 0.5, "shortageHealth": -5, "shortageTrust": -3 },
+  "drift": { "solidarity": -1, "order": -1 },
+  "health": { "perTwoHomeless": -1, "homelessCap": -10 },
+  "thresholds": {
+    "trustRumors": 25,
+    "trustLose": 0,
+    "solidarityCrisis": 25,
+    "healthDeaths": 30,
+    "healthDeathShare": 0.05,
+    "orderTheft": 30,
+    "orderTheftShare": 0.15
+  },
+  "buildings": {
+    "core": { "name": "Ядро", "fixed": true, "tiers": ["root"] },
+    "council": { "name": "Совет", "fixed": true, "tiers": ["spire"] },
+    "housing": { "name": "Жилой модуль", "cost": 10, "workers": 0, "housing": 6 },
+    "farm": { "name": "Гидропонная ферма", "cost": 15, "workers": 3, "perNight": { "food": 7 } },
+    "catcher": { "name": "Уловитель эфира", "cost": 10, "workers": 3, "perNight": { "ether": 8 }, "allowed": "rootAndAbove", "rootBonus": 0.25 },
+    "salvage": { "name": "Разборка", "cost": 8, "workers": 3, "perNight": { "mat": 6 } },
+    "infirmary": { "name": "Лазарет", "cost": 20, "workers": 2, "perNight": { "health": 3 } },
+    "guard": { "name": "Стража", "cost": 15, "workers": 2, "perNight": { "order": 3 } },
+    "red_corner": { "name": "Красный уголок", "cost": 15, "workers": 1, "perNight": { "solidarity": 1, "trust": 1 }, "locked": true, "maxCount": 1 },
+    "radio": { "name": "Радиорубка", "cost": 20, "workers": 1, "tiers": ["spire"], "maxCount": 1, "afterMvp": true },
+    "observatory": { "name": "Обсерватория", "cost": 20, "workers": 1, "tiers": ["spire"], "forecastNights": 3, "afterMvp": true }
+  },
+  "demolishRefund": 0.5,
+  "upgrades": {
+    "workshop": { "costFactor": 1, "outputFactor": 1.5 },
+    "ether": { "costFactor": 2, "outputFactor": 2, "etherPerNight": 1 },
+    "afterMvp": true
+  },
+  "decrees": {
+    "maxActive": 2,
+    "cooldownDays": 2,
+    "list": {
+      "double_shifts": { "name": "Двойные смены в Корне", "fromDay": 1, "perNight": { "health": -2 }, "factions": { "stokers": -2 }, "catcherFactor": 1.3 },
+      "curfew": { "name": "Комендантский час", "fromDay": 1, "perNight": { "order": 2, "trust": -1, "solidarity": -1 } },
+      "equal_rations": { "name": "Равные пайки", "fromDay": 1, "perNight": { "solidarity": 2 }, "factions": { "institute": -2 }, "foodFactor": 1.1 },
+      "spire_ration": { "name": "Спецпаёк Шпиля", "fromDay": 5, "perNight": { "trust": 1, "solidarity": -2 }, "factions": { "institute": 2 } },
+      "free_sermon": { "name": "Свобода проповеди", "fromDay": 5, "perNight": { "trust": 1, "order": -1 }, "factions": { "sky": 2 } },
+      "quarantine": { "name": "Карантин нижних ярусов", "fromDay": 5, "perNight": { "health": 2, "solidarity": -2 }, "factions": { "mistborn": -3 } }
+    }
+  },
+  "factions": {
+    "range": [-100, 100],
+    "allyAt": 30,
+    "enemyAt": -30,
+    "eventAt": 60,
+    "passive": {
+      "stokers": { "ally": { "need": -2 }, "enemy": { "need": 3 } },
+      "institute": { "ally": { "forecastNights": 2, "health": 1 }, "enemy": { "infirmaryFactor": 0.5 } },
+      "mistborn": { "ally": { "mistWarning": true }, "enemy": { "solidarity": -1 } },
+      "sky": { "ally": { "solidarity": 1 }, "enemy": { "sabotageChance": 0.2, "sabotageEther": -8 } }
+    }
+  },
+  "events": { "maxWindowsPerMorning": 2, "poolRepeatGapDays": 3 },
+  "preview": { "statSteps": [1, 5, 15], "resSteps": [1, 10, 20], "factionPortraitMin": 5 }
+}
