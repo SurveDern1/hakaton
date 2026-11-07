@@ -5,14 +5,14 @@ import type { GameStore } from '../game/store';
 // Временная отрисовка башни простыми фигурами: ярусы снизу вверх, Мгла поднимается снизу.
 // Цвета — из токенов design/project/sedmaya.css.
 const COLORS = {
-  sky: 0x121419,
-  tier: 0x262b35,
-  root: 0x1a1e26,
-  spire: 0x8e1c15,
-  slot: 0x3a404c,
-  built: 0xd99a2b,
-  ether: 0x6cd4ff,
-  mist: 0x8d939b,
+  sky: 0x1a3437,
+  tier: 0x24494f,
+  root: 0x1f3f44,
+  spire: 0x8f2a2f,
+  slot: 0x3a6e79,
+  built: 0xf69550,
+  ether: 0x9fd6df,
+  mist: 0x8faaad,
 };
 
 const TIER_H = 70;

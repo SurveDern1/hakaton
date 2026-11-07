@@ -18,7 +18,7 @@
       <span class="plaque">Блоки башни</span>
       <h1 class="disp" style="margin: 0; font-size: 44px;">Здания в трёх стадиях</h1>
     </div>
-    <p class="serif" style="margin: 0; max-width: 70ch; font-size: 16px; line-height: 1.5; color: var(--muted);">Каждое здание рисует та же функция <code style="font-family: var(--f-ui); color: var(--ochre);">renderTower</code>, что и всю башню. Стадия задаётся в слоте: <code style="font-family: var(--f-ui); color: var(--ochre);">{b: 'farm', stage: 2}</code>. Времянка — доски, брезент и верёвки; мастерская — металл, заклёпки и трубы; эфирная — латунь, кристаллы и голубое свечение.</p>
+    <p class="serif" style="margin: 0; max-width: 70ch; font-size: 16px; line-height: 1.5; color: var(--muted);">Каждое здание рисует та же функция <code style="font-family: var(--f-ui); color: var(--ochre);">renderTower</code>, что и всю башню. Стадия задаётся в слоте: <code style="font-family: var(--f-ui); color: var(--ochre);">{b: 'farm', stage: 2}</code>. Времянка — доски, брезент и верёвки; мастерская — металл, заклёпки и трубы; эфирная — латунь, кристаллы и бирюзовое свечение.</p>
   </div>
 
   <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px;">
@@ -30,7 +30,7 @@
         </div>
         <div style="display: flex; gap: 16px;">
           <sc-for list="{{c.stages}}" as="s" hint-placeholder-count="3">
-            <div style="display: flex; flex-direction: column; gap: 8px; background: #172133;">
+            <div style="display: flex; flex-direction: column; gap: 8px; background: #1A3437;">
               <dc-import name="Tower" part="building" b="{{s.b}}" stage="{{s.stage}}" scale="1.2" sky="false" hint-size="252px,239px"></dc-import>
               <span class="lbl" style="padding: 0 10px 10px; color: var(--text);">{{s.label}}</span>
             </div>
@@ -43,7 +43,7 @@
       <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px 18px; font-size: 15px; line-height: 1.45;">
         <span class="plaque ink" style="align-self: start;">Времянка</span><span>Доски с гвоздями, брезентовая крыша на верёвках, деревянные рамы и лестницы. Базовый эффект.</span>
         <span class="plaque ochre" style="align-self: start;">Мастерская</span><span>Стальные панели с заклёпками, трубы и антенны, стёкла в металлических рамах. Эффект +50 %.</span>
-        <span class="plaque ether" style="align-self: start;">Эфирная</span><span>Латунные рамы, кристалл на крыше, голубые окна и подсветка. Эффект +100 %, расходует 1 эфир в ночь.</span>
+        <span class="plaque ether" style="align-self: start;">Эфирная</span><span>Латунные рамы, кристалл на крыше, бирюзовые окна и подсветка. Эффект +100 %, расходует 1 эфир в ночь.</span>
       </div>
       <p class="serif" style="margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted);">Окна горят по здоровью колонии, бьются при низком порядке, покрываются инеем, когда Мгла у Корня. Жители одеты пёстро при высокой солидарности.</p>
     </article>

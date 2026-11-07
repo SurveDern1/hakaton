@@ -11,7 +11,7 @@ const store = new GameStore(createInitialState(gameData.balance));
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  backgroundColor: '#121419',
+  backgroundColor: '#1a3437',
   scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
   scene: [new TowerScene(store)],
 });

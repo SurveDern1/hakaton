@@ -118,8 +118,8 @@ function renderTower(s, o) {
   var lit = twClamp((st.health - 15) / 70, 0, 1);
   var lowOrder = st.order < 35, lowSol = st.solidarity < 35, lowHealth = st.health < 35, lowTrust = st.trust < 35;
   var hiOrder = st.order >= 70, hiSol = st.solidarity >= 70, hiHealth = st.health >= 70, hiTrust = st.trust >= 70;
-  var TINTS = ['#5b3b31', '#2f4b4c', '#5b5131', '#3d3557', '#4b3a2a'];
-  var CLOTH = ['#8e2a20', '#2f5a5c', '#8a6a2a', '#4a3f6b', '#3a4150', '#a8471f'];
+  var TINTS = ['#634734', '#486467', '#715441', '#174D5A', '#574336'];
+  var CLOTH = ['#9A3335', '#255D6B', '#A26943', '#255D6B', '#255D6B', '#AE5700'];
   var close = false, winIdx = 0, figIdx = 0;
 
   function r1(v) { return Math.round(v * 10) / 10; }
@@ -135,7 +135,7 @@ function renderTower(s, o) {
   // Житель: силуэт 9×22 px (1,75 м); x — центр, yb — пол. При высокой солидарности одежда разноцветная
   function fig(x, yb, cls, extra) {
     var i = figIdx++;
-    var col = hiSol ? CLOTH[Math.floor(twHash(i + 31) * CLOTH.length)] : '#191c23';
+    var col = hiSol ? CLOTH[Math.floor(twHash(i + 31) * CLOTH.length)] : '#1A3437';
     px(tower, 'man' + (cls ? ' ' + cls : ''), x - 4.5, yb - 22, 9, 22, '--cc:' + col + ';' + (extra || ''));
   }
   function win(x, yy, w, h, ti, S) {
@@ -145,7 +145,7 @@ function renderTower(s, o) {
   }
 
   // Здание в слоте: x, y — левый верх, w × h, низ стоит на палубе. Стадия меняет материал:
-  // 1 — доски, брезент, верёвки; 2 — металл, заклёпки, трубы; 3 — латунь, кристаллы, голубое свечение
+  // 1 — доски, брезент, верёвки; 2 — металл, заклёпки, трубы; 3 — латунь, кристаллы, бирюзовое свечение
   function building(sl, x, y, w, h, ti) {
     function P(c, rx, ry, rw, rh, ex, t) { px(tower, c, x + rx, y + ry, rw, rh, ex, t); }
     function L(c, ax, ay, bx, by, t) { line(tower, c, x + ax, y + ay, x + bx, y + by, t); }
@@ -179,7 +179,7 @@ function renderTower(s, o) {
     }
 
     if (b === 'housing') {
-      shell('#b7a886', 0, 12, w, h - 12);
+      shell('#CBA993', 0, 12, w, h - 12);
       var aw = w - 22, g = grid(4, 14, aw, h - 16, 3, 2, 20, 19, function (r, c) { return r === 1 && c === 1; });
       P('door d' + S, 4 + 2 * g.gx + 22, h - 27, 16, 27);
       var balY = 14 + g.gy + 19;
@@ -208,7 +208,7 @@ function renderTower(s, o) {
     }
     else if (b === 'catcher') {
       var cx = w / 2;
-      shell('#8a7a5a', w * 0.18, h - 30, w * 0.64, 30, true);
+      shell('#9D7D68', w * 0.18, h - 30, w * 0.64, 30, true);
       win(x + w * 0.18 + 9, y + h - 22, 14, 12, ti, S);
       win(x + w * 0.82 - 23, y + h - 22, 14, 12, ti, S);
       P('pylon y' + S, cx - 9, 16, 18, h - 46);
@@ -237,7 +237,7 @@ function renderTower(s, o) {
       fig(x + w - 14, y + h);
     }
     else if (b === 'council') {
-      shell('#a8241b', 0, 18, w, h - 18, true);
+      shell('#B32E35', 0, 18, w, h - 18, true);
       P('attic a' + S, w * 0.14, 3, w * 0.72, 16);
       P('emblem e' + S, w / 2 - 13, -16, 26, 26);
       P('star sm' + (S === 3 ? ' glow' : ''), w / 2 - 8, -12, 16, 16);
@@ -255,7 +255,7 @@ function renderTower(s, o) {
         P('tent-door', w / 2 - 13, h - 36, 26, 36);
         P('cross-sign', w / 2 - 12, 18, 24, 24);
       } else {
-        shell('#d9d3c4', 0, 12, w, h - 12);
+        shell('#E9E2CF', 0, 12, w, h - 12);
         grid(2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
         grid(w * 0.7 - 2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
         P('cross-sign' + (S === 3 ? ' glow' : ''), w / 2 - 15, 18, 30, 30);
@@ -265,7 +265,7 @@ function renderTower(s, o) {
       fig(x + w * 0.8, y + h, 'medic');
     }
     else if (b === 'guard') {
-      shell('#4b505b', 0, 22, w, h - 22, true);
+      shell('#536E71', 0, 22, w, h - 22, true);
       P('beam', w / 2 + 14, -36, 110, 48, op(lowOrder ? 0.12 : 0.6));
       P('booth b' + S, w / 2 - 20, -4, 40, 27);
       P('booth-cap', w / 2 - 26, -13, 52, 10);
@@ -278,7 +278,7 @@ function renderTower(s, o) {
       fig(x + w * 0.2, y + h, 'guard');
     }
     else if (b === 'scrap') {
-      shell('#6b6250', w * 0.46, h - 36, w * 0.54, 36, true);
+      shell('#648083', w * 0.46, h - 36, w * 0.54, 36, true);
       P('gate', w * 0.46 + 10, h - 26, w * 0.54 - 20, 26);
       P('lattice y' + S, 10, 2, 12, h - 2);
       P('jib y' + S, 2, 2, w - 12, 9);
@@ -291,7 +291,7 @@ function renderTower(s, o) {
       fig(x + w * 0.4, y + h);
     }
     else if (b === 'radio') {
-      shell('#7a705a', 6, h - 30, w - 12, 30, true);
+      shell('#6F8E91', 6, h - 30, w - 12, 30, true);
       win(x + 14, y + h - 22, 14, 12, ti, S);
       L('wire', w / 2, -30, 8, h - 30, 1.2); L('wire', w / 2, -30, w - 8, h - 30, 1.2);
       P('radiomast y' + S, w / 2 - 10, -40, 20, h + 10);
@@ -302,7 +302,7 @@ function renderTower(s, o) {
       P('beacon', w / 2 - 3, -46, 6, 6);
     }
     else if (b === 'corner') {
-      shell('#8e2a20', 0, 12, w, h - 12);
+      shell('#9A3335', 0, 12, w, h - 12);
       P('poster', 8, 20, w * 0.34, h - 38);
       P('star sm', 8 + w * 0.17 - 7, 26, 14, 14);
       grid(w * 0.42, 14, w * 0.58 - 4, h * 0.42, 2, 1, 22, 18);
@@ -311,7 +311,7 @@ function renderTower(s, o) {
       P('garland', 6, 12, w - 12, 10);
     }
     else if (b === 'observatory') {
-      shell('#6f6a5e', 0, h * 0.45, w, h * 0.55, true);
+      shell('#6B878A', 0, h * 0.45, w, h * 0.55, true);
       P('scope', w / 2 - 3, -14, 7, 40, 'transform:rotate(32deg);transform-origin:50% 100%;');
       P('obsdome o' + S, w * 0.12, 6, w * 0.76, h * 0.45);
       P('slit dark', w / 2 - 4, 10, 8, h * 0.3);
@@ -342,7 +342,7 @@ function renderTower(s, o) {
   var rootW = tw(0), boxes = [];
 
   function mistLayer(L, i) {
-    var cols = ['rgba(104,110,120,.6)', 'rgba(141,147,155,.7)', 'rgba(178,183,190,.82)'];
+    var cols = ['rgba(110, 138, 141,.6)', 'rgba(144, 173, 176,.7)', 'rgba(176, 206, 210,.82)'];
     var c = cols[i], top = mY - 40 + i * 30;
     px(L, 'mist m' + i, -400, top, W + 800, H - top + 60,
       'background:radial-gradient(100px 38px at 100px 38px,' + c + ' 96%,transparent 100%) 0 0/200px 38px repeat-x,linear-gradient(' + c + ',' + c + ') 0 36px/100% 100% no-repeat;');
@@ -353,7 +353,7 @@ function renderTower(s, o) {
     var cw = c[2] * U;
     px(back, 'cloud cl' + (i % 2), c[0] * W, c[1] * H, cw, cw * 0.28);
   });
-  px(back, 'glow', 0, mY - 130 * U, W, 150 * U, 'background:linear-gradient(180deg,rgba(217,154,43,0),rgba(217,154,43,.2));');
+  px(back, 'glow', 0, mY - 130 * U, W, 150 * U, 'background:linear-gradient(180deg,rgba(246, 149, 80,0),rgba(246, 149, 80,.2));');
   mistLayer(back, 0);
 
   // Центральная шахта: видна в фермах между ярусами, под килем и над крышей
@@ -605,7 +605,7 @@ class Component extends DCLogic {
       back: r.back, tower: r.tower, front: r.front, tiltStyle: r.tiltStyle, alt: alt,
       rootStyle: 'width:' + Math.round(cw * sc) + 'px;height:' + Math.round(ch * sc) + 'px;',
       innerStyle: 'position:absolute;left:0;top:0;width:' + r.W + 'px;height:' + r.H + 'px;transform:scale(' + sc + ') translate(' + (-ox) + 'px,' + (-oy) + 'px);transform-origin:0 0;' +
-        (sky ? 'background:linear-gradient(180deg,#172133 0%,#26354b 48%,#4b4b52 78%,#7d7f86 100%);' : '')
+        (sky ? 'background:linear-gradient(180deg,#1A3437 0%,#20444E 48%,#4F6A6D 78%,#7E9B9E 100%);' : '')
     };
   }
 }
