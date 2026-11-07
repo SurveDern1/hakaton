@@ -461,42 +461,62 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       }
       fig(x + w * 0.8, y + h, 'medic');
     } else if (b === 'guard') {
-      shell('#536E71', 0, 22, w, h - 22, true);
-      P('beam', w / 2 + 14, -36, 110, 48, op(lowOrder ? 0.12 : 0.6));
-      P(`booth b${S}`, w / 2 - 20, -4, 40, 27);
-      P('booth-cap', w / 2 - 26, -13, 52, 10);
-      P('slit', w / 2 - 14, 4, 28, 5);
-      P(`lamp${S === 3 ? ' ether' : ''}`, w / 2 + 10, -6, 12, 12);
-      grid(4, 26, w - 8, h - 34, 3, 1, 7, 20, (_r, c) => c === 1);
+      // Пост: стена с зубцами, сторожевая башенка с прожектором справа, звезда над дверью
+      const tx = w - 46;
+      shell('#536E71', 0, 26, w, h - 26, true);
+      P(`merlons k${S}`, 0, 17, tx - 2, 9);
+      P('beam', tx + 34, -30, 96, 46, op(lowOrder ? 0.12 : 0.6));
+      P(`booth b${S}`, tx, -2, 40, 30);
+      P('booth-cap', tx - 6, -11, 52, 10);
+      P('slit', tx + 6, 6, 28, 5);
+      P(`lamp${S === 3 ? ' ether' : ''}`, tx + 30, -6, 12, 12);
+      grid(4, 30, w - 8, h - 38, 3, 1, 9, 18, (_r, c) => c === 1);
+      P('star sm', w / 2 - 7, 33, 14, 14);
       P(`door d${S}`, w / 2 - 9, h - 30, 18, 30);
       if (S === 1) {
-        P('sandbags', 2, h - 14, w * 0.36, 14);
-        P('sandbags', w * 0.64 - 2, h - 14, w * 0.36, 14);
-      } else P('siren', w - 22, 28, 14, 10);
+        P('sandbags', 2, h - 15, w * 0.32, 15);
+        P('sandbags', w * 0.66 - 2, h - 15, w * 0.34, 15);
+      } else {
+        P('siren', tx - 14, 3, 14, 10);
+        P('post', w * 0.64, h - 22, 5, 22);
+        P('barrier', w * 0.64 + 2, h - 19, w * 0.32, 5);
+      }
       fig(x + w * 0.2, y + h, 'guard');
     } else if (b === 'scrap') {
-      shell('#648083', w * 0.46, h - 36, w * 0.54, 36, true);
-      P('gate', w * 0.46 + 10, h - 26, w * 0.54 - 20, 26);
+      // Цех с пилообразной крышей, кран с кабиной, куча лома с листами и бочкой
+      const sx0 = w * 0.46;
+      const sw0 = w * 0.54;
+      shell('#648083', sx0, h - 36, sw0, 36, true);
+      P(`sawroof r${S}`, sx0, h - 49, sw0, 13);
+      P('gate', sx0 + 10, h - 26, sw0 - 20, 26);
       P(`lattice y${S}`, 10, 2, 12, h - 2);
+      P(`cab c${S}`, 5, 24, 22, 15);
       P(`jib y${S}`, 2, 2, w - 12, 9);
       P('cweight', 0, 11, 16, 13);
       P('hookline', w - 18, 11, 1.5, h * 0.36);
       P(S === 3 ? 'magnet' : 'hook', w - 23, 11 + h * 0.36, 11, 10);
-      if (S === 1) L('rope', 16, 4, w * 0.4, h - 24, 1.5);
       P('b-pile', w * 0.02, h - 24, w * 0.5, 24);
+      P('sheet', w * 0.08, h - 30, 18, 24, 'transform:rotate(-14deg);');
       P('gear', w * 0.2, h - 20, 16, 16);
-      fig(x + w * 0.4, y + h);
+      P('barrel', w * 0.36, h - 15, 11, 15);
+      fig(x + w * 0.42, y + h);
     } else if (b === 'radio') {
-      shell('#6F8E91', 6, h - 30, w - 12, 30, true);
-      win(x + 14, y + h - 22, 14, 12, ti, S);
-      L('wire', w / 2, -30, 8, h - 30, 1.2);
-      L('wire', w / 2, -30, w - 8, h - 30, 1.2);
-      P(`radiomast y${S}`, w / 2 - 10, -40, 20, h + 10);
-      P('dish', w - 34, h - 56, 24, 24);
-      P('ring', w / 2 - 12, -52, 24, 24, op(0.4 + 0.6 * e));
-      P('ring', w / 2 - 22, -62, 44, 44, op(0.2 + 0.4 * e));
-      P('ring', w / 2 - 32, -72, 64, 64, op(0.1 + 0.25 * e));
-      P('beacon', w / 2 - 3, -46, 6, 6);
+      // Рубка с окном и тарелкой на крыше, решётчатая мачта на растяжках, волны сигнала
+      const hw = Math.round(w * 0.62);
+      const mx = w * 0.8;
+      L('wire', mx, -24, 6, h - 44, 1.2);
+      L('wire', mx, -24, w - 2, h - 2, 1.2);
+      P(`radiomast y${S}`, mx - 9, -32, 18, h + 2);
+      P('ring wave', mx - 8, -36, 16, 16, op(0.5 + 0.5 * e));
+      P('ring wave', mx - 15, -43, 30, 30, `${op(0.3 + 0.4 * e)}animation-delay:-.6s;`);
+      P('ring wave', mx - 22, -50, 44, 44, `${op(0.15 + 0.3 * e)}animation-delay:-1.2s;`);
+      P('beacon', mx - 3, -38, 6, 6);
+      P(`booth b${S}`, mx - 12, h - 18, 24, 18);
+      shell('#6F8E91', 2, h - 44, hw, 44);
+      win(x + 9, y + h - 34, 18, 15, ti, S);
+      P(`door d${S}`, hw - 20, h - 26, 15, 26);
+      P('dish-arm', 2 + hw * 0.24, h - 56, 3, 12);
+      P('dish', 2 + hw * 0.24 - 10, h - 68, 22, 15, 'transform:rotate(-28deg);');
     } else if (b === 'corner') {
       shell('#9A3335', 0, 12, w, h - 12);
       P('poster', 8, 20, w * 0.34, h - 38);
@@ -507,11 +527,25 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       P(`table t${S}`, w * 0.46, h - 16, w * 0.46, 16);
       P('garland', 6, 12, w - 12, 10);
     } else if (b === 'observatory') {
-      shell('#6B878A', 0, h * 0.45, w, h * 0.55, true);
-      P('scope', w / 2 - 3, -14, 7, 40, 'transform:rotate(32deg);transform-origin:50% 100%;');
-      P(`obsdome o${S}`, w * 0.12, 6, w * 0.76, h * 0.45);
-      P('slit dark', w / 2 - 4, 10, 8, h * 0.3);
-      grid(4, h * 0.45 + 4, w - 8, h * 0.55 - 8, 3, 1, 14, 14);
+      // Купол на латунном барабане, раскрытая щель со звёздами, труба телескопа из щели
+      const dw = w * 0.7;
+      const dx = (w - dw) / 2;
+      const base = h * 0.5;
+      const dh = h * 0.42;
+      const dt = base - 7 - dh;
+      shell('#6B878A', 0, base, w, h - base, true);
+      P(`drum o${S}`, dx - 5, base - 7, dw + 10, 8);
+      P(`obsdome o${S}`, dx, dt, dw, dh);
+      P('dome-slit', w / 2 - 7, dt + 1, 14, dh - 1);
+      P(
+        `scope s${S}`,
+        w / 2 - 4,
+        base - 9 - (dh + 12),
+        8,
+        dh + 12,
+        'transform:rotate(22deg);transform-origin:50% 100%;',
+      );
+      grid(4, base + 4, w - 8, h - base - 8, 3, 1, 14, 14);
     } else {
       // Здание без рисунка: общий корпус, чтобы новое здание из данных не пропало с экрана
       shell('#8E7A6A', 0, 12, w, h - 12);
