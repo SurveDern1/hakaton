@@ -26,7 +26,7 @@ export function mountHud(root: HTMLElement, store: GameStore, firstDay: string):
     bar.innerHTML = `
       <div class="hud-day"><span class="lbl">День ${s.day}</span><span class="disp">${day}</span></div>
       <ul class="hud-stats">
-        ${LABELS.map(([k, name]) => `<li><span class="lbl">${name}</span><span class="num">${values[k]}</span></li>`).join('')}
+        ${LABELS.map(([k, name]) => `<li data-key="${k}"><span class="lbl">${name}</span><span class="num">${values[k]}</span></li>`).join('')}
       </ul>`;
   });
 }
