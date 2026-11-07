@@ -46,10 +46,16 @@ function closedPaths(state: GameState, data: GameData, reached: string): string[
   return out;
 }
 
-export function showFinal(root: HTMLElement, state: GameState, opts: FinalOptions): HTMLElement {
-  const { data } = opts;
+/** Концовка партии; путь не выбран — башня держится дальше одна. */
+export function finalEnding(state: GameState, data: GameData) {
   const ending = resolveEnding(state, data) ?? resolveEnding({ ...state, ending: 'hold' }, data);
   if (!ending) throw new Error('Нет концовки');
+  return ending;
+}
+
+export function showFinal(root: HTMLElement, state: GameState, opts: FinalOptions): HTMLElement {
+  const { data } = opts;
+  const ending = finalEnding(state, data);
   const all = data.endings.endings;
   const index = all.findIndex((e) => e.id === ending.id) + 1;
   const date = dayDate(data, state.day);

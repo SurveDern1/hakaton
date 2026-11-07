@@ -107,6 +107,9 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     }
   }).observe(opts.root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
+  // Лист комикса (src/comics/viewer.ts)
+  opts.root.addEventListener('comic:turn', () => play('page'));
+
   // ---- Клики по кнопкам ----
   document.addEventListener(
     'click',

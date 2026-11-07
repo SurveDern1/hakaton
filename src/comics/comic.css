@@ -1,0 +1,511 @@
+/* Комикс пролога и эпилогов (viewer.ts). Бумажная страница с кадрами, поворот листа на корешке
+   слева, проявление кадров: картинка светлеет и медленно едет, подпись выезжает, облачка выпрыгивают.
+   Размеры — от рамки игры (@container app). */
+.cx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(37, 93, 107, 0.35), transparent 70%),
+    repeating-linear-gradient(-32deg, transparent 0 22px, rgba(255, 255, 255, 0.02) 22px 23px), #10221f;
+  background-color: #0f2124;
+  color: var(--text);
+  outline: none;
+  animation: cxIn 420ms ease-out both;
+}
+#ui > .cx-layer {
+  pointer-events: auto;
+}
+.cx-layer.is-leaving {
+  animation: cxOut 460ms ease-in both;
+}
+
+/* ---- Шапка и низ ---- */
+.cx-top,
+.cx-bottom {
+  position: relative;
+  z-index: 3;
+  background: #0f2124;
+}
+.cx-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 8px;
+}
+.cx-name {
+  color: var(--ochre);
+}
+.cx-count {
+  margin-left: auto;
+}
+.cx-skip {
+  min-height: 40px;
+  padding: 0 4px 0 10px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--f-ui);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cx-skip:hover,
+.cx-skip:focus-visible {
+  color: var(--paper);
+  outline: none;
+}
+.cx-skip::after {
+  content: " ›";
+}
+.cx-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+}
+.cx-prev[disabled] {
+  opacity: 0.3;
+  cursor: default;
+}
+.cx-dots {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.cx-dots i {
+  width: 7px;
+  height: 7px;
+  background: var(--line);
+  transform: rotate(45deg);
+  transition:
+    background 300ms ease,
+    transform 300ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.cx-dots i.is-past {
+  background: var(--muted);
+}
+.cx-dots i.is-on {
+  background: var(--red);
+  transform: rotate(45deg) scale(1.5);
+}
+.cx-next {
+  min-width: 128px;
+}
+.cx-next.is-ready {
+  animation: cxReady 1.4s ease-in-out 2;
+}
+.cx-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* ---- Книга и лист ---- */
+.cx-book {
+  position: relative;
+  margin: 0 12px;
+  perspective: 2400px;
+  perspective-origin: 10% 50%;
+  touch-action: none;
+  cursor: pointer;
+}
+.cx-layer.is-leaving .cx-book {
+  transition:
+    transform 460ms cubic-bezier(0.4, 0, 0.6, 1),
+    filter 460ms ease;
+  transform: scale(1.04);
+  filter: brightness(1.4) blur(2px);
+}
+.cx-page {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  backface-visibility: hidden;
+}
+.cx-page.is-under {
+  z-index: 1;
+}
+.cx-page.is-leaf {
+  z-index: 2;
+  will-change: transform;
+}
+.cx-page.is-first {
+  animation: cxPageIn 640ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms backwards;
+}
+.cx-front {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 10px 10px 24px;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(26, 52, 55, 0.07) 1px, transparent 1.4px) 0 0 / 5px 5px,
+    linear-gradient(90deg, rgba(26, 52, 55, 0.18), transparent 4%),
+    var(--paper);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    0 2px 0 rgba(0, 0, 0, 0.2);
+}
+.cx-page.is-leaf .cx-front {
+  box-shadow:
+    calc(var(--gloss, 0) * 26px) 0 calc(var(--gloss, 0) * 46px) rgba(0, 0, 0, 0.5),
+    0 18px 50px rgba(0, 0, 0, 0.45);
+}
+.cx-grid {
+  display: grid;
+  gap: 8px;
+  height: 100%;
+}
+.cx-folio {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+  text-align: center;
+  font-family: var(--f-ui);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(26, 52, 55, 0.55);
+}
+/* Лист темнеет, уходя от света; по нему бежит блик */
+.cx-shade,
+.cx-gloss,
+.cx-cast {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cx-shade {
+  background: linear-gradient(to left, rgba(8, 18, 20, 0.95), rgba(8, 18, 20, 0.3));
+  opacity: var(--shade, 0);
+}
+.cx-gloss {
+  background: linear-gradient(
+    100deg,
+    transparent calc(var(--gx, 100%) - 24%),
+    rgba(255, 250, 235, 0.32) var(--gx, 100%),
+    transparent calc(var(--gx, 100%) + 24%)
+  );
+  opacity: var(--gloss, 0);
+  mix-blend-mode: screen;
+}
+/* Тень поднятого листа на странице под ним */
+.cx-cast {
+  background: linear-gradient(to right, rgba(5, 12, 14, 0.95), rgba(5, 12, 14, 0.35) 45%, transparent 90%);
+  opacity: var(--cast, 0);
+}
+
+/* ---- Кадр ---- */
+.cx-panel {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  background: var(--ink);
+  container-type: size;
+}
+.cx-cam {
+  position: absolute;
+  inset: 0;
+  transform: var(--from, none);
+}
+.cx-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.5) saturate(0.55);
+  transition: filter 700ms ease;
+}
+.cx-art > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cx-panel.is-in .cx-art {
+  filter: none;
+}
+
+/* Медленный наезд камеры после проявления кадра; стартовая точка задана заранее, без скачка */
+.cx-panel[data-move="in"] .cx-cam {
+  --from: scale(1);
+  --to: scale(1.09);
+}
+.cx-panel[data-move="out"] .cx-cam {
+  --from: scale(1.14);
+  --to: scale(1.02);
+}
+.cx-panel[data-move="left"] .cx-cam {
+  --from: scale(1.1) translateX(3.5%);
+  --to: scale(1.1) translateX(-3.5%);
+}
+.cx-panel[data-move="right"] .cx-cam {
+  --from: scale(1.1) translateX(-3.5%);
+  --to: scale(1.1) translateX(3.5%);
+}
+.cx-panel[data-move="up"] .cx-cam {
+  --from: scale(1.1) translateY(4%);
+  --to: scale(1.1) translateY(-3%);
+}
+.cx-panel[data-move="down"] .cx-cam {
+  --from: scale(1.1) translateY(-4%);
+  --to: scale(1.1) translateY(3%);
+}
+.cx-panel.is-in .cx-cam {
+  animation: cxCam 13s cubic-bezier(0.25, 0.6, 0.3, 1) forwards;
+}
+.cx-panel[data-move="none"] .cx-cam {
+  animation: none;
+}
+
+.cx-stub {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 1px 6px;
+  border: 1px solid rgba(251, 240, 214, 0.4);
+  font-family: var(--f-ui);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(251, 240, 214, 0.6);
+}
+
+/* Подпись: выезжает слева направо */
+.cx-cap {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 40px);
+  margin: 0;
+  padding: 6px 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper-2);
+  color: var(--paper-ink);
+  font-size: clamp(12px, 3.5cqw, 16px);
+  line-height: 1.35;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  clip-path: inset(-6px 100% -6px -6px);
+  transition: clip-path 520ms cubic-bezier(0.3, 0.7, 0.2, 1) var(--d, 0ms);
+}
+.cx-cap.is-bottom {
+  top: auto;
+  left: auto;
+  right: 8px;
+  bottom: 8px;
+}
+.cx-panel.is-in .cx-cap {
+  clip-path: inset(-6px -6px -6px -6px);
+}
+
+/* Облачко: выпрыгивает от хвостика */
+.cx-bubble {
+  position: absolute;
+  width: max-content;
+  max-width: 68%;
+  padding: 7px 14px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-family: var(--f-ui);
+  font-size: clamp(13px, 3.7cqw, 17px);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.35);
+  transform-origin: 50% 100%;
+  transition:
+    transform 440ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0ms),
+    opacity 180ms ease var(--d, 0ms);
+}
+.cx-panel.is-in .cx-bubble {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.cx-who {
+  display: block;
+  margin-bottom: 1px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.cx-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: calc(50% - 7px);
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  transform: rotate(45deg) skew(8deg, 8deg);
+}
+.cx-bubble.tail-left {
+  transform-origin: 20% 100%;
+}
+.cx-bubble.tail-left::after {
+  left: 18%;
+}
+.cx-bubble.tail-right {
+  transform-origin: 80% 100%;
+}
+.cx-bubble.tail-right::after {
+  left: auto;
+  right: 18%;
+}
+.cx-bubble.tail-none::after {
+  display: none;
+}
+/* Радио: рамка эфира вместо облачка */
+.cx-bubble.kind-radio {
+  border: 2px dashed var(--ether);
+  border-radius: 4px;
+  background: rgba(15, 33, 36, 0.9);
+  color: var(--ether);
+  transform-origin: 50% 50%;
+}
+.cx-bubble.kind-radio .cx-who {
+  color: var(--ochre);
+}
+
+/* Звукоподражание: падает крупно и встаёт на место */
+.cx-sfx {
+  position: absolute;
+  right: 7%;
+  top: 38%;
+  font-size: clamp(26px, 13cqw, 52px);
+  color: var(--ochre);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink);
+  opacity: 0;
+  transform: rotate(-10deg) scale(2.4);
+  transition:
+    transform 380ms cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0ms),
+    opacity 140ms ease var(--d, 0ms);
+}
+.cx-panel.is-in .cx-sfx {
+  opacity: 1;
+  transform: rotate(-10deg) scale(1);
+}
+
+/* Заглавная надпись кадра: буквы съезжаются */
+.cx-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 13%;
+  padding: 0 12px;
+  text-align: center;
+  font-size: clamp(20px, 8cqw, 40px);
+  line-height: 1.1;
+  color: var(--paper);
+  text-shadow:
+    4px 4px 0 var(--red),
+    0 0 26px rgba(0, 0, 0, 0.55);
+  letter-spacing: 0.24em;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 700ms ease var(--d, 0ms),
+    transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms),
+    letter-spacing 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0ms);
+}
+.cx-panel.is-in .cx-title {
+  opacity: 1;
+  transform: none;
+  letter-spacing: 0.02em;
+}
+
+@keyframes cxIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cxOut {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes cxPageIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) rotateX(7deg) scale(0.95);
+  }
+}
+@keyframes cxCam {
+  from {
+    transform: var(--from, none);
+  }
+  to {
+    transform: var(--to, none);
+  }
+}
+@keyframes cxReady {
+  50% {
+    background: var(--red-hi);
+    transform: scale(1.05);
+  }
+}
+
+/* Без движения: листы сменяются наплывом, кадры и надписи появляются на месте */
+.cx-layer.is-reduced .cx-cam,
+.cx-layer.is-reduced .cx-page.is-first,
+.cx-layer.is-reduced .cx-next.is-ready {
+  animation: none;
+  transform: none;
+}
+.cx-layer.is-reduced .cx-cap {
+  clip-path: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.cx-layer.is-reduced .cx-panel.is-in .cx-cap {
+  opacity: 1;
+}
+.cx-layer.is-reduced .cx-bubble,
+.cx-layer.is-reduced .cx-panel.is-in .cx-bubble {
+  transform: translate(-50%, -50%);
+  transition: opacity 160ms ease;
+}
+.cx-layer.is-reduced .cx-sfx,
+.cx-layer.is-reduced .cx-panel.is-in .cx-sfx {
+  transform: rotate(-10deg);
+  transition: opacity 160ms ease;
+}
+.cx-layer.is-reduced .cx-title,
+.cx-layer.is-reduced .cx-panel.is-in .cx-title {
+  transform: none;
+  letter-spacing: 0.02em;
+  transition: opacity 160ms ease;
+}
+.cx-layer.is-reduced.is-leaving,
+.cx-layer.is-reduced {
+  animation-duration: 160ms;
+}
+.cx-layer.is-reduced.is-leaving .cx-book {
+  transform: none;
+  filter: none;
+}
+
+/* Прошлая страница при листании назад — сразу целиком */
+.cx-layer .cx-panel.is-instant.is-in .cx-art,
+.cx-layer .cx-panel.is-instant.is-in .cx-cap,
+.cx-layer .cx-panel.is-instant.is-in .cx-bubble,
+.cx-layer .cx-panel.is-instant.is-in .cx-sfx,
+.cx-layer .cx-panel.is-instant.is-in .cx-title {
+  transition: none;
+}

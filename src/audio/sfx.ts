@@ -20,6 +20,7 @@ export type SfxName =
   | 'plus'
   | 'minus'
   | 'paper'
+  | 'page'
   | 'final'
   | 'decree';
 
@@ -372,6 +373,32 @@ const SOUNDS: Record<SfxName, Sound> = {
     });
   },
   // Стенгазета: разворот большого листа и пара ударов кнопок
+  // Лист комикса: шорох бумаги снизу вверх и мягкий хлопок, когда лист ложится
+  page(e, t, out) {
+    noise(e, {
+      t,
+      dur: 0.26,
+      attack: 0.06,
+      release: 0.16,
+      gain: 0.16,
+      dest: out,
+      filter: 'bandpass',
+      freq: 900,
+      to: 3600,
+      q: 0.8,
+    });
+    noise(e, {
+      t: t + 0.3,
+      dur: 0.04,
+      attack: 0.005,
+      release: 0.12,
+      gain: 0.12,
+      dest: out,
+      filter: 'lowpass',
+      freq: 700,
+      q: 0.7,
+    });
+  },
   paper(e, t, out) {
     noise(e, {
       t,
