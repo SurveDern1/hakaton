@@ -3,6 +3,7 @@
 // день (панель, меню стройки по клику на слот) → «Завершить день» → ночь (night.ts) → утро … → финал.
 // Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу.
 import Phaser from 'phaser';
+import { initAudio } from './audio';
 import { createInitialState, forecastNight, gameData, type NightReport } from './core';
 import { GameLoop } from './game/loop';
 import { loadGame } from './game/save';
@@ -91,6 +92,7 @@ const loop = new GameLoop(store, data, {
   },
   night: (_report, commit) => playNight(ui, towerScene, data, store.state.day, commit),
 });
+const sound = initAudio({ root: ui, store, loop });
 
 // Меню «гамбургер»: новая игра с подтверждением
 const gameMenu = h('div', { class: 'paper game-menu', role: 'menu', hidden: true });
@@ -111,7 +113,7 @@ function toggleMenu(force?: boolean) {
   });
   const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
   close.addEventListener('click', () => toggleMenu(false));
-  gameMenu.replaceChildren(restart, close);
+  gameMenu.replaceChildren(restart, ...sound.menuItems(), close);
   restart.focus();
 }
 gameMenu.addEventListener('keydown', (e) => {
@@ -185,6 +187,7 @@ Object.assign(window, {
     loop,
     events,
     panel,
+    sound,
     tower: {
       scene: towerScene,
       presets: Object.keys(TOWER_PRESETS),
