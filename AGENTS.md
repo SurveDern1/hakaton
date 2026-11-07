@@ -15,7 +15,8 @@
 | `src/scenes/` | Сцены Phaser: `TowerScene.ts` рисует башню и Мглу по состоянию |
 | `src/ui/` | Интерфейс обычным HTML/CSS поверх canvas (`#ui`): `hud.ts` — календарь и ресурсы, `style.css` — подключает токены из `design/project/sedmaya.css` |
 | `src/main.ts`, `index.html` | Точка входа: core → `GameStore` → Phaser и DOM. В консоли браузера доступно `window.sedmaya` |
-| `.github/workflows/deploy.yml` | Пуш в `main` → `npm run check`, сборка и выкладка на GitHub Pages |
+| `tools/export-design.js`, `tools/dc-lite.js` | Макеты для дизайнеров без Claude Design: `npm run export:design` собирает из `design/project/*.dc.html` обычные автономные страницы в `design/export/` (в git не хранится) — по странице на экран, `index.html` с превью, рядом `sedmaya.css` и `dc-lite.js`; компонент `Tower` вшит в страницы, открываются двойным кликом. `dc-lite.js` заменяет `support.js` холста: `{{…}}`, `sc-for`, `dc-import`, `onClick/onChange`, `renderVals/setState`. Новая конструкция в макетах, которой нет в `dc-lite.js`, на экспорте не отрисуется |
+| `.github/workflows/deploy.yml` | Пуш в `main` → `npm run check`, сборка и выкладка на GitHub Pages; макеты для дизайнеров — в подпапке `/design/` того же сайта (`node tools/export-design.js dist/design`) |
 | `design/project/` | Макеты экранов, холст Claude Design «Седьмая — макеты»: `*.dc.html` — артборды, `Tower.dc.html` — функция `renderTower(state)`, `Blocks.dc.html` — лист зданий в трёх стадиях и крупные планы ярусов, `sedmaya.css` — токены, детали башни `.tw .*` и анимации |
 
 Правила:
