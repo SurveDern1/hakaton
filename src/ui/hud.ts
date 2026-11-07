@@ -13,10 +13,19 @@ export interface HudOptions {
 
 const MODE_WORDS = { hold: 'держим', climb: 'набираем', save: 'экономим' } as const;
 
-function tile(key: string, name: string, color: string, value: string, sub: string, subTone: string): string {
+/** Плитка ресурса. short — подпись и строка изменения для узкой шапки телефона (6 плиток в ряд). */
+function tile(
+  key: string,
+  name: string,
+  color: string,
+  value: string,
+  sub: string,
+  subTone: string,
+  short: { name: string; sub: string },
+): string {
   return `<div class="hud-tile" data-key="${key}">
     <span class="hud-ico" style="color:${color}">${icon(key)}</span>
-    <div class="hud-val"><span class="lbl">${name}</span><span class="num hud-num">${value}</span><span class="num hud-sub ${subTone}">${sub}</span></div>
+    <div class="hud-val"><span class="lbl"><span class="hud-long">${name}</span><span class="hud-short">${short.name}</span></span><span class="num hud-num">${value}</span><span class="num hud-sub ${subTone}"><span class="hud-long">${sub}</span><span class="hud-short">${short.sub}</span></span></div>
   </div>`;
 }
 
@@ -68,10 +77,20 @@ export function mountHud(root: HTMLElement, opts: HudOptions): HTMLElement {
         String(s.res.pop),
         homeless ? `${homeless} без жилья` : 'все под крышей',
         homeless ? 'warn' : 'muted',
+        { name: 'Жители', sub: homeless ? `${homeless} без жил.` : 'под крышей' },
       ),
-      tile('food', 'Еда', 'var(--good)', String(s.res.food), `${sgn(d.food)} за ночь`, tone(d.food)),
-      tile('ether', 'Эфир', 'var(--ether)', String(s.res.ether), `${sgn(d.ether)} за ночь`, tone(d.ether)),
-      tile('mat', 'Материалы', 'var(--ochre)', String(s.res.mat), `${sgn(d.mat)} за ночь`, tone(d.mat)),
+      tile('food', 'Еда', 'var(--good)', String(s.res.food), `${sgn(d.food)} за ночь`, tone(d.food), {
+        name: 'Еда',
+        sub: sgn(d.food),
+      }),
+      tile('ether', 'Эфир', 'var(--ether)', String(s.res.ether), `${sgn(d.ether)} за ночь`, tone(d.ether), {
+        name: 'Эфир',
+        sub: sgn(d.ether),
+      }),
+      tile('mat', 'Материалы', 'var(--ochre)', String(s.res.mat), `${sgn(d.mat)} за ночь`, tone(d.mat), {
+        name: 'Матер.',
+        sub: sgn(d.mat),
+      }),
       tile(
         'altitude',
         'Высота',
@@ -79,8 +98,12 @@ export function mountHud(root: HTMLElement, opts: HudOptions): HTMLElement {
         `${fmtNum(s.altitude)} м`,
         f.altitudeDelta ? `${sgn(f.altitudeDelta)} м` : MODE_WORDS[s.engineMode],
         tone(f.altitudeDelta),
+        { name: 'Высота', sub: f.altitudeDelta ? `${sgn(f.altitudeDelta)} м` : MODE_WORDS[s.engineMode] },
       ),
-      tile('mist', 'Мгла', 'var(--mist-light)', `${fmtNum(s.mist)} м`, `${sgn(f.mistRise)} за ночь`, 'bad'),
+      tile('mist', 'Мгла', 'var(--mist-light)', `${fmtNum(s.mist)} м`, `${sgn(f.mistRise)} за ночь`, 'bad', {
+        name: 'Мгла',
+        sub: `${sgn(f.mistRise)} м`,
+      }),
     ].join('');
   });
   return bar;

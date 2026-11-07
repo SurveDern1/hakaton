@@ -215,8 +215,10 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
   function place() {
     if (!at) return;
     const r = at.anchor.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // Меню живёт в рамке телефона #app: размеры и координаты — от неё, а не от окна
+    const frame = (document.getElementById('app') ?? document.body).getBoundingClientRect();
+    const vw = frame.width;
+    const vh = frame.height;
     if (vw < 760) {
       card.style.left = '';
       card.style.top = '';
@@ -226,9 +228,9 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
     card.classList.remove('is-sheet');
     const w = card.offsetWidth || 260;
     const hgt = card.offsetHeight || 300;
-    let left = r.right + 24;
-    if (left + w > vw - 420) left = Math.max(12, r.left - w - 24);
-    const top = Math.min(Math.max(112, r.top + r.height / 2 - hgt / 2), vh - hgt - 12);
+    let left = r.right - frame.left + 24;
+    if (left + w > vw - 420) left = Math.max(12, r.left - frame.left - w - 24);
+    const top = Math.min(Math.max(112, r.top - frame.top + r.height / 2 - hgt / 2), vh - hgt - 12);
     card.style.left = `${left}px`;
     card.style.top = `${top}px`;
   }

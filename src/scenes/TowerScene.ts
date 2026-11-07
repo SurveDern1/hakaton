@@ -18,6 +18,11 @@ export interface TowerSceneOptions {
   insets?: () => { top: number; right: number; bottom: number; left: number };
   /** Подписи зданий на табличках, как на главном экране макета. */
   labels?: boolean;
+  /**
+   * Мгла ушла ниже кадра (башня крупно на узком экране): сколько метров до неё; null — Мгла видна.
+   * Вызывается только при изменении.
+   */
+  onMistBelow?: (meters: number | null) => void;
 }
 
 /** Длительность перехода между состояниями — в диапазоне 300–600 мс. */
@@ -30,6 +35,8 @@ const SKY = [
 ] as const;
 const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 1.25;
+/** Низ башни с двигателями и подушкой (px от днища): ниже — только воздух до Мглы. */
+const TOWER_FOOT = 320;
 /** Время, за которое камера проходит ~63 % пути к новой рамке. */
 const CAMERA_LAG_MS = 140;
 
@@ -53,6 +60,7 @@ export class TowerScene extends Phaser.Scene {
   /** Длительность следующих переходов; ночь растягивает её, чтобы Мгла поднималась медленно. */
   tweenMs = TWEEN_MS;
   private pendingSlots: SlotHandler | null = null;
+  private mistBelow: number | null | undefined;
 
   constructor(
     private source: TowerSource,
@@ -130,12 +138,20 @@ export class TowerScene extends Phaser.Scene {
     const vw = Math.max(80, width - ins.left - ins.right - 2 * pad);
     const vh = Math.max(80, height - ins.top - ins.bottom - 2 * pad);
     const b = m.bounds;
-    const zoom = Phaser.Math.Clamp(Math.min(vw / b.w, vh / b.h), ZOOM_MIN, ZOOM_MAX);
+    // Телефон: башня от звезды до двигателей — как можно крупнее; воздух до Мглы — сколько влезет.
+    // Если всё не помещается, кадр прижат к звезде, а Мгла въезжает снизу, когда подходит близко.
+    const towerH = Math.min(b.h, TOWER_FOOT - b.y);
+    const fitAll = Math.min(vw / b.w, vh / b.h);
+    const fitTower = Math.min(vw / b.w, vh / towerH);
+    const zoom = Phaser.Math.Clamp(Math.max(fitAll, fitTower), ZOOM_MIN, ZOOM_MAX);
+    const visH = vh / zoom;
+    const cy = visH >= b.h ? b.y + b.h / 2 : b.y + visH / 2;
     // Центр свободной области смещён от центра экрана на разницу отступов
     const dx = (ins.left - ins.right) / 2;
     const dy = (ins.top - ins.bottom) / 2;
     const x = b.x + b.w / 2 - dx / zoom;
-    const y = b.y + b.h / 2 - dy / zoom;
+    const y = cy - dy / zoom;
+    this.reportMist(b.y + visH < m.gapPx - 20);
 
     const c = this.cam;
     if (snap || this.reduced || !c.ready) {
@@ -153,6 +169,14 @@ export class TowerScene extends Phaser.Scene {
     cam.setZoom(c.zoom);
     cam.centerOn(c.x, c.y);
     this.drawSky();
+  }
+
+  private reportMist(hidden: boolean): void {
+    const s = this.shown;
+    const next = hidden && s ? Math.max(0, Math.round(s.altitude - s.mist)) : null;
+    if (next === this.mistBelow) return;
+    this.mistBelow = next;
+    this.options.onMistBelow?.(next);
   }
 
   /** Небо во весь видимый прямоугольник: сверху тёмная бирюза, к Мгле светлее. */

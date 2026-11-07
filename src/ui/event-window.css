@@ -290,7 +290,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: min(440px, calc(100vw - 48px));
+  max-width: min(440px, calc(100cqw - 48px));
   pointer-events: none;
 }
 .ev-reply {
@@ -448,7 +448,7 @@
 }
 
 /* Узкий экран: окно на весь экран, плакат — полоса сверху, текст прокручивается */
-@media (max-width: 760px) {
+@container app (max-width: 760px) {
   .ev-layer {
     padding: 0;
   }
@@ -542,7 +542,7 @@
 }
 
 /* Невысокий экран ноутбука: плакат сжимается, знак не налезает на подпись */
-@media (min-width: 761px) and (max-height: 760px) {
+@container app (min-width: 761px) and (max-height: 760px) {
   .ev-emblem {
     top: 70px;
     width: 260px;

@@ -17,8 +17,10 @@ export function flashHud(
   const f = document.createElement('span');
   f.className = `ev-float ${delta > 0 ? 'up' : 'down'} num`;
   f.textContent = text;
-  f.style.left = `${r.left + r.width / 2}px`;
-  f.style.top = `${r.bottom}px`;
+  // Слой чисел лежит в рамке #app, а не в углу окна — координаты от его края
+  const o = floats.getBoundingClientRect();
+  f.style.left = `${r.left - o.left + r.width / 2}px`;
+  f.style.top = `${r.bottom - o.top}px`;
   floats.append(f);
   target.classList.remove('ev-flash');
   void target.offsetWidth;

@@ -51,17 +51,28 @@ function showTower(input: TowerInput): void {
 
 const ui = document.getElementById('ui');
 if (!ui) throw new Error('Нет слоя #ui');
-const narrow = () => window.innerWidth < 760;
+// Экран игры — портретная рамка #app (style.css); отступы башни считаются от неё, а не от окна.
+const app = document.getElementById('app') ?? document.body;
+
+// Мгла ниже кадра (башня крупно на телефоне) — табличка над панелью: сколько до неё метров
+const mistBelow = h('div', { class: 'mist-below num', 'aria-hidden': 'true' });
+ui.append(mistBelow);
 
 const towerScene = new TowerScene(towerSource, {
   labels: true,
+  onMistBelow: (m) => {
+    mistBelow.classList.toggle('is-on', m != null);
+    if (m != null) mistBelow.textContent = `Мгла ниже на ${m} м`;
+  },
   insets: () => {
-    const top = document.querySelector('#ui .hud')?.getBoundingClientRect().bottom ?? 0;
+    const a = app.getBoundingClientRect();
+    const hud = document.querySelector('#ui .hud')?.getBoundingClientRect();
+    const top = hud && hud.height > 0 ? hud.bottom - a.top : 0;
     const panel = document.querySelector<HTMLElement>('#ui .panel');
     if (!panel || ui.classList.contains('is-bare')) return { top, right: 0, bottom: 0, left: 0 };
     const r = panel.getBoundingClientRect();
-    return narrow()
-      ? { top, right: 0, bottom: window.innerHeight - r.top, left: 0 }
+    return a.width < 760
+      ? { top, right: 0, bottom: a.bottom - r.top, left: 0 }
       : { top, right: r.width, bottom: 40, left: 0 };
   },
 });
