@@ -158,7 +158,7 @@
 .tw .dipole { border-radius: 1px; background: linear-gradient(90deg, var(--ether) 0 4px, #c9b994 4px calc(100% - 4px), var(--ether) 0); box-shadow: 0 0 4px rgba(108, 212, 255, .5); }
 .tw .needle { background: linear-gradient(90deg, #a8811f, #f0cf7a 50%, #a8811f); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
 .tw .ball { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff1c4 0 15%, #f0cf7a 35%, #a8811f 80%, #6b5214); }
-.tw .avl { border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 6px 2px rgba(255, 74, 58, .7); animation: twBlink 3s linear infinite; }
+.tw .avl { border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 6px 2px rgba(255, 74, 58, .7); }
 .tw .pylon, .tw .radiomast { clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
 .tw .y1 { --lc: #9a7848; }
 .tw .y3 { --lc: #d9b25a; }
