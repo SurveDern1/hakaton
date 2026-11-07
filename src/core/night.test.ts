@@ -196,7 +196,7 @@ describe('стройка', () => {
     expect(s.tiers).toHaveLength(2);
     expect(s.res.pop).toBe(8);
     expect(s.stats.solidarity).toBe(45);
-    expect(s.scars).toContain('stump');
+    expect(s.scars).toContain('tier_stump');
     expect(dropTier(fresh(), data, 0).ok).toBe(false);
   });
 });

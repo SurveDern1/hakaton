@@ -1,6 +1,7 @@
 // Действия игрока днём (ТЗ 3.1 «День», 5.1, 5.2, 6.6): цены списываются сразу.
 // Каждое действие — чистая функция; при отказе состояние не меняется и есть причина для интерфейса.
 
+import { DROPPED_TIER_SCAR } from './choice';
 import { countBuildings } from './state';
 import { cloneState, newTierCost, residentsByTier } from './tower';
 import type { EngineMode, GameData, GameState } from './types';
@@ -104,7 +105,7 @@ export function dropTier(state: GameState, data: GameData, tierIndex: number): A
     const hit = data.balance.tower.dropTier.solidarityPerTierWithPeople;
     s.stats.solidarity = Math.max(0, Math.min(100, s.stats.solidarity + hit));
   }
-  s.scars.push('stump');
+  s.scars.push(DROPPED_TIER_SCAR);
   return { ok: true, state: s };
 }
 
