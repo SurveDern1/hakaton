@@ -1,0 +1,576 @@
+/* Окно утреннего события — по макету design/project/Event.dc.html.
+   1440×900: окно 1080×788 по центру, плакатная половина 380 px. Узко (≤ 760 px): плакат — полоса сверху. */
+
+.ev-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.ev-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 52, 55, 0.72);
+  animation: evFade 200ms ease-out both;
+}
+
+.ev {
+  position: relative;
+  display: flex;
+  width: min(1080px, 100%);
+  height: min(788px, 100%);
+  box-shadow: 18px 18px 0 rgba(0, 0, 0, 0.45);
+  outline: none;
+  animation: evIn 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.ev-layer.is-leaving .ev {
+  animation: evOut 200ms ease-in both;
+}
+.ev-layer.is-leaving .ev-backdrop {
+  animation: evFadeOut 200ms ease-in both;
+}
+
+/* Плакатная половина */
+.ev-poster {
+  position: relative;
+  width: 380px;
+  flex: none;
+  overflow: hidden;
+  background: var(--red);
+}
+.ev-poster.tone-ether {
+  background: var(--ether-deep);
+}
+.ev-poster.tone-ochre {
+  background: var(--ochre-deep);
+}
+.ev-stripe {
+  position: absolute;
+  width: 700px;
+  transform: rotate(-28deg);
+}
+.ev-stripe-a {
+  left: -120px;
+  top: 470px;
+  height: 90px;
+  background: var(--ochre);
+}
+.ev-poster.tone-ochre .ev-stripe-a {
+  background: var(--red);
+}
+.ev-stripe-b {
+  left: -80px;
+  top: 600px;
+  height: 22px;
+  background: var(--paper-ink);
+}
+.ev-emblem {
+  position: absolute;
+  left: 30px;
+  top: 90px;
+  width: 320px;
+  height: 400px;
+}
+.ev-emblem svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ev-date {
+  position: absolute;
+  left: 32px;
+  top: 32px;
+}
+.ev-caption {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* Подпись — плашкой: полосы плаката проходят под ней и не съедают текст. */
+.ev-kicker {
+  align-self: flex-start;
+  padding: 2px 8px;
+  background: var(--paper-ink);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ochre);
+  font-weight: 600;
+}
+.ev-name {
+  font-size: 26px;
+  color: var(--paper);
+}
+.ev-quote {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--paper);
+}
+
+/* Бумага: отчёт о ночи, текст и выбор */
+.ev-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ev-report {
+  background: var(--paper-ink);
+  color: var(--paper);
+  padding: 14px 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  font-size: 15px;
+}
+.ev-report .lbl {
+  color: var(--ochre);
+}
+.ev-main {
+  padding: 30px 36px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+.ev-title {
+  margin: 0;
+  font-size: 46px;
+  line-height: 1.05;
+  color: var(--paper-ink);
+}
+.ev-text {
+  max-width: 60ch;
+  font-size: 19px;
+  line-height: 1.5;
+}
+.ev-text p {
+  margin: 0;
+}
+.ev-text p + p {
+  margin-top: 0.6em;
+}
+
+.ev-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.ev-choice {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 6px 14px;
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 2px solid var(--paper-ink);
+  background: transparent;
+  color: var(--paper-ink);
+  cursor: pointer;
+  font-family: var(--f-ui);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 200ms ease,
+    transform 150ms ease;
+}
+.ev-choice:hover {
+  background: rgba(26, 52, 55, 0.07);
+}
+.ev-choice:active:not([aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+.ev-choice:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+.ev-num {
+  grid-row: span 2;
+  font-size: 22px;
+  color: var(--red);
+}
+.ev-label {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ev-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hint-ico {
+  display: inline-flex;
+}
+
+/* Закрытый вариант: виден, не выбирается, объясняет почему */
+.ev-choice.is-off {
+  cursor: not-allowed;
+  border-style: dashed;
+  border-color: rgba(26, 52, 55, 0.45);
+  color: #577376;
+}
+.ev-choice.is-off:hover {
+  background: transparent;
+}
+.ev-choice.is-off .ev-num {
+  color: #8aa3a5;
+}
+.ev-choice.is-locked .ev-label {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.ev-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--red-deep);
+}
+
+/* После выбора: выбранная карточка горит, остальные гаснут */
+.ev-choice.is-picked {
+  background: var(--paper-ink);
+  color: var(--paper);
+  cursor: default;
+}
+.ev-choice.is-picked .ev-num {
+  color: var(--ochre);
+}
+.ev-choice.is-picked .hint {
+  background: var(--ink-3);
+  color: var(--paper);
+}
+.ev-choice.is-picked .hint .up {
+  color: var(--good);
+}
+.ev-choice.is-picked .hint .down {
+  color: var(--bad);
+}
+.ev-choice.is-dim {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.ev-legend {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 13px;
+  color: #577376;
+  border-top: 1px solid rgba(26, 52, 55, 0.2);
+  padding-top: 12px;
+}
+.ev-legend b {
+  color: var(--paper-ink);
+}
+
+/* Реплика персонажа у левого края и итог выбора */
+.ev-replies {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(440px, calc(100vw - 48px));
+  pointer-events: none;
+}
+.ev-reply {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+  background: var(--ink-2);
+  border-left: 4px solid var(--red);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.4);
+  animation: evReplyIn 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ev-reply.is-leaving {
+  animation: evReplyOut 200ms ease-in both;
+}
+.ev-reply-face {
+  width: 84px;
+  flex: none;
+  background: var(--red);
+  overflow: hidden;
+}
+.ev-reply-face.tone-ether {
+  background: var(--ether-deep);
+}
+.ev-reply-face.tone-ochre {
+  background: var(--ochre-deep);
+}
+.ev-reply-face svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ev-reply-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px 14px 0;
+}
+.ev-reply.no-who .ev-reply-body {
+  padding-left: 16px;
+}
+.ev-reply-who {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ochre);
+}
+.ev-reply-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--paper);
+}
+.ev-reply-log {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.ev-reply-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Слои реплик и чисел не ловят клики: style.css включает pointer-events всем детям #ui. */
+#ui > .ev-floats,
+#ui > .ev-replies {
+  pointer-events: none;
+}
+
+/* Всплывающие числа над шкалами HUD */
+.ev-floats {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.ev-float {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font-family: var(--f-ui);
+  font-size: 22px;
+  font-weight: 700;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  animation: evFloat 1600ms ease-out both;
+}
+.ev-float.up {
+  color: var(--good);
+}
+.ev-float.down {
+  color: var(--bad);
+}
+.ev-flash {
+  animation: evFlash 1100ms ease-out;
+}
+
+@keyframes evFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes evFadeOut {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes evIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+@keyframes evOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.99);
+  }
+}
+@keyframes evReplyIn {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes evReplyOut {
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+@keyframes evFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 26px);
+  }
+}
+@keyframes evFlash {
+  0%,
+  100% {
+    background: transparent;
+  }
+  20% {
+    background: rgba(246, 149, 80, 0.28);
+  }
+}
+
+/* Узкий экран: окно на весь экран, плакат — полоса сверху, текст прокручивается */
+@media (max-width: 760px) {
+  .ev-layer {
+    padding: 0;
+  }
+  .ev {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    box-shadow: none;
+  }
+  /* Плакат — полоса: дата и подпись идут потоком слева, знак справа; высота по содержимому. */
+  .ev-poster {
+    width: 100%;
+    min-height: 132px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 120px 34px 16px;
+  }
+  .ev-stripe-a {
+    left: -40px;
+    top: auto;
+    bottom: 4px;
+    height: 30px;
+    transform: rotate(-8deg);
+  }
+  .ev-stripe-b {
+    left: -40px;
+    top: auto;
+    bottom: -14px;
+    height: 10px;
+    transform: rotate(-8deg);
+  }
+  .ev-emblem {
+    left: auto;
+    right: 8px;
+    top: 6px;
+    width: 104px;
+    height: 130px;
+  }
+  .ev-date,
+  .ev-caption {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+  }
+  .ev-caption {
+    gap: 4px;
+  }
+  .ev-kicker {
+    font-size: 11px;
+  }
+  .ev-name {
+    font-size: 20px;
+  }
+  .ev-quote {
+    display: none;
+  }
+  .ev-report {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  .ev-main {
+    padding: 18px 16px 20px;
+    gap: 14px;
+  }
+  .ev-title {
+    font-size: 28px;
+  }
+  .ev-text {
+    font-size: 17px;
+  }
+  .ev-choice {
+    grid-template-columns: 26px 1fr;
+    gap: 6px 10px;
+    padding: 12px;
+  }
+  .ev-label {
+    font-size: 18px;
+  }
+  .hint {
+    white-space: normal;
+  }
+  .ev-replies {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none;
+  }
+}
+
+/* Невысокий экран ноутбука: плакат сжимается, знак не налезает на подпись */
+@media (min-width: 761px) and (max-height: 760px) {
+  .ev-emblem {
+    top: 70px;
+    width: 260px;
+    height: 325px;
+    left: 60px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev,
+  .ev-layer.is-leaving .ev,
+  .ev-reply,
+  .ev-reply.is-leaving {
+    animation-name: evFade;
+  }
+  .ev-layer.is-leaving .ev,
+  .ev-reply.is-leaving {
+    animation-name: evFadeOut;
+  }
+  .ev-float {
+    animation-name: evFadeOut;
+    animation-duration: 1600ms;
+    animation-timing-function: steps(1, end);
+  }
+  .ev-choice {
+    transition: none;
+  }
+  .ev-choice:active:not([aria-disabled="true"]) {
+    transform: none;
+  }
+}
