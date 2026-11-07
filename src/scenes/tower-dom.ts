@@ -2,7 +2,15 @@
 // Обновляет только изменившиеся элементы: группа и деталь находятся по ключу, класс, стиль
 // и подпись переписываются, лишь когда отличаются. Анимации CSS при этом не перезапускаются.
 // Появление нового яруса, падение сброшенного и сдвиг Шпиля — Web Animations на группе.
-import { LAYERS, type Layer, MIST_LAYERS, partStyle, type TowerModel } from './tower-model';
+import {
+  LAYERS,
+  type Layer,
+  MIST_LAYERS,
+  partStyle,
+  type SlotRect,
+  TOWER_NAMES,
+  type TowerModel,
+} from './tower-model';
 
 interface PartNode {
   el: HTMLDivElement;
@@ -24,6 +32,11 @@ export const APPEAR_MS = 550;
 export const SHIFT_MS = 500;
 export const FALL_MS = 1100;
 
+/** Клик по месту здания: ярус, слот и сама кнопка (к ней привязывается меню). */
+export type SlotHandler = (tier: number, slot: number, el: HTMLElement) => void;
+
+const TIER_WORDS: Record<string, string> = { root: 'Корень', spire: 'Шпиль' };
+
 export interface ApplyStats {
   created: number;
   updated: number;
@@ -36,6 +49,11 @@ export class TowerDom {
   private groups = new Map<string, GroupNode>();
   private gap = Number.NaN;
   private tilt = Number.NaN;
+  /** Кнопки поверх мест зданий: клик открывает меню стройки (ТЗ 9, «Центр»). */
+  private hitLayer: HTMLDivElement;
+  private hits = new Map<string, HTMLButtonElement>();
+  private onSlot: SlotHandler | null = null;
+  private selected: string | null = null;
 
   constructor(private motion: () => boolean) {
     this.root = document.createElement('div');
@@ -48,6 +66,66 @@ export class TowerDom {
       el.style.cssText = BOX;
       this.root.append(el);
       this.layers.set(l, el);
+    }
+    this.hitLayer = document.createElement('div');
+    this.hitLayer.className = 'tw-hits';
+    this.hitLayer.style.cssText = `${BOX}z-index:1;`;
+    this.layers.get('tower')?.append(this.hitLayer);
+  }
+
+  /** Включить клики по слотам; null — выключить (окно события, ночь). */
+  setSlotHandler(handler: SlotHandler | null): void {
+    this.onSlot = handler;
+    this.hitLayer.classList.toggle('is-off', !handler);
+    for (const b of this.hits.values()) b.disabled = !handler;
+  }
+
+  /** Подсветить выбранный слот рамкой; null — снять. */
+  select(tier: number | null, slot = 0): void {
+    this.selected = tier == null ? null : `${tier}:${slot}`;
+    for (const [k, b] of this.hits) {
+      b.classList.toggle('is-selected', k === this.selected);
+      b.setAttribute('aria-expanded', String(k === this.selected));
+    }
+  }
+
+  /** Кнопка слота — чтобы поставить меню рядом. */
+  slotElement(tier: number, slot: number): HTMLElement | null {
+    return this.hits.get(`${tier}:${slot}`) ?? null;
+  }
+
+  private applyHits(slots: SlotRect[]): void {
+    const keep = new Set<string>();
+    let k = 0;
+    const tierNo = new Map<number, number>();
+    for (const r of slots) {
+      const key = `${r.tier}:${r.slot}`;
+      keep.add(key);
+      let b = this.hits.get(key);
+      if (!b) {
+        b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tw-hit';
+        b.disabled = !this.onSlot;
+        const btn = b;
+        b.addEventListener('click', () => this.onSlot?.(r.tier, Number(btn.dataset.slot), btn));
+        this.hits.set(key, b);
+        this.hitLayer.append(b);
+      }
+      b.dataset.tier = String(r.tier);
+      b.dataset.slot = String(r.slot);
+      if (r.kind === 'tier' && !tierNo.has(r.tier)) tierNo.set(r.tier, ++k);
+      const tierName = TIER_WORDS[r.kind] ?? `Ярус ${tierNo.get(r.tier) ?? ''}`;
+      const what = r.b ? (TOWER_NAMES[r.b] ?? r.b) : 'пусто, построить';
+      b.setAttribute('aria-label', `${tierName}, слот ${r.slot + 1}: ${what}`);
+      b.classList.toggle('is-empty', !r.b);
+      b.classList.toggle('is-selected', key === this.selected);
+      b.style.cssText = `left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;`;
+    }
+    for (const [key, b] of this.hits) {
+      if (keep.has(key)) continue;
+      b.remove();
+      this.hits.delete(key);
     }
   }
 
@@ -151,6 +229,8 @@ export class TowerDom {
         a.onfinish = () => node.el.remove();
       } else node.el.remove();
     }
+
+    this.applyHits(model.slots);
 
     if (model.gapPx !== this.gap) {
       this.gap = model.gapPx;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { APPEAR_MS, TowerDom } from './tower-dom';
+import { APPEAR_MS, type SlotHandler, TowerDom } from './tower-dom';
 import { buildTower, lerpInput, type TowerInput, type TowerModel } from './tower-model';
 
 // Башня по макету renderTower (design/project/Tower.dc.html).
@@ -16,6 +16,8 @@ export interface TowerSource {
 export interface TowerSceneOptions {
   /** Отступы от краёв экрана, которые заняты интерфейсом (верхняя панель и т. п.). */
   insets?: () => { top: number; right: number; bottom: number; left: number };
+  /** Подписи зданий на табличках, как на главном экране макета. */
+  labels?: boolean;
 }
 
 /** Длительность перехода между состояниями — в диапазоне 300–600 мс. */
@@ -48,6 +50,9 @@ export class TowerScene extends Phaser.Scene {
   private unsubscribe?: () => void;
   /** Сэмплы последнего перехода для проверки плавности: window.sedmaya.tower.samples. */
   samples: { t: number; gapPx: number; tilt: number; zoom: number }[] = [];
+  /** Длительность следующих переходов; ночь растягивает её, чтобы Мгла поднималась медленно. */
+  tweenMs = TWEEN_MS;
+  private pendingSlots: SlotHandler | null = null;
 
   constructor(
     private source: TowerSource,
@@ -66,6 +71,7 @@ export class TowerScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(SKY[0][1]);
     this.sky = this.add.graphics();
     this.dom = new TowerDom(() => !this.reduced);
+    this.dom.setSlotHandler(this.pendingSlots);
     const el = this.add.dom(0, 0, this.dom.root).setOrigin(0, 0);
     el.pointerEvents = 'none';
 
@@ -89,7 +95,7 @@ export class TowerScene extends Phaser.Scene {
     this.tween = this.tweens.add({
       targets: frame,
       t: 1,
-      duration: TWEEN_MS,
+      duration: this.tweenMs,
       ease: 'Sine.easeInOut',
       onUpdate: () => {
         this.render(lerpInput(from, target, frame.t), true);
@@ -105,7 +111,7 @@ export class TowerScene extends Phaser.Scene {
 
   private render(input: TowerInput, animate: boolean): void {
     this.shown = input;
-    this.model = buildTower(input);
+    this.model = buildTower(input, { labels: this.options.labels ?? false });
     this.dom.apply(this.model, animate);
     this.fitCamera(!animate);
   }
@@ -166,6 +172,25 @@ export class TowerScene extends Phaser.Scene {
       g.fillGradientStyle(a[1], a[1], b[1], b[1], 1);
       g.fillRect(x, y0 - 1, w, y1 - y0 + 2);
     }
+  }
+
+  /** Клики по слотам башни; null — выключить. Можно вызывать до create(). */
+  setSlotHandler(handler: SlotHandler | null): void {
+    this.pendingSlots = handler;
+    this.dom?.setSlotHandler(handler);
+  }
+
+  selectSlot(tier: number | null, slot = 0): void {
+    this.dom?.select(tier, slot);
+  }
+
+  slotElement(tier: number, slot: number): HTMLElement | null {
+    return this.dom?.slotElement(tier, slot) ?? null;
+  }
+
+  /** Ночь: окна гаснут, башня темнеет (CSS .tw-game.is-night). */
+  setNight(on: boolean): void {
+    this.dom?.root.classList.toggle('is-night', on);
   }
 
   /** Сколько деталей в разметке и последний ход перехода — для отладки из консоли. */

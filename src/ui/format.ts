@@ -1,0 +1,141 @@
+// Общие подписи интерфейса: даты календаря, названия ресурсов и показателей, описание зданий и декретов.
+import type { BuildingDef, DecreeDef, Effects, FactionDelta, GameData } from '../core';
+
+export const RES_NAMES: Record<string, string> = {
+  pop: 'Жители',
+  food: 'Еда',
+  ether: 'Эфир',
+  mat: 'Материалы',
+  trust: 'Доверие',
+  solidarity: 'Солидарность',
+  health: 'Здоровье',
+  order: 'Порядок',
+  altitude: 'Высота',
+  mist: 'Мгла',
+};
+
+/** Родительный падеж для «+7 еды». */
+const GENITIVE: Record<string, string> = {
+  pop: 'жителей',
+  food: 'еды',
+  ether: 'эфира',
+  mat: 'материалов',
+  trust: 'доверия',
+  solidarity: 'солидарности',
+  health: 'здоровья',
+  order: 'порядка',
+  altitude: 'высоты',
+  mist: 'Мглы',
+};
+
+export const FACTION_NAMES: Record<string, string> = {
+  stokers: 'Кочегары',
+  institute: 'Институт',
+  mistborn: 'Туманники',
+  sky: 'Дети Неба',
+};
+
+export const TIER_NAMES = { root: 'Корень', spire: 'Шпиль' } as const;
+
+/** Дата дня игры. */
+export function dayDate(data: GameData, day: number): Date {
+  const date = new Date(`${data.balance.calendar.firstDay}T00:00:00`);
+  date.setDate(date.getDate() + day - 1);
+  return date;
+}
+
+export const fmtDate = (d: Date, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' }) =>
+  d.toLocaleDateString('ru-RU', opts);
+
+export const fmtNum = (n: number) => n.toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+
+/** «+2», «−1», «±0». */
+export const sgn = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${fmtNum(Math.abs(n))}`;
+
+/** «Ярус 2» по номеру среди обычных ярусов, «Корень», «Шпиль». */
+export function tierName(kinds: readonly string[], i: number): string {
+  const kind = kinds[i];
+  if (kind === 'root' || kind === 'spire') return TIER_NAMES[kind];
+  let n = 0;
+  for (let j = 0; j <= i; j++) if (kinds[j] === 'tier') n++;
+  return `Ярус ${n}`;
+}
+
+function effectsText(e: Effects | undefined): string[] {
+  return Object.entries(e ?? {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${sgn(v ?? 0)} ${GENITIVE[k] ?? k}`);
+}
+
+function factionsText(f: FactionDelta | undefined): string[] {
+  return Object.entries(f ?? {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${FACTION_NAMES[k] ?? k} ${sgn(v ?? 0)}`);
+}
+
+/** «+7 еды за ночь · 3 рабочих», «+6 мест жилья». */
+export function buildingText(def: BuildingDef): string {
+  const parts: string[] = [];
+  if (def.housing) parts.push(`+${def.housing} мест жилья`);
+  const per = effectsText(def.perNight);
+  if (per.length) parts.push(`${per.join(', ')} за ночь`);
+  if (def.rootBonus) parts.push(`в Корне +${Math.round(def.rootBonus * 100)} %`);
+  if (def.workers) parts.push(`${def.workers} рабоч.`);
+  return parts.join(' · ');
+}
+
+/** «солидарность +2 · Институт −2 · еды +10 %». */
+export function decreeText(def: DecreeDef): string {
+  const parts = Object.entries(def.perNight ?? {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${(RES_NAMES[k] ?? k).toLowerCase()} ${sgn(v ?? 0)}`);
+  parts.push(...factionsText(def.factions));
+  if (def.catcherFactor && def.catcherFactor !== 1)
+    parts.push(`уловители ${sgn(Math.round((def.catcherFactor - 1) * 100))} %`);
+  if (def.foodFactor && def.foodFactor !== 1)
+    parts.push(`еды едят ${sgn(Math.round((def.foodFactor - 1) * 100))} %`);
+  return parts.join(' · ');
+}
+
+/** «Ночей» в нужной форме: 1 ночь, 2 ночи, 5 ночей. */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}
+
+type Child = Node | string | null | undefined | false;
+
+/** Короткая сборка разметки без шаблонов: атрибуты и дети. */
+export function h<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  attrs: Record<string, string | boolean | undefined> = {},
+  ...children: Child[]
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === false) continue;
+    node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children) if (c) node.append(c);
+  return node;
+}
+
+/** Иконки шапки (как в Main.dc.html): 24×24, обводка. */
+export const ICONS: Record<string, string> = {
+  pop: '<circle cx="12" cy="7" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
+  food: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>',
+  ether: '<path d="M12 2l6 7-6 13-6-13z"/><path d="M6 9h12"/>',
+  mat: '<path d="M3 6h18M3 18h18M6 6l6 12 6-12"/>',
+  altitude: '<path d="M12 20V4M6 10l6-6 6 6"/><path d="M4 21h16"/>',
+  mist: '<path d="M3 9c3-2 6 2 9 0s6-2 9 0M3 14c3-2 6 2 9 0s6-2 9 0M3 19c3-2 6 2 9 0s6-2 9 0"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+};
+
+export function icon(name: string, size = 22, extra = ''): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" ${extra}>${ICONS[name] ?? ''}</svg>`;
+}

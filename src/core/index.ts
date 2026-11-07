@@ -36,6 +36,7 @@ export {
   etherBurn,
   etherNeed,
   factionStance,
+  freeWorkers,
   housingByTier,
   isTierInMist,
   newTierCost,

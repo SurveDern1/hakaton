@@ -1,22 +1,37 @@
 // Точка входа: состояние из core → GameStore → сцена Phaser (башня) и DOM-панели (#ui).
-// ?preset=<имя> показывает башню из набора макета (src/scenes/tower-presets.ts) вместо состояния
-// игры; переключение с плавным переходом — window.sedmaya.tower.preset('bad').
+// Порядок игры: стартовый экран → GameLoop (src/game/loop.ts): утро (отчёт и окна событий) →
+// день (панель, меню стройки по клику на слот) → «Завершить день» → ночь (night.ts) → утро … → финал.
+// Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу.
 import Phaser from 'phaser';
-import { createInitialState, gameData } from './core';
+import { createInitialState, forecastNight, gameData, type NightReport } from './core';
+import { GameLoop } from './game/loop';
+import { loadGame } from './game/save';
 import { GameStore } from './game/store';
 import { TowerScene, type TowerSource } from './scenes/TowerScene';
 import type { TowerInput } from './scenes/tower-model';
 import { towerInputFromState } from './scenes/tower-model';
 import { isPresetName, type PresetName, TOWER_PRESETS } from './scenes/tower-presets';
-import { mountEventWindow } from './ui/event-window';
+import { mountBuildMenu } from './ui/build-menu';
+import { fmtSigned, mountEventWindow } from './ui/event-window';
+import { flashHud, mountStatus } from './ui/feedback';
+import { showFinal } from './ui/final';
+import { h } from './ui/format';
 import { mountHud } from './ui/hud';
+import { playNight } from './ui/night';
+import { mountPanel } from './ui/panel';
+import { mountPaper } from './ui/paper';
+import { mistNote, morningReport, showReportCard } from './ui/report';
+import { showStart } from './ui/start';
 import './scenes/tower.css';
 import './ui/style.css';
+import './ui/game.css';
 
-const store = new GameStore(createInitialState(gameData.balance));
+const data = gameData;
+const store = new GameStore(createInitialState(data.balance));
+const params = new URLSearchParams(location.search);
 
 // Источник картинки башни: состояние игры или выбранный набор из макета
-const presetParam = new URLSearchParams(location.search).get('preset');
+const presetParam = params.get('preset');
 const presetListeners = new Set<(input: TowerInput) => void>();
 let presetInput: TowerInput | null = isPresetName(presetParam) ? TOWER_PRESETS[presetParam] : null;
 const towerSource: TowerSource = presetInput
@@ -27,20 +42,28 @@ const towerSource: TowerSource = presetInput
         return () => presetListeners.delete(listener);
       },
     }
-  : { subscribe: (listener) => store.subscribe((s) => listener(towerInputFromState(s, gameData.balance))) };
+  : { subscribe: (listener) => store.subscribe((s) => listener(towerInputFromState(s, data.balance))) };
 
 function showTower(input: TowerInput): void {
   presetInput = input;
   for (const l of presetListeners) l(input);
 }
 
+const ui = document.getElementById('ui');
+if (!ui) throw new Error('Нет слоя #ui');
+const narrow = () => window.innerWidth < 760;
+
 const towerScene = new TowerScene(towerSource, {
-  insets: () => ({
-    top: document.querySelector('#ui .hud')?.getBoundingClientRect().bottom ?? 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  }),
+  labels: true,
+  insets: () => {
+    const top = document.querySelector('#ui .hud')?.getBoundingClientRect().bottom ?? 0;
+    const panel = document.querySelector<HTMLElement>('#ui .panel');
+    if (!panel || ui.classList.contains('is-bare')) return { top, right: 0, bottom: 0, left: 0 };
+    const r = panel.getBoundingClientRect();
+    return narrow()
+      ? { top, right: 0, bottom: window.innerHeight - r.top, left: 0 }
+      : { top, right: r.width, bottom: 40, left: 0 };
+  },
 });
 
 new Phaser.Game({
@@ -52,30 +75,116 @@ new Phaser.Game({
   scene: [towerScene],
 });
 
-const ui = document.getElementById('ui');
-if (!ui) throw new Error('Нет слоя #ui');
-mountHud(ui, store, gameData.balance.calendar.firstDay);
-const events = mountEventWindow(ui, { store, data: gameData });
+const floats = h('div', { class: 'ev-floats', 'aria-hidden': 'true' });
+const status = mountStatus(ui);
+const flash = (key: string, delta: number) =>
+  flashHud(ui, floats, key, delta, fmtSigned(delta, key as Parameters<typeof fmtSigned>[1]));
 
-// Проверка окна без движка утра: ?event=d02_raft или ?event=d01_first_morning,d02_raft (до двух окон);
+const events = mountEventWindow(ui, { store, data });
+const paper = mountPaper(ui, data);
+
+const loop = new GameLoop(store, data, {
+  async morning(queue, report: NightReport | null) {
+    const strip = report ? morningReport(report, data, store.state.day) : undefined;
+    if (queue.length) await events.showMorning(queue, strip);
+    else if (strip) await showReportCard(ui, strip, mistNote(store.state.altitude, store.state.mist));
+  },
+  night: (_report, commit) => playNight(ui, towerScene, data, store.state.day, commit),
+});
+
+// Меню «гамбургер»: новая игра с подтверждением
+const gameMenu = h('div', { class: 'paper game-menu', role: 'menu', hidden: true });
+function toggleMenu(force?: boolean) {
+  const open = force ?? gameMenu.hidden;
+  gameMenu.hidden = !open;
+  if (!open) return;
+  const restart = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Новая игра');
+  restart.addEventListener('click', () => {
+    if (restart.dataset.sure) {
+      toggleMenu(false);
+      void loop.newGame();
+      return;
+    }
+    restart.dataset.sure = '1';
+    restart.textContent = 'Точно? Текущая партия пропадёт';
+    restart.classList.add('is-danger');
+  });
+  const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
+  close.addEventListener('click', () => toggleMenu(false));
+  gameMenu.replaceChildren(restart, close);
+  restart.focus();
+}
+gameMenu.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') toggleMenu(false);
+});
+
+const hud = mountHud(ui, {
+  store,
+  data,
+  onPaper: () => paper.open(store.state, loop.lastReport, forecastNight(store.state, data)),
+  onMenu: () => toggleMenu(),
+});
+const panel = mountPanel(ui, { store, data, loop, status, flash });
+const menu = mountBuildMenu(ui, {
+  store,
+  data,
+  loop,
+  status,
+  flash,
+  select: (tier, slot) => towerScene.selectSlot(tier, slot),
+});
+ui.append(gameMenu, floats);
+
+towerScene.setSlotHandler((tier, slot, el) => menu.open(tier, slot, el));
+loop.onPhase((phase) => {
+  document.body.dataset.phase = phase;
+  hud.inert = phase !== 'day';
+  if (phase === 'final') {
+    showFinal(ui, store.state, { data, onRestart: () => void loop.newGame() });
+  }
+});
+
+function start() {
+  ui?.classList.add('is-bare');
+  showStart(ui as HTMLElement, {
+    data,
+    saved: loadGame(),
+    onNew: () => {
+      ui?.classList.remove('is-bare');
+      void loop.newGame();
+    },
+    onContinue: (state) => {
+      ui?.classList.remove('is-bare');
+      loop.continueGame(state);
+      status.say(`Продолжаем: день ${state.day}`, 'info');
+    },
+  });
+}
+
+// Проверка окна без цикла: ?event=d02_raft или ?event=d01_first_morning,d02_raft (до двух окон);
 // день — из события (или &day=17), &flags=a,b — с флагами.
-const params = new URLSearchParams(location.search);
 const eventIds = params.get('event')?.split(',').filter(Boolean) ?? [];
-if (eventIds.length) {
-  const eventDay = gameData.events.find((e) => e.id === eventIds[0])?.day;
+if (presetInput) {
+  ui.classList.add('is-bare', 'is-preset');
+} else if (eventIds.length) {
+  const eventDay = data.events.find((e) => e.id === eventIds[0])?.day;
   const day = Number(params.get('day')) || eventDay;
   const flags = params.get('flags')?.split(',').filter(Boolean) ?? [];
   store.dispatch((s) => ({ ...s, day: day || s.day, flags: [...s.flags, ...flags] }));
   void events.showMorning(eventIds);
+} else {
+  start();
 }
 
-// Для отладки из консоли браузера: window.sedmaya.store.state, window.sedmaya.events.show('d02_raft'),
-// window.sedmaya.tower.preset('good')
+// Для отладки из консоли браузера: window.sedmaya.store.state, window.sedmaya.loop.endDay(),
+// window.sedmaya.events.show('d02_raft'), window.sedmaya.tower.preset('good')
 Object.assign(window, {
   sedmaya: {
     store,
-    data: gameData,
+    data,
+    loop,
     events,
+    panel,
     tower: {
       scene: towerScene,
       presets: Object.keys(TOWER_PRESETS),

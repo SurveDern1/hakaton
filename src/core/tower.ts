@@ -123,3 +123,10 @@ export function newTierCost(state: GameState, balance: Balance): number {
 export function cloneState(state: GameState): GameState {
   return structuredClone(state);
 }
+
+/** Свободные руки: жители минус рабочие всех зданий в живых ярусах (не меньше нуля). */
+export function freeWorkers(state: GameState, balance: Balance): number {
+  let busy = 0;
+  for (const st of staffing(state, balance).values()) busy += st.have;
+  return Math.max(0, state.res.pop - busy);
+}

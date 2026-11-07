@@ -110,6 +110,20 @@ export interface TowerModel {
   starMode: 'on' | 'blink' | 'off';
   /** Доля горящих окон от здоровья. */
   lit: number;
+  /** Места зданий для кликов: ярус, слот и прямоугольник в координатах слоя башни. */
+  slots: SlotRect[];
+}
+
+export interface SlotRect {
+  tier: number;
+  slot: number;
+  kind: TierKind;
+  /** Здание в слоте (id из данных) или null. */
+  b: string | null;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export interface Slot {
@@ -228,6 +242,7 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
   const gapPx = r1((A - M) * K);
 
   const groups: Group[] = [];
+  const slotRects: SlotRect[] = [];
   let g: Group = { id: '', layer: 'tower', tier: null, anchorY: 0, parts: [] };
   let counts = new Map<string, number>();
   let seed = 0;
@@ -627,6 +642,16 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     t.slots.forEach((v, j) => {
       const sx = x0 + inner + j * slotW;
       const sl = normalizeSlot(v);
+      slotRects.push({
+        tier: i,
+        slot: j,
+        kind: t.kind,
+        b: sl?.b ?? null,
+        x: r1(sx),
+        y: r1(by),
+        w: r1(slotW),
+        h: r1(bh),
+      });
       building(sl, sx + 3, by, slotW - 6, bh, i);
       if (labels)
         px(
@@ -845,6 +870,7 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     cushionWeak: weak,
     starMode: st.trust >= 60 ? 'on' : st.trust >= 30 ? 'blink' : 'off',
     lit,
+    slots: slotRects,
   };
 }
 
