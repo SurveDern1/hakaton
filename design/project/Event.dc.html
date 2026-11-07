@@ -25,29 +25,20 @@ body{margin:0}
   <div style="position: absolute; inset: 0; background: rgba(26, 52, 55,.55);"></div>
 
   <section role="dialog" aria-labelledby="ev-title" style="position: absolute; left: 180px; top: 56px; width: 1080px; height: 788px; display: flex; box-shadow: 18px 18px 0 rgba(0,0,0,.45);">
-    <!-- Плакатная половина: портрет -->
+    <!-- Плакатная половина: знак события и подпись -->
     <div style="position: relative; width: 380px; flex: none; overflow: hidden; background: var(--red);">
       <div style="position: absolute; left: -120px; top: 470px; width: 700px; height: 90px; background: var(--ochre); transform: rotate(-28deg);"></div>
       <div style="position: absolute; left: -80px; top: 600px; width: 700px; height: 22px; background: var(--paper-ink); transform: rotate(-28deg);"></div>
-      <svg width="320" height="400" viewBox="0 0 300 380" role="img" aria-label="Портрет: девочка с серыми глазами" style="position: absolute; left: 30px; top: 90px;">
-        <circle cx="150" cy="176" r="128" fill="#F69550"></circle>
-        <circle cx="150" cy="176" r="128" fill="none" stroke="#1A3437" stroke-width="6"></circle>
-        <path d="M30 380 C46 286 254 286 270 380 Z" fill="#1A3437"></path>
-        <path d="M112 266 L188 266 L176 312 L150 296 L124 312 Z" fill="#C93C41" stroke="#1A3437" stroke-width="3"></path>
-        <rect x="134" y="228" width="32" height="42" fill="#DECFAC"></rect>
-        <ellipse cx="150" cy="190" rx="54" ry="64" fill="#FBF0D6"></ellipse>
-        <path d="M96 206 C84 116 120 108 150 108 C186 108 220 124 206 214 C202 176 192 154 176 146 L168 168 L156 144 L140 166 L130 146 L116 170 L108 158 C100 172 98 188 96 206 Z" fill="#1A3437"></path>
-        <path d="M118 182 L140 178 M160 178 L182 182" stroke="#1A3437" stroke-width="4" stroke-linecap="round"></path>
-        <circle cx="130" cy="198" r="15" fill="#DBD6CA" opacity=".35"></circle>
-        <circle cx="170" cy="198" r="15" fill="#DBD6CA" opacity=".35"></circle>
-        <ellipse cx="130" cy="198" rx="10" ry="7" fill="#90ADB0"></ellipse>
-        <ellipse cx="170" cy="198" rx="10" ry="7" fill="#90ADB0"></ellipse>
-        <circle cx="132" cy="196" r="2.6" fill="#FBF0D6"></circle>
-        <circle cx="172" cy="196" r="2.6" fill="#FBF0D6"></circle>
-        <path d="M150 204 L146 220 L154 220" fill="none" stroke="#B38C72" stroke-width="2.5" stroke-linejoin="round"></path>
-        <path d="M138 236 Q150 241 162 236" fill="none" stroke="#1A3437" stroke-width="3" stroke-linecap="round"></path>
-        <path d="M20 330 C70 300 110 352 160 322 S250 300 290 330" fill="none" stroke="#DBD6CA" stroke-width="10" stroke-linecap="round" opacity=".75"></path>
-        <path d="M0 360 C60 336 120 380 180 354 S260 342 300 360" fill="none" stroke="#90ADB0" stroke-width="12" stroke-linecap="round" opacity=".85"></path>
+      <!-- Плакатный знак события: плот на гаснущем эфирном баллоне над Мглой, без портрета -->
+      <svg width="320" height="400" viewBox="0 0 300 380" role="img" aria-label="Плот на гаснущем эфирном баллоне над Мглой" style="position: absolute; left: 30px; top: 90px;">
+        <circle cx="150" cy="120" r="84" fill="var(--ether-deep)" stroke="var(--paper-ink)" stroke-width="6"></circle>
+        <path d="M150 36 A84 84 0 0 1 150 204 A40 84 0 0 0 150 36 Z" fill="var(--ether)" opacity=".55"></path>
+        <path d="M66 120 L234 120" stroke="var(--paper-ink)" stroke-width="4"></path>
+        <path d="M100 196 L84 268 M200 196 L216 268 M150 204 L150 268" stroke="var(--paper-ink)" stroke-width="4"></path>
+        <path d="M60 268 L240 268 L226 292 L74 292 Z" fill="var(--paper-ink)"></path>
+        <path d="M84 280 L216 280" stroke="var(--ochre)" stroke-width="3"></path>
+        <path d="M20 318 C70 290 110 340 160 312 S250 292 290 318" fill="none" stroke="var(--mist-light)" stroke-width="10" stroke-linecap="round" opacity=".8"></path>
+        <path d="M0 352 C60 330 120 372 180 348 S260 336 300 352" fill="none" stroke="var(--mist)" stroke-width="12" stroke-linecap="round" opacity=".9"></path>
       </svg>
       <div style="position: absolute; left: 32px; top: 32px; display: flex; flex-direction: column; gap: 6px;">
         <span class="plaque ink">День 2 · 20 октября</span>
