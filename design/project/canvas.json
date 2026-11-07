@@ -1,0 +1,36 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-07T14:30:00Z" },
+  "title": "Седьмая — макеты",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Главный экран · день 2" },
+    "Mobile.dc.html": { "x": 1520, "y": 0, "w": 390, "h": 844, "title": "Главный экран · телефон" },
+    "Style.dc.html": { "x": 1990, "y": 0, "w": 1440, "h": 900, "title": "Стиль-гайд" },
+    "Event.dc.html": { "x": 0, "y": 1280, "w": 1440, "h": 900, "title": "Окно события · Плот из Мглы" },
+    "Paper.dc.html": { "x": 1520, "y": 1280, "w": 1100, "h": 860, "title": "Стенгазета" },
+    "Final.dc.html": { "x": 2700, "y": 1280, "w": 1440, "h": 900, "title": "Финал · Гавань" },
+    "States.dc.html": { "x": 0, "y": 2560, "w": 1440, "h": 980, "title": "Состояния башни" },
+    "Playground.dc.html": { "x": 1520, "y": 2560, "w": 1200, "h": 800, "title": "Башня от показателей", "is_interactive": true },
+    "Tower.dc.html": { "x": 2800, "y": 2560, "w": 360, "h": 560, "title": "Компонент башни" }
+  },
+  "order": [
+    "Main.dc.html",
+    "Mobile.dc.html",
+    "Style.dc.html",
+    "Event.dc.html",
+    "Paper.dc.html",
+    "Final.dc.html",
+    "States.dc.html",
+    "Playground.dc.html",
+    "Tower.dc.html"
+  ],
+  "notes": {
+    "row1": { "x": 0, "y": -260, "text": "Седьмая: день над Мглой", "kind": "title1", "maxW": 3430 },
+    "row2": { "x": 0, "y": 1020, "text": "Событие, стенгазета, финал", "kind": "title1", "maxW": 4140 },
+    "row3": { "x": 0, "y": 2300, "text": "Башня отражает колонию", "kind": "title1", "maxW": 3160 },
+    "towerNote": { "x": 3240, "y": 2560, "w": 320, "text": "Башня рисуется одной функцией renderTower(state) из Tower.dc.html. Она возвращает список деталей с координатами, без DOM. В игре тот же список рисуется на Canvas или в Phaser.", "fill": "orange" }
+  },
+  "designSystems": []
+}

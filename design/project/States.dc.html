@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Состояния башни</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="sd" style="width: 1440px; height: 980px; box-sizing: border-box; padding: 36px 56px; display: flex; flex-direction: column; gap: 24px; background: var(--ink);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span class="plaque">Башня отражает колонию</span>
+      <h1 class="disp" style="margin: 0; font-size: 40px;">Хорошо · Плохо · Шрамы</h1>
+    </div>
+    <p class="serif" style="margin: 0; max-width: 60ch; font-size: 16px; line-height: 1.5; color: var(--muted);">Все три картинки строит одна функция <code style="font-family: var(--f-ui); color: var(--ochre);">renderTower(state)</code> по таблице связей показателей с изображением. Масштаб одинаковый: метры совпадают, видно, как близко Мгла.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; flex: 1; min-height: 0;">
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--ink-2); border-top: 4px solid var(--good);">
+      <div style="display: flex; justify-content: center;"><dc-import name="Tower" preset="good" topm="152" scale="0.82" hint-size="295px,623px"></dc-import></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="disp" style="font-size: 22px; color: var(--good);">Хорошо</span><span class="lbl num">день 12 · 4 яруса</span></div>
+      <div class="num" style="font-size: 14px; color: var(--muted);">Д 84 · С 78 · З 82 · П 74 · эфир 100 % · днище 90 м, Мгла 38 м</div>
+      <div style="font-size: 14px; line-height: 1.45;">Сады на балконах, звезда горит ровно, флаги и транспарант. Патрули с фонарями, гирлянды на ярусах, яркое ядро.</div>
+    </article>
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--ink-2); border-top: 4px solid var(--bad);">
+      <div style="display: flex; justify-content: center;"><dc-import name="Tower" preset="bad" topm="152" scale="0.82" hint-size="295px,623px"></dc-import></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="disp" style="font-size: 22px; color: var(--bad);">Плохо</span><span class="lbl num">день 13 · 4 яруса</span></div>
+      <div class="num" style="font-size: 14px; color: var(--muted);">Д 42 · С 22 · З 26 · П 24 · эфир 30 % · днище 52 м, Мгла 47,5 м</div>
+      <div style="font-size: 14px; line-height: 1.45;">Окна гаснут, серый налёт, дым и костёр, разбитые стёкла. Баррикады между ярусами, ярусы разных цветов. Звезда мигает, ядро тусклое, крен, Мгла у Корня и иней на окнах.</div>
+    </article>
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 16px; background: var(--ink-2); border-top: 4px solid var(--ochre);">
+      <div style="display: flex; justify-content: center;"><dc-import name="Tower" preset="scars" topm="152" scale="0.82" hint-size="295px,623px"></dc-import></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="disp" style="font-size: 22px; color: var(--ochre);">Шрамы</span><span class="lbl num">день 17 · ярус сброшен</span></div>
+      <div class="num" style="font-size: 14px; color: var(--muted);">Д 62 · С 48 · З 58 · П 56 · эфир 70 % · днище 72 м, Мгла 44 м</div>
+      <div style="font-size: 14px; line-height: 1.45;">Колония выправилась, но башня помнит: заплаты на трещинах, обрубок балки на месте сброшенного яруса, оборванные тросы и памятная табличка.</div>
+    </article>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

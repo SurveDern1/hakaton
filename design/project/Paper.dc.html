@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Стенгазета</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="sd" style="position: relative; width: 1100px; height: 860px; overflow: hidden; background: #2a2620;">
+  <div class="paper" style="position: absolute; left: 50px; top: 40px; width: 1000px; height: 780px; box-sizing: border-box; padding: 34px 40px; display: flex; flex-direction: column; gap: 22px; transform: rotate(-.6deg); box-shadow: 10px 12px 0 rgba(0,0,0,.35);">
+    <div style="position: absolute; left: -14px; top: -10px; width: 90px; height: 26px; background: rgba(217,154,43,.55); transform: rotate(-12deg);"></div>
+    <div style="position: absolute; right: -14px; top: -8px; width: 90px; height: 26px; background: rgba(217,154,43,.55); transform: rotate(10deg);"></div>
+
+    <header style="display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 20px; border-bottom: 6px solid var(--paper-ink); padding-bottom: 14px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="lbl">Стенгазета башни «Седьмое ноября» · Бортовой журнал</span>
+        <h1 class="disp" style="margin: 0; font-size: 64px; line-height: 1; color: var(--red);">За высоту!</h1>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+        <span class="plaque ink num">№ 2</span>
+        <span class="num" style="font-size: 16px; font-weight: 500;">20 октября 1967 · пятница</span>
+      </div>
+    </header>
+
+    <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; flex: 1; min-height: 0;">
+      <article style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="plaque">Главное</span>
+        <h2 class="disp" style="margin: 0; font-size: 30px; line-height: 1.1;">С плота подняли всех восьмерых</h2>
+        <p class="serif" style="margin: 0; font-size: 17px; line-height: 1.55;">Утром к Корню подошёл плот на гаснущем баллоне. Совет решил не делить людей на здоровых и больных: по канату подняли всех, и троих с серыми глазами тоже. Туманники говорят, что такого наверху ещё не видели.</p>
+        <blockquote class="serif" style="margin: 0; padding: 12px 18px; background: var(--paper-ink); color: var(--paper); font-size: 19px; font-style: italic; line-height: 1.45;">«Мама говорила, наверху добрые».<span style="display: block; margin-top: 6px; font-family: var(--f-ui); font-style: normal; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ochre);">Ия, 10 лет</span></blockquote>
+        <div style="margin-top: auto; display: flex; gap: 16px; align-items: center; padding: 12px 16px; border: 2px dashed var(--paper-ink);">
+          <span class="disp" style="font-size: 26px; color: var(--red);">8</span>
+          <span style="font-size: 16px; line-height: 1.35;">человек ночуют на лестницах Нижнего яруса. Совет просит заложить жилой модуль: 10 материалов, 6 коек.</span>
+        </div>
+      </article>
+
+      <div style="display: flex; flex-direction: column; gap: 18px; border-left: 2px solid var(--paper-ink); padding-left: 26px;">
+        <article style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;">Председатель сказал правду</h3>
+          <p class="serif" style="margin: 0; font-size: 16px; line-height: 1.5;">Вчера Председатель вышел к людям и сказал, как есть: еды на две недели. На лестнице долго молчали.</p>
+          <p class="serif" style="margin: 0; font-size: 16px; line-height: 1.5; font-style: italic;">«Хоть один наверху не врёт». <span style="font-style: normal; color: #5d5444;">— Марта, старший кочегар</span></p>
+        </article>
+        <article style="display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid rgba(29,26,21,.3);">
+          <h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;">Мгла поднялась на 3,1 метра</h3>
+          <p class="serif num" style="margin: 0; font-size: 16px; line-height: 1.5;">Ночью туман подошёл к отметке 23,1 м. Кочегары держат днище на 60 метрах и сожгли 11 мер эфира.</p>
+        </article>
+        <article style="display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid rgba(29,26,21,.3);">
+          <h3 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;">Склад считает пайки</h3>
+          <p class="serif num" style="margin: 0; font-size: 16px; line-height: 1.5;">На складе 37 мер еды. С новыми жителями уходит 14 в день, ферма даёт 7. Кладовщица просит вторую ферму.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

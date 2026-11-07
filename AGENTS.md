@@ -10,9 +10,13 @@
 | `data/events.json` | Все события: сюжетные `dNN_*`, отложенные `late_*`, пул `pool_*`, кризисы `crisis_*` |
 | `data/endings.json` | Концовки, судьбы персонажей, кристаллы памяти |
 | `tools/check-data.js` | Проверка данных: `node tools/check-data.js` |
+| `design/project/` | Макеты экранов, холст Claude Design «Седьмая — макеты»: `*.dc.html` — артборды, `Tower.dc.html` — функция `renderTower(state)`, `sedmaya.css` — токены и анимации |
 
 Правила:
 - Числа меняются в `data/balance.json`, затем таблицы в ТЗ (раздел 4) приводятся в соответствие.
 - Новый флаг описывается в `STORY-sedmaya.md`, раздел 9.
 - После правки `data/` запускать `node tools/check-data.js`.
 - Код игры появится позже; движок (Canvas или Phaser) ещё не выбран.
+- Макеты опубликованы в https://claude.ai/artifact/Ev5Tb85HnfCwh86g4f8Y3z. После правки файлов в
+  `design/project/` их публикуют туда же, корень публикации — `design/`. Сами по себе `.dc.html`
+  в браузере не открываются: им нужен `support.js` холста.

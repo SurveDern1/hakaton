@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Башня</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tw" style="{{rootStyle}}" role="img" aria-label="{{alt}}">
+<div style="{{innerStyle}}">
+<sc-for list="{{back}}" as="p" hint-placeholder-count="4"><div class="{{p.c}}" style="{{p.s}}">{{p.t}}</div></sc-for>
+<div style="{{tiltStyle}}">
+<sc-for list="{{tower}}" as="p" hint-placeholder-count="12"><div class="{{p.c}}" style="{{p.s}}">{{p.t}}</div></sc-for>
+</div>
+<sc-for list="{{front}}" as="p" hint-placeholder-count="3"><div class="{{p.c}}" style="{{p.s}}">{{p.t}}</div></sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"preset":{"editor":"enum","options":["day2","good","bad","scars","harbor"],"default":"day2"},"scale":{"editor":"float","min":0.3,"max":3,"step":0.05,"default":1},"labels":{"editor":"boolean","default":false},"width":{"editor":"int","min":300,"max":1400,"default":360},"topm":{"editor":"int","min":0,"max":300,"default":0},"sky":{"editor":"boolean","default":true},"state":{"editor":null},"$preview":{"width":360,"height":560}}'>
+/* Башня «Седьмая»: изображение из состояния игры (ТЗ §7.4).
+   renderTower(state, opts) — чистая функция без DOM: возвращает размеры и три слоя
+   деталей {c: классы, s: координаты и стиль, t: подпись}. В игре тот же список
+   рисуется на Canvas/Phaser; классы описаны в sedmaya.css.
+   state = { altitude, mist, ether 0..1, stats {trust, solidarity, health, order},
+             tiers [{kind: root|tier|spire, slots: [...]}], scars {patches, stumpAt, memorial} } */
+var TOWER_PRESETS = {
+  day2: {
+    altitude: 60, mist: 23.1, ether: 0.85,
+    stats: { trust: 68, solidarity: 69, health: 60, order: 54 },
+    tiers: [
+      { kind: 'root', slots: ['core', 'catcher', null] },
+      { kind: 'tier', slots: ['housing', 'housing', 'farm'] },
+      { kind: 'spire', slots: ['council', null, null] }
+    ]
+  },
+  good: {
+    altitude: 90, mist: 38, ether: 1,
+    stats: { trust: 84, solidarity: 78, health: 82, order: 74 },
+    tiers: [
+      { kind: 'root', slots: ['core', 'catcher', 'catcher'] },
+      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
+      { kind: 'tier', slots: ['housing', 'farm', 'guard'] },
+      { kind: 'spire', slots: ['council', 'radio', 'housing'] }
+    ]
+  },
+  bad: {
+    altitude: 52, mist: 47.5, ether: 0.3,
+    stats: { trust: 42, solidarity: 22, health: 26, order: 24 },
+    tiers: [
+      { kind: 'root', slots: ['core', 'catcher', 'scrap'] },
+      { kind: 'tier', slots: ['housing', 'housing', 'farm'] },
+      { kind: 'tier', slots: ['housing', 'scrap', null] },
+      { kind: 'spire', slots: ['council', 'guard', null] }
+    ]
+  },
+  scars: {
+    altitude: 72, mist: 44, ether: 0.7,
+    stats: { trust: 62, solidarity: 48, health: 58, order: 56 },
+    tiers: [
+      { kind: 'root', slots: ['core', 'catcher', 'scrap'] },
+      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
+      { kind: 'tier', slots: ['housing', 'housing', 'guard'] },
+      { kind: 'spire', slots: ['council', 'radio', null] }
+    ],
+    scars: { patches: [[0, 0.62, 0.15], [1, 0.12, 0.3], [1, 0.78, 0.2], [2, 0.45, 0.25]], stumpAt: 1, memorial: true }
+  },
+  harbor: {
+    altitude: 96, mist: 41, ether: 0.95,
+    stats: { trust: 78, solidarity: 74, health: 76, order: 66 },
+    tiers: [
+      { kind: 'root', slots: ['core', 'catcher', 'catcher'] },
+      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
+      { kind: 'tier', slots: ['housing', 'farm', 'housing'] },
+      { kind: 'spire', slots: ['council', 'radio', 'housing'] }
+    ],
+    scars: { patches: [[1, 0.7, 0.25], [2, 0.2, 0.2]], stumpAt: 1, memorial: true }
+  }
+};
+
+var TW_NAMES = { core: 'Ядро', catcher: 'Уловитель', housing: 'Жилой', farm: 'Ферма', council: 'Совет', infirmary: 'Лазарет', guard: 'Стража', scrap: 'Разборка', radio: 'Радио' };
+
+function twHash(i) { var x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); }
+function twClamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function twM(v) { var s = (Math.round(v * 10) / 10).toFixed(1).replace('.', ','); return s.slice(-2) === ',0' ? s.slice(0, -2) : s; }
+
+function renderTower(s, o) {
+  o = o || {};
+  var K = 5, W = o.W || 360, CX = Math.round(W / 2);
+  var tiers = s.tiers, n = tiers.length, A = s.altitude, M = s.mist;
+  var st = s.stats, e = twClamp(s.ether, 0, 1), sc = s.scars || {};
+  var topM = o.topM || (A + 10 * n + 22);
+  var H = Math.round(topM * K);
+  var labels = !!o.labels;
+  var back = [], tower = [], front = [];
+  var WID = { root: 210, tier: 190, spire: 150 };
+  var TINTS = ['#5b3b31', '#2f4b4c', '#5b5131', '#3d3557', '#4b3a2a'];
+  var lit = twClamp((st.health - 15) / 70, 0, 1);
+  var lowOrder = st.order < 35, lowSol = st.solidarity < 35, lowHealth = st.health < 35;
+  var close = (A - M) < 10;
+  var winIdx = 0;
+  function y(m) { return Math.round((topM - m) * K); }
+  function px(L, c, x, yy, w, h, extra, t) {
+    L.push({ c: 'p ' + c, s: 'left:' + Math.round(x) + 'px;top:' + Math.round(yy) + 'px;width:' + Math.round(w) + 'px;height:' + Math.round(h) + 'px;' + (extra || ''), t: t || '' });
+  }
+  var mY = y(M), botY = y(A), topY = y(A + 10 * n);
+  var rootW = WID[tiers[0].kind] || 210;
+
+  function mistLayer(L, i) {
+    var cols = ['rgba(104,110,120,.6)', 'rgba(141,147,155,.7)', 'rgba(178,183,190,.82)'];
+    var c = cols[i], top = mY - 16 + i * 12;
+    px(L, 'mist m' + i, -160, top, W + 320, H - top + 24,
+      'background:radial-gradient(40px 15px at 40px 15px,' + c + ' 96%,transparent 100%) 0 0/80px 15px repeat-x,linear-gradient(' + c + ',' + c + ') 0 14px/100% 100% no-repeat;');
+  }
+  function win(x, yy, w, h, ti) {
+    var k = winIdx++;
+    var cls = 'win' + (twHash(k) < lit ? ' on' : '') + (lowOrder && twHash(k + 97) > 0.58 ? ' broken' : '') + (ti === 0 && close ? ' frost' : '');
+    px(tower, cls, x, yy, w, h);
+  }
+  function windows(x, yy, w, h, cols, rows, ti) {
+    var ww = 6, wh = 7, gx = (w - cols * ww) / (cols + 1), gy = (h - rows * wh) / (rows + 1);
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) win(x + gx + c * (ww + gx), yy + gy + r * (wh + gy), ww, wh, ti);
+  }
+  function building(b, x, yy, w, h, ti) {
+    if (!b) { px(tower, 'slot-empty', x, yy + 4, w, h - 4, '', labels ? '' : '+'); return; }
+    if (b === 'housing') { px(tower, 'b-house', x, yy + 4, w, h - 4); windows(x, yy + 5, w, h - 6, 3, 2, ti); }
+    else if (b === 'farm') {
+      px(tower, 'b-farm', x, yy + 6, w, h - 6);
+      for (var r = 0; r < 3; r++) px(tower, 'farm-row', x + 7, yy + h - 7 - r * 7, w - 14, 3, lowHealth ? 'background:#7a6a48;' : '');
+    }
+    else if (b === 'catcher') {
+      px(tower, 'b-catch', x + 4, yy + 12, w - 8, h - 12);
+      px(tower, 'mast-thin', x + w / 2 - 1, yy + 3, 2, 10);
+      px(tower, 'spark', x + w / 2 - 6, yy - 3, 12, 12, 'opacity:' + (0.25 + 0.75 * e).toFixed(2) + ';');
+    }
+    else if (b === 'core') {
+      var d = Math.min(w, h) - 6, cx = x + w / 2, cy = yy + h / 2 + 2;
+      px(tower, 'core-halo', cx - d, cy - d, d * 2, d * 2, 'opacity:' + (0.15 + 0.85 * e).toFixed(2) + ';');
+      px(tower, 'core-ring', cx - d / 2 - 5, cy - d / 2 - 5, d + 10, d + 10, 'opacity:' + (0.3 + 0.7 * e).toFixed(2) + ';');
+      px(tower, 'core', cx - d / 2, cy - d / 2, d, d, 'opacity:' + (0.35 + 0.65 * e).toFixed(2) + ';');
+    }
+    else if (b === 'council') { px(tower, 'b-council', x, yy + 4, w, h - 4); px(tower, 'council-t', x, yy + 6, w, 9, '', 'СОВЕТ'); windows(x, yy + 15, w, h - 16, 3, 1, ti); }
+    else if (b === 'infirmary') { px(tower, 'b-house', x, yy + 4, w, h - 4); px(tower, 'cross', x + w / 2 - 2, yy + 9, 4, 16); px(tower, 'cross', x + w / 2 - 8, yy + 15, 16, 4); }
+    else if (b === 'guard') { px(tower, 'b-guard', x, yy + 4, w, h - 4); px(tower, 'lamp', x + w / 2 - 4, yy + 8, 8, 8); windows(x, yy + 18, w, h - 19, 2, 1, ti); }
+    else if (b === 'scrap') {
+      px(tower, 'crane', x + 8, yy + 2, 3, h - 2); px(tower, 'crane', x + 8, yy + 4, w - 12, 3);
+      px(tower, 'hook', x + w - 8, yy + 7, 1, 14); px(tower, 'b-pile', x + w * 0.35, yy + h - 13, w * 0.62, 13);
+    }
+    else if (b === 'radio') {
+      px(tower, 'mast-thin', x + w / 2 - 1, yy + 1, 2, h - 1);
+      px(tower, 'ring', x + w / 2 - 8, yy + 4, 16, 16, 'opacity:' + (0.4 + 0.6 * e).toFixed(2) + ';');
+      px(tower, 'ring', x + w / 2 - 13, yy - 1, 26, 26, 'opacity:' + (0.2 + 0.4 * e).toFixed(2) + ';');
+      px(tower, 'b-house', x + 4, yy + h - 14, w - 8, 14);
+    }
+  }
+
+  // Небо: облака и тёплый свет над Мглой
+  [[0.05, 0.08, 96], [0.6, 0.04, 124], [0.74, 0.27, 82], [0.1, 0.4, 70]].forEach(function (c, i) {
+    px(back, 'cloud cl' + (i % 2), c[0] * W, c[1] * H, c[2], c[2] * 0.28);
+  });
+  px(back, 'glow', 0, mY - 130, W, 150, 'background:linear-gradient(180deg,rgba(217,154,43,0),rgba(217,154,43,.2));');
+  mistLayer(back, 0);
+
+  // Лифт, киль, пропеллеры, выхлоп эфира
+  var liftX = CX - rootW / 2 - 14;
+  px(tower, 'cable', liftX, topY, 2, botY - topY);
+  px(tower, 'lift', liftX - 4, botY - 16, 10, 12, '--lift:' + (-(botY - topY - 24)) + 'px;');
+  px(tower, 'exhaust', CX - 50, botY + 6, 100, 74, 'opacity:' + (0.12 + 0.6 * e).toFixed(2) + ';');
+  px(tower, 'keel', CX - 38, botY, 76, 30);
+  [-1, 1].forEach(function (side) {
+    var x = CX + side * 80;
+    px(tower, 'pod', x - 9, botY, 18, 12);
+    px(tower, 'prop', x - 30, botY + 14, 60, 5, 'animation-duration:' + (0.18 / Math.max(e, 0.08)).toFixed(2) + 's;');
+  });
+
+  // Ярусы снизу вверх
+  tiers.forEach(function (t, i) {
+    var w = WID[t.kind] || 190, x0 = CX - w / 2, yt = y(A + 10 * (i + 1)), yb = y(A + 10 * i), h = yb - yt;
+    px(tower, 'tier', x0, yt, w, h, 'background:' + (lowSol ? TINTS[i % TINTS.length] : '#2b3039') + ';');
+    px(tower, 'deck', x0 - 6, yb - 4, w + 12, 6);
+    var slotW = (w - 12) / 3, sh = labels ? h - 17 : h - 9;
+    t.slots.forEach(function (b, j) {
+      var sx = x0 + 6 + j * slotW;
+      building(b, sx + 2, yt + 4, slotW - 4, sh, i);
+      if (labels) px(tower, 'slab' + (b ? '' : ' empty'), sx, yb - 14, slotW, 10, '', b ? TW_NAMES[b] : '+ слот');
+    });
+    // Сады на балконах (здоровье)
+    if (st.health >= 70 && t.kind !== 'spire') {
+      px(tower, 'bush', x0 - 7, yb - 14, 11, 11); px(tower, 'bush', x0 + w - 4, yb - 12, 10, 9);
+    } else if (lowHealth && t.kind !== 'spire') {
+      px(tower, 'bush dry', x0 - 7, yb - 9, 9, 6);
+    }
+    // Патрули с фонарями (порядок)
+    if (st.order >= 70) {
+      px(tower, 'lantern', x0 + 3, yb + 2, 5, 7); px(tower, 'lantern', x0 + w - 8, yb + 2, 5, 7);
+      px(tower, 'figure', x0 - 3, yb - 13, 4, 9);
+    }
+    // Флажки-гирлянды (солидарность)
+    if (st.solidarity >= 70 && t.kind !== 'spire') {
+      for (var k = 0; k < Math.floor((w - 8) / 13); k++) px(tower, 'pennant ' + (k % 2 ? 'o' : 'r'), x0 + 5 + k * 13, yt + 1, 8, 8);
+    }
+    // Крыша Шпиля, мачта и звезда (доверие)
+    if (t.kind === 'spire') {
+      var rh = 24, ry = yt - rh, my = ry - 34;
+      px(tower, 'roof', x0, ry, w, rh);
+      px(tower, 'mast', CX - 2, my, 4, 34);
+      var mode = st.trust >= 60 ? 'on' : st.trust >= 30 ? 'blink' : 'off';
+      px(tower, 'star-halo ' + (mode === 'off' ? 'off' : mode === 'blink' ? 'blink' : ''), CX - 27, my - 38, 54, 54);
+      px(tower, 'star ' + (mode === 'off' ? 'off' : mode === 'blink' ? 'blink' : ''), CX - 14, my - 25, 28, 28);
+      if (st.trust >= 70) {
+        [x0 + 2, x0 + w - 4].forEach(function (fx) { px(tower, 'pole', fx, yt - 30, 2, 30); px(tower, 'flag', fx + 2, yt - 30, 18, 11); });
+      }
+    }
+  });
+
+  // Баррикады между ярусами (солидарность)
+  if (lowSol) {
+    for (var i = 1; i < n; i++) {
+      var jy = y(A + 10 * i), jw = WID[tiers[i].kind] || 190;
+      [CX - jw / 2 + 8, CX + jw / 2 - 32].forEach(function (bx) {
+        px(tower, 'plank', bx, jy - 10, 24, 3, 'transform:rotate(28deg);');
+        px(tower, 'plank', bx, jy - 10, 24, 3, 'transform:rotate(-28deg);');
+      });
+    }
+  }
+  // Транспарант (доверие)
+  if (n > 2 && (st.trust >= 70 || st.trust < 35)) {
+    var bw = WID[tiers[1].kind] || 190;
+    if (st.trust >= 70) px(tower, 'banner', CX + bw / 2 - 1, y(A + 20) + 3, 14, 74, '', 'ВСЕ НА ВЫСОТУ');
+    else px(tower, 'banner torn', CX + bw / 2 - 1, y(A + 20) + 3, 14, 48, '', 'ВСЕ НА');
+  }
+  // Дым, разбитые стёкла и костёр (порядок)
+  if (lowOrder) {
+    var t1 = Math.min(1, n - 1), w1 = WID[tiers[t1].kind] || 190;
+    [[CX + w1 / 2 - 26, y(A + 10 * (t1 + 1)) - 10], [CX - rootW / 2 + 10, y(A + 10) - 10]].forEach(function (p) {
+      for (var s2 = 0; s2 < 3; s2++) px(front, 'smoke s' + s2, p[0], p[1], 18, 18);
+    });
+    px(tower, 'fire', CX - w1 / 2 - 4, y(A + 10 * t1) - 9, 8, 6);
+  }
+  // Серый налёт (здоровье)
+  if (lowHealth) px(tower, 'film', CX - rootW / 2 - 6, topY - 24, rootW + 12, botY - topY + 24);
+
+  // Шрамы: трещины с заплатами, обрубок балки, мемориал
+  (sc.patches || []).forEach(function (pt) {
+    var ti = pt[0], tw2 = WID[tiers[ti].kind] || 190, tx = CX - tw2 / 2 + pt[1] * tw2, ty = y(A + 10 * (ti + 1)) + pt[2] * 50;
+    px(tower, 'crack', tx - 4, ty - 6, 1, 24);
+    px(tower, 'patch', tx - 7, ty, 15, 10);
+  });
+  if (sc.stumpAt != null) {
+    var sj = sc.stumpAt, sw = WID[tiers[sj].kind] || 190, sy = y(A + 10 * (sj + 1));
+    px(tower, 'stump', CX + sw / 2 - 6, sy - 6, 56, 10);
+    px(tower, 'cable-hang', CX + sw / 2 + 40, sy + 3, 1, 26);
+    px(tower, 'cable-hang', CX + sw / 2 + 22, sy + 3, 1, 16, 'transform:rotate(-8deg);');
+    if (sc.memorial) {
+      px(tower, 'memorial', CX - sw / 2 - 2, sy - 18, 14, 12);
+      px(tower, 'star', CX - sw / 2 + 1, sy - 17, 8, 8, 'background:#c62a1f;');
+    }
+  }
+
+  // Мгла спереди и клубы у Корня
+  mistLayer(front, 1);
+  mistLayer(front, 2);
+  px(front, 'underglow', 0, mY + 20, W, H - mY);
+  if (close) {
+    px(front, 'wisp', CX - 150, botY - 44, 300, 86);
+    px(front, 'wisp', CX - 100, botY - 74, 170, 64, 'animation-duration:8s;');
+  }
+
+  // Подписи: высоты, ярусы, уровень Мглы
+  if (labels) {
+    for (var m = Math.ceil(M / 10) * 10; m <= A + 10 * n; m += 10) {
+      px(front, 'tick', 8, y(m), 10, 1); px(front, 'tick-t', 22, y(m) - 7, 44, 14, '', m + ' м');
+    }
+    tiers.forEach(function (t, i) {
+      var w = WID[t.kind] || 190, nm = t.kind === 'root' ? 'Корень' : t.kind === 'spire' ? 'Шпиль' : (i === 1 ? 'Нижний ярус' : 'Ярус ' + i);
+      px(front, 'tier-name', CX + w / 2 + 20, y(A + 10 * i) - 33, 100, 16, '', nm);
+    });
+    px(front, 'mist-line', 0, mY, W, 1);
+    px(front, 'mist-t', W - 190, mY - 22, 180, 16, '', 'Мгла · ' + twM(M) + ' м');
+  }
+
+  var tilt = e < 0.5 ? +((0.5 - e) * 8).toFixed(1) : 0;
+  return {
+    W: W, H: H, back: back, tower: tower, front: front,
+    tiltStyle: 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;transform:rotate(' + tilt + 'deg);transform-origin:' + CX + 'px ' + botY + 'px;'
+  };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var p = this.props;
+    var s = p.state || TOWER_PRESETS[p.preset || 'day2'] || TOWER_PRESETS.day2;
+    var sc = parseFloat(p.scale) || 1;
+    var W = parseInt(p.width, 10) || 360;
+    var topM = parseInt(p.topm, 10) || 0;
+    var labels = p.labels === true || p.labels === 'true';
+    var sky = !(p.sky === false || p.sky === 'false');
+    var r = renderTower(s, { W: W, topM: topM || undefined, labels: labels });
+    return {
+      back: r.back, tower: r.tower, front: r.front, tiltStyle: r.tiltStyle,
+      alt: 'Башня: ' + s.tiers.length + ' яруса, днище ' + s.altitude + ' м, Мгла ' + twM(s.mist) + ' м',
+      rootStyle: 'width:' + Math.round(r.W * sc) + 'px;height:' + Math.round(r.H * sc) + 'px;',
+      innerStyle: 'position:absolute;left:0;top:0;width:' + r.W + 'px;height:' + r.H + 'px;transform:scale(' + sc + ');transform-origin:0 0;' +
+        (sky ? 'background:linear-gradient(180deg,#172133 0%,#26354b 48%,#4b4b52 78%,#7d7f86 100%);' : '')
+    };
+  }
+}
+</script>
+</body>
+</html>

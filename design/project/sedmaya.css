@@ -1,0 +1,194 @@
+/* «Седьмая»: токены и общие детали макетов.
+   Конструктивизм и плакат 60-х: красный, охра, чёрный, голубой эфир, серая Мгла.
+   Одна тёмная тема: игра идёт над Мглой, бумага — только у плакатов и газеты. */
+:root {
+  --ink: #121419;
+  --ink-2: #1a1e26;
+  --ink-3: #262b35;
+  --line: #3a404c;
+  --paper: #ece0c4;
+  --paper-2: #d9c9a3;
+  --paper-ink: #1d1a15;
+  --red: #c62a1f;
+  --red-hi: #dc3a2b;
+  --red-deep: #8e1c15;
+  --ochre: #d99a2b;
+  --ochre-deep: #a8711a;
+  --ether: #6cd4ff;
+  --ether-deep: #2b86b8;
+  --mist: #8d939b;
+  --mist-light: #c3c7cc;
+  --text: #efe6d2;
+  --muted: #a7a9b0;
+  --good: #7cc47f;
+  --warn: #e0a53a;
+  --bad: #ef6a55;
+  --f-display: 'Rubik Mono One', 'Arial Black', Impact, sans-serif;
+  --f-ui: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --f-text: 'PT Serif', Georgia, 'Times New Roman', serif;
+  color-scheme: dark;
+}
+
+.sd { font-family: var(--f-ui); color: var(--text); background: var(--ink); }
+.disp { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+.lbl { font-family: var(--f-ui); font-weight: 500; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+.serif { font-family: var(--f-text); }
+
+/* Кнопки: косой параллелограмм */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 0 30px; border: 0; cursor: pointer; text-decoration: none;
+  background: var(--red); color: var(--paper);
+  font-family: var(--f-ui); font-weight: 600; font-size: 18px; letter-spacing: .1em; text-transform: uppercase;
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+}
+.btn:hover { background: var(--red-hi); }
+.btn:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--paper); }
+.btn.ochre { background: var(--ochre); color: var(--paper-ink); }
+.btn.ochre:hover { background: #e8ab3c; }
+.btn.ink { background: var(--ink-3); color: var(--text); }
+.btn.ink:hover { background: #313744; }
+.btn.small { min-height: 36px; padding: 0 18px; font-size: 14px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.btn[disabled] { background: var(--ink-3); color: #7d808a; cursor: not-allowed; }
+
+.ibtn {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; border-radius: 2px;
+}
+.ibtn:hover { background: var(--ink-3); }
+.ibtn:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+
+/* Косая плашка */
+.plaque {
+  display: inline-block; padding: 4px 16px; background: var(--red); color: var(--paper);
+  font-family: var(--f-ui); font-weight: 600; font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.plaque.ochre { background: var(--ochre); color: var(--paper-ink); }
+.plaque.ink { background: var(--paper-ink); color: var(--paper); }
+.plaque.ether { background: var(--ether-deep); color: #f2fbff; }
+
+/* Подсказки до выбора: стрелки и значки */
+.hint {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 2px;
+  background: rgba(29, 26, 21, .08); color: var(--paper-ink);
+  font-family: var(--f-ui); font-size: 14px; font-weight: 500; white-space: nowrap;
+}
+.hint .up { color: #2f7d3a; font-weight: 700; letter-spacing: -.08em; }
+.hint .down { color: #b3271d; font-weight: 700; letter-spacing: -.08em; }
+.hint.memory { background: var(--paper-ink); color: var(--paper); }
+.hint.dark { background: var(--ink-3); color: var(--text); }
+.hint.dark .up { color: var(--good); }
+.hint.dark .down { color: var(--bad); }
+
+/* Шкала показателя: 20 делений */
+.scale { position: relative; height: 12px; background: var(--ink-3); }
+.scale-fill { position: absolute; left: 0; top: 0; bottom: 0;
+  background: repeating-linear-gradient(90deg, currentColor 0 calc(5% - 2px), transparent calc(5% - 2px) 5%); }
+.scale-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--red); }
+
+/* Отрывной календарь */
+.leaf { position: relative; background: var(--paper); color: var(--paper-ink); text-align: center;
+  clip-path: polygon(0 0, 100% 0, 100% 92%, 90% 100%, 80% 93%, 70% 100%, 60% 93%, 50% 100%, 40% 93%, 30% 100%, 20% 93%, 10% 100%, 0 92%); }
+.leaf-top { background: var(--red); color: var(--paper); font-family: var(--f-ui); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+
+/* Бумага */
+.paper { background: var(--paper); color: var(--paper-ink); }
+.paper .lbl { color: #5d5444; }
+
+/* ---------- Башня (renderTower) ---------- */
+.tw { position: relative; overflow: hidden; }
+.tw .p { position: absolute; box-sizing: border-box; }
+.tw .cloud { background: rgba(236, 224, 196, .09); border-radius: 999px; animation: twCloud 40s ease-in-out infinite alternate; }
+.tw .cl1 { animation-duration: 56s; background: rgba(236, 224, 196, .06); }
+.tw .mist { animation: twDrift 12s linear infinite, twBreath 7s ease-in-out infinite; }
+.tw .m1 { animation-duration: 18s, 9s; }
+.tw .m2 { animation-duration: 27s, 11s; }
+.tw .underglow { background: linear-gradient(180deg, rgba(108, 212, 255, 0), rgba(160, 205, 220, .22)); }
+.tw .cable { background: rgba(236, 224, 196, .35); }
+.tw .lift { background: var(--ochre); animation: twLift 16s ease-in-out infinite; }
+.tw .exhaust { background: radial-gradient(50% 50% at 50% 30%, rgba(108, 212, 255, .7), rgba(108, 212, 255, 0)); }
+.tw .keel { background: #1b1f27; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.tw .pod { background: #1b1f27; border-radius: 3px; }
+.tw .prop { background: var(--ochre); border-radius: 50%; animation: twSpin .2s linear infinite; }
+.tw .tier { border-top: 3px solid var(--red); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3); }
+.tw .deck { background: var(--ochre-deep); }
+.tw .slab { font: 500 8px/10px var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--paper); text-align: center; white-space: nowrap; overflow: hidden; }
+.tw .slab.empty { color: var(--ochre); }
+.tw .slot-empty { border: 1px dashed rgba(236, 224, 196, .45); color: rgba(236, 224, 196, .7); font: 400 16px/1 var(--f-ui); display: flex; align-items: center; justify-content: center; }
+.tw .b-house { background: #b7a886; }
+.tw .win { background: #262a33; }
+.tw .win.on { background: #ffd36b; box-shadow: 0 0 4px rgba(255, 211, 107, .6); }
+.tw .win.broken { background: linear-gradient(135deg, #262a33 42%, #c3c7cc 45%, #262a33 49%, #262a33 60%, #c3c7cc 63%, #262a33 66%); box-shadow: none; }
+.tw .win.frost { outline: 1px solid rgba(220, 238, 248, .85); }
+.tw .b-farm { background: rgba(124, 196, 127, .35); border: 1px solid #9fd3a6; border-radius: 50% 50% 2px 2px / 80% 80% 2px 2px; }
+.tw .farm-row { background: #6fae5a; }
+.tw .b-catch { background: var(--ochre); clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%); }
+.tw .mast-thin { background: #c9b994; }
+.tw .spark { border-radius: 50%; background: radial-gradient(circle, #e8fbff 0 25%, var(--ether) 45%, rgba(108, 212, 255, 0) 72%); animation: twPulse 2.4s ease-in-out infinite; }
+.tw .core { border-radius: 50%; background: radial-gradient(circle at 40% 38%, #f2fdff 0 12%, var(--ether) 40%, var(--ether-deep) 76%, #10283a 100%); }
+.tw .core-halo { border-radius: 50%; background: radial-gradient(circle, rgba(108, 212, 255, .6), rgba(108, 212, 255, 0) 70%); animation: twPulse 3s ease-in-out infinite; }
+.tw .core-ring { border-radius: 50%; border: 1.5px solid rgba(108, 212, 255, .7); }
+.tw .b-council { background: var(--red); }
+.tw .council-t { font: 600 7px/9px var(--f-ui); letter-spacing: .2em; color: var(--paper); text-align: center; }
+.tw .cross { background: var(--red); }
+.tw .b-guard { background: #4b505b; }
+.tw .lamp { border-radius: 50%; background: #ffd36b; box-shadow: 0 0 8px 2px rgba(255, 211, 107, .6); }
+.tw .crane { background: var(--ochre); }
+.tw .hook { background: #c9b994; }
+.tw .b-pile { background: #6b6250; clip-path: polygon(0 100%, 20% 30%, 45% 50%, 70% 0, 100% 100%); }
+.tw .ring { border: 1.5px solid var(--ether); border-radius: 50%; }
+.tw .roof { background: var(--red); clip-path: polygon(0 100%, 28% 0, 72% 0, 100% 100%); }
+.tw .mast { background: #c9b994; }
+.tw .star { background: #ff3b2b; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.tw .star.off { background: #4a2a26; }
+.tw .star-halo { border-radius: 50%; background: radial-gradient(circle, rgba(255, 80, 50, .6), rgba(255, 80, 50, 0) 65%); }
+.tw .star-halo.off { display: none; }
+.tw .blink { animation: twBlink 2.4s linear infinite; }
+.tw .pole { background: #c9b994; }
+.tw .flag { background: var(--red); clip-path: polygon(0 0, 100% 12%, 84% 50%, 100% 88%, 0 100%); transform-origin: 0 50%; animation: twFlag 1.8s ease-in-out infinite; }
+.tw .bush { background: #6fae5a; border-radius: 50% 50% 40% 40%; }
+.tw .bush.dry { background: #7a6a48; }
+.tw .lantern { background: #ffd36b; border-radius: 1px; box-shadow: 0 0 7px 2px rgba(255, 211, 107, .55); }
+.tw .figure { background: #11141a; border-radius: 2px 2px 0 0; }
+.tw .smoke { border-radius: 50%; background: rgba(70, 74, 82, .8); animation: twRise 4s ease-out infinite; }
+.tw .s1 { animation-delay: 1.3s; }
+.tw .s2 { animation-delay: 2.6s; }
+.tw .fire { border-radius: 50% 50% 20% 20%; background: #ff8a2b; box-shadow: 0 0 10px 4px rgba(255, 138, 43, .5); animation: twPulse .8s ease-in-out infinite; }
+.tw .pennant { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.tw .pennant.r { background: var(--red); }
+.tw .pennant.o { background: var(--ochre); }
+.tw .plank { background: #8a6a3c; }
+.tw .banner { background: var(--red); color: var(--paper); font: 600 8px/14px var(--f-ui); letter-spacing: .2em; writing-mode: vertical-rl; text-align: center; overflow: hidden; white-space: nowrap; }
+.tw .banner.torn { background: #7c2a22; color: rgba(236, 224, 196, .7); clip-path: polygon(0 0, 100% 0, 100% 58%, 70% 70%, 88% 84%, 40% 100%, 30% 80%, 0 92%); }
+.tw .film { background: rgba(160, 165, 172, .3); }
+.tw .wisp { border-radius: 50%; background: radial-gradient(closest-side, rgba(178, 183, 190, .8), rgba(178, 183, 190, 0)); animation: twBreath 6s ease-in-out infinite; }
+.tw .patch { background: #8c7d60; border: 1px dashed #2b261e; transform: rotate(-7deg); }
+.tw .crack { background: #0d1015; transform: rotate(55deg); }
+.tw .stump { background: #4a4f59; border-top: 2px solid var(--red-deep); clip-path: polygon(0 0, 100% 0, 86% 40%, 100% 62%, 82% 100%, 0 100%); }
+.tw .cable-hang { background: rgba(236, 224, 196, .5); transform: rotate(12deg); transform-origin: top; }
+.tw .memorial { background: var(--paper); }
+.tw .tick { background: rgba(236, 224, 196, .45); }
+.tw .tick-t { font: 500 10px/14px var(--f-ui); color: rgba(236, 224, 196, .78); font-variant-numeric: tabular-nums; }
+.tw .tier-name { font: 600 10px/16px var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--paper); white-space: nowrap; }
+.tw .mist-line { border-top: 1px dashed rgba(236, 224, 196, .65); }
+.tw .mist-t { font: 600 10px/16px var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--paper); text-align: right; white-space: nowrap; }
+
+@keyframes twDrift { to { transform: translateX(80px); } }
+@keyframes twBreath { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+@keyframes twSpin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.06); } }
+@keyframes twPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes twBlink { 0%, 46% { opacity: 1; } 50%, 68% { opacity: .12; } 72%, 100% { opacity: 1; } }
+@keyframes twRise { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 15% { opacity: .85; } 100% { transform: translate(18px, -70px) scale(1.8); opacity: 0; } }
+@keyframes twCloud { to { transform: translateX(36px); } }
+@keyframes twLift { 0%, 12% { transform: translateY(0); } 50%, 62% { transform: translateY(var(--lift)); } 100% { transform: translateY(0); } }
+@keyframes twFlag { 0%, 100% { transform: scaleX(1) skewY(0); } 50% { transform: scaleX(.86) skewY(-6deg); } }
+@keyframes uiPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 154, 43, .7); } 50% { box-shadow: 0 0 0 6px rgba(217, 154, 43, 0); } }
+.pulse { animation: uiPulse 1.8s ease-out infinite; }
+
+/* Без движения: состояния остаются, анимации нет */
+@media (prefers-reduced-motion: reduce) {
+  .tw .p, .pulse { animation: none !important; }
+  .tw .blink { opacity: .45; }
+}

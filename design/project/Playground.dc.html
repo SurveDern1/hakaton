@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Башня от показателей</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>
+body{margin:0}
+input[type=range]{width:100%;accent-color:var(--red);height:28px}
+input[type=range]:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+</style>
+</helmet>
+<div class="sd" style="width: 1200px; height: 800px; box-sizing: border-box; display: flex; background: var(--ink);">
+  <div style="width: 560px; flex: none; box-sizing: border-box; padding: 40px 44px; display: flex; flex-direction: column; gap: 20px;">
+    <span class="plaque ochre" style="align-self: flex-start;">Проверка связей</span>
+    <h1 class="disp" style="margin: 0; font-size: 34px;">Башня от показателей</h1>
+    <p class="serif" style="margin: 0; font-size: 16px; line-height: 1.5; color: var(--muted);">Двигайте шкалы: башня перерисуется той же функцией, что и в игре. Пороги: ниже 35 появляются беды, от 70 — награды.</p>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button class="btn small" type="button" onClick="{{toGood}}">Хорошо</button>
+      <button class="btn ink small" type="button" onClick="{{toDay2}}">День 2</button>
+      <button class="btn ink small" type="button" onClick="{{toBad}}">Плохо</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <sc-for list="{{params}}" as="p" hint-placeholder-count="6">
+        <div style="display: grid; grid-template-columns: 170px 1fr 52px; align-items: center; gap: 14px;">
+          <label for="{{p.id}}" style="font-size: 15px;">{{p.label}}</label>
+          <input id="{{p.id}}" type="range" min="{{p.min}}" max="{{p.max}}" value="{{p.val}}" onChange="{{p.set}}">
+          <span class="num" style="font-size: 16px; font-weight: 600; text-align: right;">{{p.shown}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div role="status" style="margin-top: auto; padding: 12px 14px; border: 1px solid var(--line); font-size: 14px; line-height: 1.5; color: var(--text);">{{summary}}</div>
+  </div>
+  <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #172133;">
+    <dc-import name="Tower" state="{{tower}}" width="560" topm="140" scale="1.1" labels="{{yes}}" hint-size="616px,770px"></dc-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":800}}'>
+var PG_TIERS = [
+  { kind: 'root', slots: ['core', 'catcher', 'scrap'] },
+  { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
+  { kind: 'tier', slots: ['housing', 'housing', 'guard'] },
+  { kind: 'spire', slots: ['council', 'radio', null] }
+];
+var PG_PRESETS = {
+  good: { trust: 84, solidarity: 78, health: 82, order: 74, ether: 100, gap: 40 },
+  day2: { trust: 68, solidarity: 69, health: 60, order: 54, ether: 85, gap: 37 },
+  bad: { trust: 42, solidarity: 22, health: 26, order: 24, ether: 30, gap: 5 }
+};
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = Object.assign({}, PG_PRESETS.day2); }
+  renderVals() {
+    var s = this.state, self = this;
+    function set(key) { return function (ev) { var o = {}; o[key] = Number(ev.target.value); self.setState(o); }; }
+    var defs = [
+      ['trust', 'Доверие', 0, 100, ''], ['solidarity', 'Солидарность', 0, 100, ''],
+      ['health', 'Здоровье', 0, 100, ''], ['order', 'Порядок', 0, 100, ''],
+      ['ether', 'Эфир на ночь', 0, 100, ' %'], ['gap', 'От Мглы до днища', 0, 50, ' м']
+    ];
+    var A = 60;
+    var notes = [];
+    if (s.health >= 70) notes.push('сады'); if (s.health < 35) notes.push('гаснут окна, налёт');
+    if (s.order >= 70) notes.push('патрули'); if (s.order < 35) notes.push('дым и разбитые стёкла');
+    if (s.solidarity >= 70) notes.push('гирлянды'); if (s.solidarity < 35) notes.push('баррикады');
+    if (s.trust >= 70) notes.push('флаги'); if (s.trust < 60 && s.trust >= 30) notes.push('звезда мигает'); if (s.trust < 30) notes.push('звезда погасла');
+    if (s.ether < 50) notes.push('крен и тусклое ядро'); if (s.gap < 10) notes.push('Мгла у Корня');
+    return {
+      yes: true,
+      params: defs.map(function (d) { return { id: 'pg-' + d[0], label: d[1], min: d[2], max: d[3], val: s[d[0]], shown: s[d[0]] + d[4], set: set(d[0]) }; }),
+      toGood: function () { self.setState(Object.assign({}, PG_PRESETS.good)); },
+      toDay2: function () { self.setState(Object.assign({}, PG_PRESETS.day2)); },
+      toBad: function () { self.setState(Object.assign({}, PG_PRESETS.bad)); },
+      summary: notes.length ? 'Видно: ' + notes.join(', ') + '.' : 'Обычная башня: ни бед, ни наград.',
+      tower: {
+        altitude: A, mist: A - s.gap, ether: s.ether / 100,
+        stats: { trust: s.trust, solidarity: s.solidarity, health: s.health, order: s.order },
+        tiers: PG_TIERS
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

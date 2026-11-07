@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Стиль-гайд</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="sd" style="position: relative; width: 1440px; height: 900px; box-sizing: border-box; padding: 44px 56px; display: grid; grid-template-columns: 520px 1fr; gap: 56px; overflow: hidden; background: var(--ink);">
+  <div style="position: absolute; right: -160px; top: -40px; width: 620px; height: 120px; background: var(--red); transform: rotate(-24deg);" aria-hidden="true"></div>
+
+  <!-- Левая колонка: заголовок, шрифты -->
+  <div style="display: flex; flex-direction: column; gap: 26px; position: relative;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span class="plaque">Стиль игры</span>
+      <h1 class="disp" style="margin: 0; font-size: 64px; line-height: .95;">Седьмая</h1>
+      <p class="serif" style="margin: 0; font-size: 17px; line-height: 1.5; color: var(--muted);">Конструктивизм и советская фантастика 60-х. Красный и охра — плакат, чёрный — ночь над башней, голубой — эфир, серый — Мгла. Диагонали и косые плашки вместо скруглений.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 18px; padding-top: 18px; border-top: 1px solid var(--line);">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span class="lbl">Заголовки · Rubik Mono One</span>
+        <span class="disp" style="font-size: 36px;">Плот из Мглы</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span class="lbl">Интерфейс и цифры · Oswald</span>
+        <span style="font-size: 28px; font-weight: 600; letter-spacing: .04em;">ЭФИР 29 · МГЛА 23,1 М · ДЕНЬ 2</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span class="lbl">Тексты событий и газеты · PT Serif</span>
+        <span class="serif" style="font-size: 19px; line-height: 1.5;">Баллон гаснет, места на канате хватит не всем. <i>«Они не злые. Они просто не помнят, где их дом».</i></span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 14px; align-items: flex-end; margin-top: auto;">
+      <div class="leaf" style="width: 96px; height: 94px;">
+        <div class="leaf-top" style="font-size: 10px; padding: 3px 0;">Октябрь · 1967</div>
+        <div class="disp num" style="font-size: 38px; line-height: 46px;">19</div>
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: .08em;">четверг</div>
+      </div>
+      <div class="leaf" style="width: 96px; height: 94px;">
+        <div class="leaf-top" style="font-size: 10px; padding: 3px 0; background: var(--paper-ink);">Ноябрь · 1967</div>
+        <div class="disp num" style="font-size: 38px; line-height: 46px; color: var(--red);">7</div>
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--red);">праздник</div>
+      </div>
+      <span style="font-size: 14px; color: var(--muted); max-width: 22ch;">Отрывной календарь: 20 листков, последний красный</span>
+    </div>
+  </div>
+
+  <!-- Правая колонка: палитра и детали -->
+  <div style="display: flex; flex-direction: column; gap: 28px; position: relative; min-width: 0;">
+    <section style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="lbl">Палитра</span>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: var(--red);"></div><span style="font-size: 14px; font-weight: 600;">Красный</span><span class="num" style="font-size: 12px; color: var(--muted);">#C62A1F · звезда, действие</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: var(--ochre);"></div><span style="font-size: 14px; font-weight: 600;">Охра</span><span class="num" style="font-size: 12px; color: var(--muted);">#D99A2B · палубы, акцент</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: var(--paper);"></div><span style="font-size: 14px; font-weight: 600;">Бумага</span><span class="num" style="font-size: 12px; color: var(--muted);">#ECE0C4 · плакат, газета</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: var(--paper-ink); box-shadow: inset 0 0 0 1px var(--line);"></div><span style="font-size: 14px; font-weight: 600;">Тушь</span><span class="num" style="font-size: 12px; color: var(--muted);">#1D1A15 · текст на бумаге</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line);"></div><span style="font-size: 14px; font-weight: 600;">Ночь</span><span class="num" style="font-size: 12px; color: var(--muted);">#121419 · фон игры</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: radial-gradient(circle at 50% 50%, #f2fdff 0 10%, var(--ether) 40%, var(--ether-deep) 90%);"></div><span style="font-size: 14px; font-weight: 600;">Эфир</span><span class="num" style="font-size: 12px; color: var(--muted);">#6CD4FF · ядро, двигатель</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 92px; background: linear-gradient(180deg, var(--mist-light), var(--mist));"></div><span style="font-size: 14px; font-weight: 600;">Мгла</span><span class="num" style="font-size: 12px; color: var(--muted);">#8D939B · туман внизу</span></div>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">Кнопки</span>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn" type="button">Завершить день</button>
+          <button class="btn ochre" type="button">Ввести</button>
+          <button class="btn ink" type="button">Отмена</button>
+        </div>
+        <span class="lbl" style="margin-top: 8px;">Плашки</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="plaque">Декрет</span><span class="plaque ochre">Ударная смена</span><span class="plaque ink">День 2</span><span class="plaque ether">Двигатель</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">Шкала показателя</span>
+        <div style="display: flex; flex-direction: column; gap: 5px; color: var(--good);">
+          <div style="display: flex; justify-content: space-between; color: var(--text);"><span style="font-size: 15px;">Доверие</span><span class="num" style="font-size: 15px; font-weight: 600;">68</span></div>
+          <div class="scale"><div class="scale-fill" style="width: 68%;"></div><div class="scale-mark" style="left: 25%;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; color: var(--warn);">
+          <div style="display: flex; justify-content: space-between; color: var(--text);"><span style="font-size: 15px;">Порядок</span><span class="num" style="font-size: 15px; font-weight: 600;">41</span></div>
+          <div class="scale"><div class="scale-fill" style="width: 41%;"></div><div class="scale-mark" style="left: 30%;"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; color: var(--bad);">
+          <div style="display: flex; justify-content: space-between; color: var(--text);"><span style="font-size: 15px;">Солидарность</span><span class="num" style="font-size: 15px; font-weight: 600;">22</span></div>
+          <div class="scale"><div class="scale-fill" style="width: 22%;"></div><div class="scale-mark" style="left: 25%;"></div></div>
+        </div>
+        <span style="font-size: 13px; color: var(--muted);">Красная риска — порог беды из ТЗ: 25 или 30</span>
+      </div>
+    </section>
+
+    <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
+      <div class="paper" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+        <span class="lbl">Подсказки до выбора</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="hint">Жители <span class="up">↑</span></span>
+          <span class="hint">Солидарность <span class="up">↑↑</span></span>
+          <span class="hint">Доверие <span class="down">↓↓↓</span></span>
+          <span class="hint">Туманники <span class="up">+</span></span>
+          <span class="hint memory">⧗ это запомнят</span>
+        </div>
+        <span style="font-size: 13px; color: #5d5444;">Игрок видит направление, а не числа: 1–4, 5–14, 15 и больше</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="lbl">Значки фракций</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; background: var(--ink-2);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="color: var(--ochre);"><path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 3-6 1 2 2 3 3 3-1-3 0-6 0-8z"></path></svg><span style="font-size: 13px;">Кочегары</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; background: var(--ink-2);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true" style="color: var(--ether);"><circle cx="12" cy="12" r="2"></circle><ellipse cx="12" cy="12" rx="10" ry="4"></ellipse><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-60 12 12)"></ellipse></svg><span style="font-size: 13px;">Институт</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; background: var(--ink-2);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="color: var(--mist-light);"><path d="M2 12c4-6 16-6 20 0-4 6-16 6-20 0z"></path><circle cx="12" cy="12" r="3"></circle></svg><span style="font-size: 13px;">Туманники</span></div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; background: var(--ink-2);"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="color: var(--paper);"><circle cx="12" cy="14" r="4"></circle><path d="M12 3v4M4 8l3 3M20 8l-3 3M2 20h20"></path></svg><span style="font-size: 13px;">Дети Неба</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+      <span class="lbl">Движение</span>
+      <span style="font-size: 15px; line-height: 1.5; color: var(--text);">Ядро дышит светом, Мгла дрейфует и колышется, пропеллеры крутятся тем быстрее, чем больше эфира, звезда мигает при низком доверии. При настройке «уменьшить движение» анимации выключены, а состояния видны статично.</span>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
