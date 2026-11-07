@@ -29,7 +29,7 @@ const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').ma
 /** Сыграть звук через `delay` секунд. До разблокировки контекста — молча. */
 export function playSfx(e: AudioEngine, name: SfxName, delay = 0): void {
   const ctx = e.ctx;
-  if (!ctx || !e.ready || e.settings.muted) return;
+  if (!ctx || !e.ready || !e.sfxAudible) return;
   const t = ctx.currentTime + 0.01 + delay;
   const out = e.sfxBus;
   const soft = reduced() ? 0.6 : 1;

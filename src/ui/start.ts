@@ -7,6 +7,8 @@ export interface StartOptions {
   saved: GameState | null;
   onNew(): void;
   onContinue(state: GameState): void;
+  /** Окно «Настройки» (src/audio/settings-window.ts); без него кнопки нет. */
+  onSettings?(): void;
 }
 
 export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
@@ -35,6 +37,11 @@ export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
     buttons.push(cont);
   }
   buttons.push(fresh);
+  if (opts.onSettings) {
+    const settings = h('button', { type: 'button', class: 'btn ink start-settings' }, 'Настройки');
+    settings.addEventListener('click', () => opts.onSettings?.());
+    buttons.push(settings);
+  }
 
   const layer = h(
     'div',

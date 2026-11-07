@@ -125,7 +125,7 @@ function toggleMenu(force?: boolean) {
   });
   const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
   close.addEventListener('click', () => toggleMenu(false));
-  gameMenu.replaceChildren(restart, ...sound.menuItems(), close);
+  gameMenu.replaceChildren(restart, ...sound.menuItems(() => toggleMenu(false)), close);
   restart.focus();
 }
 gameMenu.addEventListener('keydown', (e) => {
@@ -177,6 +177,7 @@ function start() {
   showStart(ui as HTMLElement, {
     data,
     saved: loadGame(),
+    onSettings: () => sound.openSettings(),
     onNew: () => void newGameWithIntro(),
     onContinue: (state) => {
       ui?.classList.remove('is-bare');

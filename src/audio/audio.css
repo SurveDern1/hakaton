@@ -53,3 +53,325 @@
     transition: none;
   }
 }
+
+/* ---------- Окно «Настройки» (settings-window.ts) ----------
+   Лист бумаги по центру рамки #app; на телефоне 390 px — почти во всю ширину, высота по содержимому
+   с прокруткой. Все управляющие элементы не ниже 44 px. */
+.st-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.st-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 52, 55, 0.72);
+  animation: stFade 200ms ease-out both;
+}
+.st {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: calc(100cqh - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px 18px;
+  box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.35);
+  outline: none;
+  overscroll-behavior: contain;
+  animation: stIn 220ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.st-layer.is-leaving .st {
+  animation: stOut 200ms ease-in both;
+}
+.st-layer.is-leaving .st-backdrop {
+  animation: stFade 200ms ease-in reverse both;
+}
+@keyframes stFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes stIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) rotate(-0.6deg);
+  }
+}
+@keyframes stOut {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.st-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--red);
+}
+.st-title {
+  margin: 4px 0 0;
+  font-size: 26px;
+  color: var(--paper-ink);
+}
+.st-x {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--paper-ink);
+  background: transparent;
+  color: var(--paper-ink);
+  font: 28px / 1 var(--f-ui);
+  cursor: pointer;
+}
+.st-x:hover,
+.st-x:focus-visible {
+  background: var(--paper-ink);
+  color: var(--paper);
+  outline: none;
+}
+.st-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.st-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(26, 52, 55, 0.25);
+}
+.st-name {
+  font-family: var(--f-ui);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--paper-ink);
+}
+.st-name small,
+.st-note {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #577376;
+}
+.st .is-off {
+  opacity: 0.45;
+}
+
+/* Выключатель: вся строка нажимается, ползунок-рычажок справа */
+.st-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.st-switch-in {
+  position: absolute;
+  right: 0;
+  width: 52px;
+  height: 30px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.st-knob {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  border: 2px solid var(--paper-ink);
+  box-sizing: border-box;
+  background: rgba(26, 52, 55, 0.12);
+  transition: background-color 0.18s ease;
+  pointer-events: none;
+}
+.st-knob::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: var(--paper-ink);
+  transition: transform 0.18s ease;
+}
+.st-switch-in:checked + .st-knob {
+  background: var(--red);
+  border-color: var(--red-deep);
+}
+.st-switch-in:checked + .st-knob::after {
+  transform: translateX(22px);
+  background: var(--paper);
+}
+.st-switch-in:focus-visible + .st-knob {
+  outline: 3px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* Ползунок: дорожка с заливкой до значения (--st-fill), ручка 28 px, высота касания 44 px */
+.st-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.st-val {
+  font-family: var(--f-ui);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--red-deep);
+  min-width: 3.5ch;
+  text-align: right;
+}
+.st-range {
+  --st-track: linear-gradient(
+    to right,
+    var(--red) 0 var(--st-fill, 50%),
+    rgba(26, 52, 55, 0.18) var(--st-fill, 50%) 100%
+  );
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-range:disabled {
+  cursor: not-allowed;
+}
+.st-range::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--st-track);
+}
+.st-range::-moz-range-track {
+  height: 8px;
+  background: var(--st-track);
+}
+.st-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  border: 3px solid var(--paper);
+  background: var(--paper-ink);
+  box-shadow: 0 0 0 2px var(--paper-ink);
+}
+.st-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--paper);
+  border-radius: 0;
+  background: var(--paper-ink);
+  box-shadow: 0 0 0 2px var(--paper-ink);
+}
+.st-range:focus-visible {
+  outline: 3px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* Мелодия: три плашки-радиокнопки */
+.st-melody {
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.st-melody legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+.st-opts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.st-opt {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 2px solid var(--paper-ink);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--paper-ink);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+.st-opt-in {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.st-opt:has(.st-opt-in:checked) {
+  background: var(--paper-ink);
+  color: var(--paper);
+}
+.st-opt:has(.st-opt-in:focus-visible) {
+  outline: 3px solid var(--ochre);
+  outline-offset: 2px;
+}
+.st-melody .st-note {
+  margin-top: 6px;
+}
+
+.st-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.st-saved {
+  font-family: var(--f-ui);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--ether-deep);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.st-saved::before {
+  content: "✓ ";
+}
+.st-saved.is-on {
+  opacity: 1;
+  transition-duration: 0.12s;
+}
+.st-done {
+  min-height: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st,
+  .st-backdrop,
+  .st-layer.is-leaving .st,
+  .st-layer.is-leaving .st-backdrop {
+    animation: none;
+  }
+  .st-knob,
+  .st-knob::after,
+  .st-opt,
+  .st-saved {
+    transition: none;
+  }
+}
