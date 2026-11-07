@@ -133,7 +133,6 @@
 .tw .keel { background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .35) 0 2px, transparent 2px 22px), linear-gradient(180deg, transparent 0 14px, var(--red) 14px 20px, transparent 20px), linear-gradient(180deg, #2b3039, #15181e); clip-path: polygon(0 0, 100% 0, 72% 100%, 28% 100%); }
 .tw .nozzle { background: linear-gradient(90deg, #a8811f, #f0cf7a 45%, #a8811f); clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); }
 .tw .nozzle-glow { border-radius: 50%; background: radial-gradient(closest-side, rgba(232, 251, 255, .9), rgba(108, 212, 255, .6) 45%, rgba(108, 212, 255, 0)); animation: twPulse 2s ease-in-out infinite; }
-.tw .exhaust { background: radial-gradient(50% 50% at 50% 30%, rgba(108, 212, 255, .7), rgba(108, 212, 255, 0)); }
 .tw .strut { background: linear-gradient(90deg, #3b4049, #6b717c 50%, #3b4049); }
 .tw .strut-d { background: #3b4049; }
 .tw .pod { border-radius: 15px; background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(0, 0, 0, .3) 18px 19.5px), linear-gradient(180deg, transparent 0 11px, var(--red) 11px 16px, transparent 16px), linear-gradient(180deg, #8b919c, #4b505b 55%, #2b2f37); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .2); }
@@ -143,7 +142,13 @@
 .tw .hub { background: #23272e; border-radius: 2px; }
 .tw .duct { border-radius: 8px; background: linear-gradient(180deg, #d99a2b 0 4px, rgba(43, 47, 55, .55) 4px calc(100% - 4px), #a8711a calc(100% - 4px)); box-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
 .tw .prop { border-radius: 50%; background: linear-gradient(90deg, rgba(236, 224, 196, .1), rgba(236, 224, 196, .8) 50%, rgba(236, 224, 196, .1)); animation: twSpin .2s linear infinite; }
-.tw .podglow { border-radius: 50%; background: radial-gradient(closest-side, rgba(108, 212, 255, .6), rgba(108, 212, 255, 0)); }
+.tw .cushion { border-radius: 50%; transform-origin: 50% 0; background: radial-gradient(closest-side, rgba(160, 232, 255, .45), rgba(108, 212, 255, .16) 55%, rgba(108, 212, 255, 0)); animation: twCushion 3.2s ease-in-out infinite; }
+.tw .jet { clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); background: repeating-linear-gradient(180deg, rgba(232, 251, 255, .6) 0 9px, rgba(232, 251, 255, 0) 9px 26px), linear-gradient(180deg, rgba(190, 240, 255, .95), rgba(108, 212, 255, .4) 45%, rgba(108, 212, 255, 0)); -webkit-mask-image: linear-gradient(#000 50%, transparent); mask-image: linear-gradient(#000 50%, transparent); animation: twJet .9s linear infinite; }
+.tw .jet.side { clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%); }
+.tw .shock { border-radius: 50%; border: 2px solid rgba(200, 242, 255, .85); box-shadow: 0 0 10px rgba(108, 212, 255, .6), inset 0 0 8px rgba(108, 212, 255, .5); animation: twShock 2.4s ease-out infinite; }
+.tw .motes { background: radial-gradient(circle, rgba(232, 251, 255, .95) 0 1.4px, transparent 2px) 0 0 / 23px 31px, radial-gradient(circle, rgba(108, 212, 255, .9) 0 1px, transparent 1.6px) 11px 15px / 17px 23px; -webkit-mask-image: radial-gradient(closest-side, #000 25%, transparent); mask-image: radial-gradient(closest-side, #000 25%, transparent); animation: twMotes 2.2s linear infinite; }
+.tw .splash { border-radius: 50%; border: 2px solid rgba(210, 244, 255, .75); box-shadow: 0 0 14px rgba(108, 212, 255, .6); animation: twRipple 2.6s ease-out infinite; }
+.tw .splash-glow { border-radius: 50%; background: radial-gradient(closest-side, rgba(160, 232, 255, .6), rgba(160, 232, 255, 0)); }
 .tw .icicles { background: conic-gradient(from -18deg at 50% 100%, rgba(220, 238, 248, .9) 0 36deg, transparent 0) 0 0 / 10px 14px repeat-x, conic-gradient(from -20deg at 50% 100%, rgba(220, 238, 248, .7) 0 40deg, transparent 0) 4px 0 / 13px 9px repeat-x; }
 
 /* Шпиль: ступени крыши, мачта, звезда с гранями, флаги */
@@ -350,6 +355,11 @@
 @keyframes twLift { 0%, 12% { transform: translateY(0); } 50%, 62% { transform: translateY(var(--lift)); } 100% { transform: translateY(0); } }
 @keyframes twFlag { 0%, 100% { transform: scaleX(1) skewY(0); } 50% { transform: scaleX(.86) skewY(-6deg); } }
 @keyframes twWalk { 0%, 100% { translate: 0 0; } 50% { translate: var(--walk, 8px) 0; } }
+@keyframes twCushion { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.05, .9); } }
+@keyframes twJet { to { background-position: 0 26px, 0 0; } }
+@keyframes twShock { 0% { transform: translateY(0) scale(.5); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(var(--fall)) scale(2.6); opacity: 0; } }
+@keyframes twMotes { to { background-position: 0 31px, 11px 38px; } }
+@keyframes twRipple { 0% { transform: scale(.3); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
 @keyframes twFlow { to { background-position: 0 14px; } }
 @keyframes uiPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 154, 43, .7); } 50% { box-shadow: 0 0 0 6px rgba(217, 154, 43, 0); } }
 .pulse { animation: uiPulse 1.8s ease-out infinite; }

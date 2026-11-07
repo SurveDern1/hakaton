@@ -371,10 +371,23 @@ function renderTower(s, o) {
 
   // Двигатели и киль под Корнем: гондолы, кольцевые обтекатели, пропеллеры, сопло эфира
   var spin = 'animation-duration:' + (0.18 / Math.max(e, 0.08)).toFixed(2) + 's;';
-  px(tower, 'exhaust', CX - 90, botY + 60, 180, 190, op(0.12 + 0.6 * e));
+  // Эфирная подушка: мягкая линза света, струи из сопла и гондол с бегущими полосами,
+  // волны давления уходят вниз и расширяются, искры эфира; там, где струя достаёт до Мглы, — рябь.
+  // Яркость и скорость — от эфира: при нехватке подушка тускнеет и замедляется.
+  var reach = Math.max(90, Math.min(mY - botY - 70, 330)), pace = 1 / Math.max(e, 0.3);
+  var dur = function (s) { return 'animation-duration:' + (s * pace).toFixed(2) + 's;'; };
+  px(tower, 'cushion', CX - 270, botY + 30, 540, reach + 60, op(0.15 + 0.6 * e) + dur(3.2));
+  px(tower, 'motes', CX - 130, botY + 72, 260, reach, op(0.1 + 0.8 * e) + dur(2.2));
+  [-1, 1].forEach(function (side) {
+    px(tower, 'jet side', CX + side * 200 - 62, botY + 66, 124, reach * 0.7, op(0.1 + 0.5 * e) + dur(1.1));
+  });
+  px(tower, 'jet', CX - 26, botY + 74, 52, reach, op(0.15 + 0.75 * e) + dur(0.9));
+  if (e > 0.15) for (var k = 0; k < 3; k++) {
+    px(tower, 'shock', CX - 46, botY + 78, 92, 18, '--fall:' + Math.round(reach * 0.75) + 'px;' + dur(2.4) + 'animation-delay:' + (-0.8 * k * pace).toFixed(2) + 's;');
+  }
+  var splash = e > 0.15 && mY - botY - 70 <= 330;
   [-1, 1].forEach(function (side) {
     var ex = CX + side * 200;
-    px(tower, 'podglow', ex - 60, botY + 64, 120, 64, op(0.1 + 0.6 * e));
     line(tower, 'strut-d', CX + side * 96, botY + 6, ex - side * 30, botY + 32, 6);
     px(tower, 'strut', ex - 5, botY, 10, 24);
     px(tower, 'pod', ex - 40, botY + 20, 80, 30);
@@ -536,6 +549,11 @@ function renderTower(s, o) {
   mistLayer(front, 1);
   mistLayer(front, 2);
   px(front, 'underglow', 0, mY + 20 * U, W, H - mY);
+  if (splash) {
+    px(front, 'splash-glow', CX - 230, mY - 40, 460, 80, op(0.3 + 0.6 * e));
+    px(front, 'splash', CX - 170, mY - 22, 340, 44, dur(2.6));
+    px(front, 'splash', CX - 170, mY - 22, 340, 44, dur(2.6) + 'animation-delay:' + (-1.3 * pace).toFixed(2) + 's;');
+  }
   if (close) {
     px(front, 'wisp', CX - 375, botY - 110, 750, 215);
     px(front, 'wisp', CX - 250, botY - 185, 425, 160, 'animation-duration:8s;');
