@@ -325,8 +325,8 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       } else {
         P('cap3', rx - 3, ry - 7, rw + 6, 8);
         if (!noTop) {
-          P('crystal-glow', rx + rw / 2 - 20, ry - 36, 40, 40, op(0.3 + 0.7 * e));
-          P('crystal', rx + rw / 2 - 6, ry - 26, 12, 20);
+          P('crystal-glow', rx + rw / 2 - 16, ry - 30, 32, 32, op(0.3 + 0.7 * e));
+          P('crystal', rx + rw / 2 - 5, ry - 21, 10, 14);
         }
       }
     }
@@ -361,10 +361,10 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       P(`rail r${S}`, 4 + gg.gx * 2 + 18, balY - 6, aw - 2 * gg.gx - 16, 10);
       P(`ladder l${S}`, w - 14, 10, 9, h - 10);
       if (S === 2) {
-        P('pipe', w * 0.72, -6, 8, 18);
-        P('pipecap', w * 0.72 - 2, -9, 12, 4);
-        P('ant', 12, -18, 2, 20);
-        P('laundry', 13, -12, w * 0.72 - 15, 11);
+        P('pipe', w * 0.72, -2, 8, 14);
+        P('pipecap', w * 0.72 - 2, -5, 12, 4);
+        P('ant', 12, -8, 2, 14);
+        P('laundry', 13, -4, w * 0.72 - 15, 11);
       } else if (S === 1) P('laundry', 6, 22, w * 0.5, 11);
     } else if (b === 'farm') {
       const dry = lowHealth ? ' dry' : '';
@@ -393,15 +393,15 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
         L('rope', cx, 22, w * 0.2, h - 30, 1.5);
         L('rope', cx, 22, w * 0.8, h - 30, 1.5);
       }
-      P(`horn h${S}`, cx - 38, -8, 76, 30);
+      P(`horn h${S}`, cx - 38, -2, 76, 26);
       if (S >= 2) {
-        P('ant', cx - 34, -30, 2, 24);
-        P('ant', cx + 32, -26, 2, 20);
-        P('ant-tip', cx - 36, -33, 6, 6);
-        P('ant-tip', cx + 30, -29, 6, 6);
+        P('ant', cx - 34, -6, 2, 20);
+        P('ant', cx + 32, -4, 2, 18);
+        P('ant-tip', cx - 36, -9, 6, 6);
+        P('ant-tip', cx + 30, -7, 6, 6);
       }
       if (S === 3) P('crystal', cx - 6, 10, 12, 20);
-      P('spark', cx - 15, -26, 30, 30, op(0.25 + 0.75 * e));
+      P('spark', cx - 15, -18, 30, 30, op(0.25 + 0.75 * e));
       fig(x + w * 0.1, y + h);
     } else if (b === 'core') {
       const d = Math.min(w - 40, h) - 16;
@@ -436,8 +436,8 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     } else if (b === 'council') {
       shell('#B32E35', 0, 18, w, h - 18, true);
       P(`attic a${S}`, w * 0.14, 3, w * 0.72, 16);
-      P(`emblem e${S}`, w / 2 - 13, -16, 26, 26);
-      P(`star sm${S === 3 ? ' glow' : ''}`, w / 2 - 8, -12, 16, 16);
+      P(`emblem e${S}`, w / 2 - 11, -2, 22, 22);
+      P(`star sm${S === 3 ? ' glow' : ''}`, w / 2 - 7, 2, 14, 14);
       P('council-t', 6, 21, w - 12, 13, '', 'СОВЕТ');
       P('pilasters', 6, 36, w - 12, h - 44);
       grid(6, 36, w - 12, h - 46, 3, 1, 14, 28, (_r, c) => c === 1);
@@ -465,11 +465,11 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       const tx = w - 46;
       shell('#536E71', 0, 26, w, h - 26, true);
       P(`merlons k${S}`, 0, 17, tx - 2, 9);
-      P('beam', tx + 34, -30, 96, 46, op(lowOrder ? 0.12 : 0.6));
-      P(`booth b${S}`, tx, -2, 40, 30);
-      P('booth-cap', tx - 6, -11, 52, 10);
-      P('slit', tx + 6, 6, 28, 5);
-      P(`lamp${S === 3 ? ' ether' : ''}`, tx + 30, -6, 12, 12);
+      P('beam', tx + 34, -22, 96, 46, op(lowOrder ? 0.12 : 0.6));
+      P(`booth b${S}`, tx, 6, 40, 22);
+      P('booth-cap', tx - 6, -2, 52, 10);
+      P('slit', tx + 6, 13, 28, 5);
+      P(`lamp${S === 3 ? ' ether' : ''}`, tx + 30, 2, 12, 12);
       grid(4, 30, w - 8, h - 38, 3, 1, 9, 18, (_r, c) => c === 1);
       P('star sm', w / 2 - 7, 33, 14, 14);
       P(`door d${S}`, w / 2 - 9, h - 30, 18, 30);
@@ -477,7 +477,7 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
         P('sandbags', 2, h - 15, w * 0.32, 15);
         P('sandbags', w * 0.66 - 2, h - 15, w * 0.34, 15);
       } else {
-        P('siren', tx - 14, 3, 14, 10);
+        P('siren', tx - 14, 10, 14, 10);
         P('post', w * 0.64, h - 22, 5, 22);
         P('barrier', w * 0.64 + 2, h - 19, w * 0.32, 5);
       }
@@ -504,15 +504,15 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       // Рубка с окном и тарелкой на крыше, решётчатая мачта на растяжках, волны сигнала
       const hw = Math.round(w * 0.62);
       const mx = w * 0.8;
-      L('wire', mx, -24, 6, h - 44, 1.2);
-      L('wire', mx, -24, w - 2, h - 2, 1.2);
-      P(`radiomast y${S}`, mx - 9, -32, 18, h + 2);
-      P('ring wave', mx - 8, -36, 16, 16, op(0.5 + 0.5 * e));
-      P('ring wave', mx - 15, -43, 30, 30, `${op(0.3 + 0.4 * e)}animation-delay:-.6s;`);
-      P('ring wave', mx - 22, -50, 44, 44, `${op(0.15 + 0.3 * e)}animation-delay:-1.2s;`);
-      P('beacon', mx - 3, -38, 6, 6);
+      L('wire', mx, 8, hw + 2, h - 44, 1.2);
+      L('wire', mx, 8, w - 2, h - 2, 1.2);
+      P(`radiomast y${S}`, mx - 9, 4, 18, h - 4);
+      P('ring wave', mx - 8, 0, 16, 16, op(0.5 + 0.5 * e));
+      P('ring wave', mx - 15, -7, 30, 30, `${op(0.3 + 0.4 * e)}animation-delay:-.8s;`);
+      P('beacon', mx - 3, 2, 6, 6);
       P(`booth b${S}`, mx - 12, h - 18, 24, 18);
-      shell('#6F8E91', 2, h - 44, hw, 44);
+      if (S === 3) P('crystal', mx - 5, h - 33, 10, 14);
+      shell('#6F8E91', 2, h - 44, hw, 44, true);
       win(x + 9, y + h - 34, 18, 15, ti, S);
       P(`door d${S}`, hw - 20, h - 26, 15, 26);
       P('dish-arm', 2 + hw * 0.24, h - 56, 3, 12);
@@ -540,9 +540,9 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       P(
         `scope s${S}`,
         w / 2 - 4,
-        base - 9 - (dh + 12),
+        base - 9 - (dh + 4),
         8,
-        dh + 12,
+        dh + 4,
         'transform:rotate(22deg);transform-origin:50% 100%;',
       );
       grid(4, base + 4, w - 8, h - base - 8, 3, 1, 14, 14);
@@ -612,17 +612,27 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
   // Двигатели и киль под Корнем; эфирная подушка: линза света, струи, волны давления, искры.
   // Яркость и скорость — от эфира: при нехватке подушка тускнеет, замедляется и рвётся.
   open('engine', 'tower');
-  const spin = `animation-duration:${(0.18 / Math.max(e, 0.08)).toFixed(2)}s;`;
   const reach = Math.max(90, Math.min(gapPx - 70, 330));
   const pace = 1 / Math.max(e, 0.3);
   const dur = (sec: number) => `animation-duration:${(sec * pace).toFixed(2)}s;`;
   const weak = e < 0.5;
   px('cushion', -270, 30, 540, reach + 60, op(0.15 + 0.6 * e) + dur(3.2));
   px('motes', -130, 72, 260, reach, op(0.1 + 0.8 * e) + dur(2.2));
-  for (const side of [-1, 1]) {
-    px(`jet side${weak ? ' weak' : ''}`, side * 200 - 62, 66, 124, reach * 0.7, op(0.1 + 0.5 * e) + dur(1.1));
-  }
-  px(`jet${weak ? ' weak' : ''}`, -26, 74, 52, reach, op(0.15 + 0.75 * e) + dur(0.9));
+  // Луч эфира: мягкий конус без жёстких краёв (маска-конус с вершиной над соплом), по нему вниз
+  // идут светлые «узлы» давления, быстрые искры-штрихи, в центре дрожит раскалённое ядро; вокруг ореол.
+  const beam = (bx: number, by: number, bw: number, len: number, top: number, k: number, side: boolean) => {
+    const ta = (bw - top) / 2 / len;
+    const a = (Math.atan(ta) * 180) / Math.PI;
+    const ap = top / 2 / Math.max(ta, 0.01);
+    const cone = `--a:${a.toFixed(1)}deg;--ap:${Math.round(ap)}px;`;
+    const wk = weak ? ' weak' : '';
+    px('jet-halo', bx - bw * 0.9, by - 8, bw * 1.8, len * 0.95, op(0.12 + 0.5 * e) + dur(3.2 * k));
+    px(`jet${wk}${side ? ' side' : ''}`, bx - bw / 2, by, bw, len, cone + op(0.2 + 0.75 * e) + dur(0.9 * k));
+    px('jet-streak', bx - bw / 2, by, bw, len * 0.9, cone + op(0.1 + 0.85 * e) + dur(0.55 * k));
+    px(`jet-core${wk}`, bx - bw / 2, by, bw, len * 0.72, cone + op(0.25 + 0.75 * e) + dur(0.14));
+  };
+  for (const side of [-1, 1]) beam(side * 200, 62, 170, reach * 0.72, 112, 1.25, true);
+  beam(0, 72, 96, reach, 34, 1, false);
   if (e > 0.15)
     for (let k = 0; k < 3; k++) {
       px(
@@ -635,15 +645,27 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       );
     }
   const splash = e > 0.15 && gapPx - 70 <= 330;
+  // Магнитные турбины: медная обмотка кольца, ротор с бегущими лопастями, гудящее свечение катушек,
+  // расходящиеся петли поля и короткие разряды на концах кольца. Всё от эфира.
+  const rotor = `animation-duration:${(0.45 / Math.max(e, 0.08)).toFixed(2)}s;`;
   for (const side of [-1, 1]) {
     const ex = side * 200;
+    if (e > 0.15)
+      for (let f = 0; f < 2; f++)
+        px('field', ex - 92, 36, 184, 48, `${dur(2)}animation-delay:${(-f * pace).toFixed(2)}s;`);
+    px('coil-glow', ex - 86, 42, 172, 36, op(0.15 + 0.85 * e) + dur(1.6));
     line('strut-d', side * 96, 6, ex - side * 30, 32, 6);
     px('strut', ex - 5, 0, 10, 24);
     px('pod', ex - 40, 20, 80, 30);
+    px('pod-coil', ex - 30, 24, 60, 3, op(0.25 + 0.75 * e) + dur(0.8));
     px(`pod-nose ${side < 0 ? 'l' : 'r'}`, side < 0 ? ex - 54 : ex + 38, 24, 16, 22);
     px('hub', ex - 7, 46, 14, 12);
     px('duct', ex - 72, 52, 144, 16);
-    px('prop', ex - 66, 56, 132, 8, spin);
+    px('prop', ex - 66, 57, 132, 6, rotor);
+    if (e > 0.15) {
+      px('arc', ex - 82, 46, 10, 22, `${dur(1.7)}animation-delay:${(-0.4 * (side + 2) * pace).toFixed(2)}s;`);
+      px('arc', ex + 72, 46, 10, 22, `${dur(2.3)}animation-delay:${(-0.9 * (side + 2) * pace).toFixed(2)}s;`);
+    }
   }
   px('keel', -110, 0, 220, 66);
   px('nozzle-glow', -32, 70, 64, 34, op(0.2 + 0.8 * e));
@@ -668,6 +690,14 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     px('cornice', x0 - 4, yt + GEOM.truss, w + 8, 7);
     px('pillar', x0, yt + GEOM.truss + 7, 10, h - GEOM.truss - 7);
     px('pillar', x0 + w - 10, yt + GEOM.truss + 7, 10, h - GEOM.truss - 7);
+    // Шрамы на стене яруса: трещины с заплатами, за зданиями
+    for (const pt of sc.patches ?? []) {
+      if (pt[0] !== i) continue;
+      const tx = x0 + pt[1] * w;
+      const ty = yt + pt[2] * 10 * K;
+      px('crack', tx - 7, ty - 12, 14, 52);
+      px('patch', tx - 15, ty + 6, 30, 22);
+    }
     if (top) spireRoof(w, x0, yt, yb);
     const inner = 12;
     const slotW = (w - 2 * inner) / 3;
@@ -809,10 +839,13 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     }
   }
   // Транспарант (доверие)
-  if (n > 2 && (hiTrust || lowTrust)) {
+  // На обрубке балки транспарант висит с его конца, в стороне от яруса и тросов
+  const bannerOn = n > 2 && (hiTrust || lowTrust);
+  const onStump = bannerOn && sc.stumpAt === 1;
+  if (bannerOn) {
     open('banner', 'tower');
-    const bx1 = tw(1) / 2 + OV + 6;
-    const by1 = ym(A + 20) + 2;
+    const bx1 = tw(1) / 2 + (onStump ? 90 : OV + 6);
+    const by1 = ym(A + 20) + (onStump ? 6 : 2);
     px('rod', bx1 - 4, by1, 40, 4);
     if (hiTrust) px('banner', bx1, by1 + 4, 30, 200, '', 'ВСЕ НА ВЫСОТУ');
     else px('banner torn', bx1, by1 + 4, 30, 120, '', 'ВСЕ НА');
@@ -845,33 +878,22 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     px('film', -rootW / 2 - OV, topY - 60, rootW + 2 * OV, -topY + 60);
   }
 
-  // Шрамы: трещины с заплатами, обрубок балки с оборванными тросами, памятная табличка
+  // Обрубок балки с оборванными тросами, памятная табличка
   const stumpAt = sc.stumpAt;
-  if ((sc.patches?.length ?? 0) > 0 || (stumpAt != null && tiers[stumpAt])) {
+  if (stumpAt != null && tiers[stumpAt]) {
     open('scars', 'tower');
-    for (const pt of sc.patches ?? []) {
-      const ti = pt[0];
-      if (!tiers[ti]) continue;
-      const w2 = tw(ti);
-      const tx = -w2 / 2 + pt[1] * w2;
-      const ty = ym(A + 10 * (ti + 1)) + pt[2] * 10 * K;
-      px('crack', tx - 7, ty - 12, 14, 52);
-      px('patch', tx - 15, ty + 6, 30, 22);
-    }
-    if (stumpAt != null && tiers[stumpAt]) {
-      const sw = tw(stumpAt);
-      const sy = ym(A + 10 * (stumpAt + 1));
-      px('stump', sw / 2 - 10, sy - 18, 132, 24);
-      px('cable-hang', sw / 2 + 108, sy + 4, 2, 64);
-      px('cable-hang', sw / 2 + 64, sy + 4, 2, 40, 'transform:rotate(-8deg);');
-      px('cable-hang', sw / 2 + 30, sy + 4, 2, 24, 'transform:rotate(14deg);');
-      if (sc.memorial) {
-        const mw = tiers[stumpAt + 1] ? tw(stumpAt + 1) : sw;
-        const mx = -mw / 2 - OV + 1;
-        px('memorial', mx, sy - GEOM.deck - 30, 22, 28);
-        px('star sm', mx + 6, sy - GEOM.deck - 26, 10, 10);
-        px('wreath', mx + 3, sy - GEOM.deck - 14, 16, 10);
-      }
+    const sw = tw(stumpAt);
+    const sy = ym(A + 10 * (stumpAt + 1));
+    px('stump', sw / 2 - 10, sy - 18, 132, 24);
+    if (!(onStump && stumpAt === 1)) px('cable-hang', sw / 2 + 108, sy + 4, 2, 64);
+    px('cable-hang', sw / 2 + 64, sy + 4, 2, 40, 'transform:rotate(-8deg);');
+    px('cable-hang', sw / 2 + 30, sy + 4, 2, 24, 'transform:rotate(14deg);');
+    if (sc.memorial) {
+      const mw = tiers[stumpAt + 1] ? tw(stumpAt + 1) : sw;
+      const mx = -mw / 2 - OV + 1;
+      px('memorial', mx, sy - GEOM.deck - 30, 22, 28);
+      px('star sm', mx + 6, sy - GEOM.deck - 26, 10, 10);
+      px('wreath', mx + 3, sy - GEOM.deck - 14, 16, 10);
     }
   }
 

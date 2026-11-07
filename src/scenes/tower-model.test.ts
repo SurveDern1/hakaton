@@ -153,7 +153,7 @@ describe('реакция на показатели (ТЗ 7.4)', () => {
     expect(coreOp(low)).toBeLessThan(coreOp(full));
     expect(full.cushionWeak).toBe(false);
     expect(low.cushionWeak).toBe(true);
-    expect(byClass(low, 'weak').length).toBe(3);
+    expect(byClass(low, 'weak').length).toBe(6);
     expect(full.tilt).toBe(0);
     expect(low.tilt).toBeGreaterThan(0);
     // Почти без эфира волны давления пропадают

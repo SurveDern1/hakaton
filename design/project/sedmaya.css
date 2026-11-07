@@ -161,12 +161,29 @@
 .tw .pod-nose.l { border-radius: 11px 0 0 11px; }
 .tw .pod-nose.r { border-radius: 0 11px 11px 0; }
 .tw .hub { background: #2C4649; border-radius: 2px; }
-.tw .duct { border-radius: 8px; background: linear-gradient(180deg, #F69550 0 4px, rgba(51, 78, 81, .55) 4px calc(100% - 4px), #BC713B calc(100% - 4px)); box-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
-.tw .prop { border-radius: 50%; background: linear-gradient(90deg, rgba(251, 240, 214, .1), rgba(251, 240, 214, .8) 50%, rgba(251, 240, 214, .1)); animation: twSpin .2s linear infinite; }
+.tw .duct { border-radius: 8px; background: repeating-linear-gradient(90deg, rgba(58, 30, 14, .6) 0 1.5px, transparent 1.5px 4.5px) 0 0 / 100% 5px no-repeat, repeating-linear-gradient(90deg, rgba(58, 30, 14, .6) 0 1.5px, transparent 1.5px 4.5px) 0 100% / 100% 5px no-repeat, linear-gradient(180deg, #F2C48E 0, #B8642E 5px, rgba(14, 34, 38, .78) 5px, rgba(30, 70, 78, .78) 50%, rgba(14, 34, 38, .78) calc(100% - 5px), #B8642E calc(100% - 5px), #6E3717 100%); box-shadow: 0 0 0 1px rgba(20, 30, 32, .55), 0 3px 0 rgba(0, 0, 0, .35), 0 0 16px rgba(165, 213, 226, .45); }
+.tw .prop { border-radius: 2px; background: repeating-linear-gradient(90deg, rgba(232, 250, 255, 0) 0 6px, rgba(232, 250, 255, .95) 6px 8px, rgba(232, 250, 255, 0) 8px 16px) 0 0 / 16px 100%, repeating-linear-gradient(90deg, rgba(165, 213, 226, 0) 0 9px, rgba(165, 213, 226, .5) 9px 13px, rgba(165, 213, 226, 0) 13px 24px) 0 0 / 24px 100%, linear-gradient(180deg, rgba(120, 200, 220, .2), rgba(205, 243, 254, .65) 50%, rgba(120, 200, 220, .2)); -webkit-mask-image: linear-gradient(90deg, transparent, #000000 16%, #000000 84%, transparent); mask-image: linear-gradient(90deg, transparent, #000000 16%, #000000 84%, transparent); animation: twRotor .5s linear infinite; }
+.tw .coil-glow { border-radius: 50%; background: radial-gradient(closest-side, rgba(215, 247, 255, .8), rgba(120, 200, 220, .32) 50%, rgba(120, 200, 220, 0)); mix-blend-mode: screen; animation: twHum 1.6s ease-in-out infinite; }
+.tw .field { border-radius: 50%; border: 1.5px solid rgba(165, 213, 226, .75); border-top-color: rgba(222, 248, 255, .95); border-bottom-color: rgba(222, 248, 255, .95); box-shadow: 0 0 8px rgba(165, 213, 226, .5), inset 0 0 6px rgba(165, 213, 226, .35); opacity: 0; animation: twField 2s ease-out infinite; }
+.tw .pod-coil { border-radius: 2px; background: repeating-linear-gradient(90deg, rgba(232, 250, 255, .95) 0 3px, rgba(120, 200, 220, .2) 3px 7px); box-shadow: 0 0 6px rgba(165, 213, 226, .9); animation: twCoil .8s linear infinite; }
+.tw .arc { background: #EAFBFF; clip-path: polygon(45% 0, 85% 0, 58% 38%, 92% 38%, 22% 100%, 42% 56%, 8% 56%); opacity: 0; animation: twArc 1.7s steps(1, end) infinite; }
+@keyframes twRotor { to { background-position: 16px 0, -24px 0, 0 0; } }
+@keyframes twHum { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.06, 1.25); } }
+@keyframes twField { 0% { transform: scale(.45, .5); opacity: 0; } 25% { opacity: .9; } 100% { transform: scale(1.18, 1.35); opacity: 0; } }
+@keyframes twCoil { to { background-position: 7px 0; } }
+@keyframes twArc { 0% { opacity: 1; } 5% { opacity: 0; } 9% { opacity: .8; } 13%, 100% { opacity: 0; } }
 .tw .cushion { border-radius: 50%; transform-origin: 50% 0; background: radial-gradient(closest-side, rgba(191, 233, 245, .45), rgba(165, 213, 226, .16) 55%, rgba(165, 213, 226, 0)); animation: twCushion 3.2s ease-in-out infinite; }
-.tw .jet { clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); background: repeating-linear-gradient(180deg, rgba(251, 240, 214, .6) 0 9px, rgba(251, 240, 214, 0) 9px 26px), linear-gradient(180deg, rgba(205, 243, 254, .95), rgba(165, 213, 226, .4) 45%, rgba(165, 213, 226, 0)); -webkit-mask-image: linear-gradient(#000000 50%, transparent); mask-image: linear-gradient(#000000 50%, transparent); animation: twJet .9s linear infinite; }
-.tw .jet.weak { -webkit-mask-image: repeating-linear-gradient(180deg, #000000 0 18px, transparent 18px 30px, #000000 30px 40px, transparent 40px 58px), linear-gradient(#000000 35%, transparent); -webkit-mask-composite: source-in; mask-image: repeating-linear-gradient(180deg, #000000 0 18px, transparent 18px 30px, #000000 30px 40px, transparent 40px 58px), linear-gradient(#000000 35%, transparent); mask-composite: intersect; animation: twJet .9s linear infinite, twFlicker .6s steps(2, end) infinite; }
-.tw .jet.side { clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%); }
+.tw .jet, .tw .jet-streak, .tw .jet-core { --cone: conic-gradient(from 0deg at 50% calc(var(--ap, 40px) * -1), transparent 0 calc(180deg - var(--a, 10deg)), #000000 calc(180deg - var(--a, 10deg) * .5) calc(180deg + var(--a, 10deg) * .5), transparent calc(180deg + var(--a, 10deg))); -webkit-mask-image: var(--cone), linear-gradient(#000000 0, #000000 30%, transparent 100%); -webkit-mask-composite: source-in; mask-image: var(--cone), linear-gradient(#000000 0, #000000 30%, transparent 100%); mask-composite: intersect; mix-blend-mode: screen; }
+.tw .jet { background: radial-gradient(50% 15px at 50% 50%, rgba(240, 252, 255, .8), rgba(205, 243, 254, 0)) 0 0 / 100% 38px, linear-gradient(180deg, rgba(225, 248, 255, .9), rgba(165, 213, 226, .45) 40%, rgba(120, 200, 220, .12) 100%); animation: twJet .9s linear infinite; }
+.tw .jet.side { background: radial-gradient(50% 12px at 50% 50%, rgba(240, 252, 255, .6), rgba(205, 243, 254, 0)) 0 0 / 100% 38px, linear-gradient(180deg, rgba(205, 243, 254, .7), rgba(165, 213, 226, .3) 40%, rgba(120, 200, 220, .08) 100%); }
+.tw .jet-streak { background: radial-gradient(1px 10px at 30% 50%, rgba(245, 253, 255, .95), rgba(245, 253, 255, 0)) 0 0 / 13px 46px, radial-gradient(1.2px 16px at 70% 50%, rgba(205, 243, 254, .85), rgba(205, 243, 254, 0)) 5px 20px / 19px 61px; animation: twStreak .55s linear infinite; }
+.tw .jet-core { transform-origin: 50% 0; background: linear-gradient(90deg, transparent 36%, rgba(205, 243, 254, .7) 45%, #FFFFFF 50%, rgba(205, 243, 254, .7) 55%, transparent 64%); animation: twWobble .14s ease-in-out infinite alternate; }
+.tw .jet-halo { border-radius: 50%; transform-origin: 50% 0; background: radial-gradient(50% 60% at 50% 0, rgba(191, 233, 245, .55), rgba(120, 200, 220, .18) 55%, rgba(120, 200, 220, 0) 100%); mix-blend-mode: screen; animation: twHaloBreath 3.2s ease-in-out infinite; }
+.tw .jet.weak { animation: twJet .9s linear infinite, twFlicker .6s steps(2, end) infinite; }
+.tw .jet-core.weak { animation: twWobble .14s ease-in-out infinite alternate, twFlicker .5s steps(2, end) infinite; }
+@keyframes twStreak { to { background-position: 0 46px, 5px 81px; } }
+@keyframes twWobble { from { transform: scaleX(1); } to { transform: scaleX(.78); } }
+@keyframes twHaloBreath { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.08, .94); } }
 .tw .shock { border-radius: 50%; border: 2px solid rgba(212, 246, 255, .85); box-shadow: 0 0 10px rgba(165, 213, 226, .6), inset 0 0 8px rgba(165, 213, 226, .5); animation: twShock 2.4s ease-out infinite; }
 .tw .motes { background: radial-gradient(circle, rgba(251, 240, 214, .95) 0 1.4px, transparent 2px) 0 0 / 23px 31px, radial-gradient(circle, rgba(165, 213, 226, .9) 0 1px, transparent 1.6px) 11px 15px / 17px 23px; -webkit-mask-image: radial-gradient(closest-side, #000000 25%, transparent); mask-image: radial-gradient(closest-side, #000000 25%, transparent); animation: twMotes 2.2s linear infinite; }
 .tw .splash { border-radius: 50%; border: 2px solid rgba(222, 247, 255, .75); box-shadow: 0 0 14px rgba(165, 213, 226, .6); animation: twRipple 2.6s ease-out infinite; }
@@ -401,7 +418,7 @@
 @keyframes twFlag { 0%, 100% { transform: scaleX(1) skewY(0); } 50% { transform: scaleX(.86) skewY(-6deg); } }
 @keyframes twWalk { 0%, 100% { translate: 0 0; } 50% { translate: var(--walk, 8px) 0; } }
 @keyframes twCushion { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.05, .9); } }
-@keyframes twJet { to { background-position: 0 26px, 0 0; } }
+@keyframes twJet { to { background-position: 0 38px, 0 0; } }
 @keyframes twFlicker { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(.4); } }
 @keyframes twShock { 0% { transform: translateY(0) scale(.5); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(var(--fall)) scale(2.6); opacity: 0; } }
 @keyframes twMotes { to { background-position: 0 31px, 11px 38px; } }
