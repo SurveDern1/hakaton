@@ -6,14 +6,50 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--ink);
+  background: #0d1c1e;
   color: var(--text);
   font-family: var(--f-ui);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Игра — портретный экран телефона. На телефоне он во весь экран, на компьютере — колонка
+   9:16 по центру. #app — контейнер @container app: вёрстка панелей (game.css, event-window.css)
+   смотрит на его ширину, а не на окно браузера; position: fixed внутри считается от него. */
+body {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(32, 68, 78, 0.55), transparent 70%),
+    repeating-linear-gradient(-32deg, transparent 0 22px, rgba(255, 255, 255, 0.015) 22px 23px), #0d1c1e;
+}
+#app {
+  position: relative;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  height: 100dvh;
+  max-width: 100vw;
+  overflow: hidden;
+  background: var(--ink);
+  container: app / size;
+  /* Слои с position: fixed (окна, старт, финал) считаются от рамки, а не от окна браузера */
+  contain: layout paint;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Узкий высокий телефон (9:19,5) занимает всё окно; на широком окне — тень вокруг колонки */
+@media (min-aspect-ratio: 10 / 16) {
+  #app {
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 30px 90px rgba(0, 0, 0, 0.55);
+  }
 }
 
 #game,
 #ui {
-  position: fixed;
+  position: absolute;
   inset: 0;
 }
 
@@ -23,4 +59,42 @@ body {
 }
 #ui > * {
   pointer-events: auto;
+}
+
+/* Телефон боком: просим повернуть — игра только портретная */
+.rotate-hint {
+  display: none;
+}
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 540px) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 14px;
+    padding: 24px;
+    background: var(--ink);
+    text-align: center;
+    font-size: 18px;
+  }
+  .rotate-hint svg {
+    animation: rotateHint 1.8s ease-in-out infinite;
+  }
+}
+@keyframes rotateHint {
+  0%,
+  30% {
+    transform: rotate(-90deg);
+  }
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotate-hint svg {
+    animation: none;
+  }
 }
