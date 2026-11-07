@@ -1,17 +1,24 @@
 // Сборка макетов для дизайнеров без Claude Design: design/project/*.dc.html -> обычные HTML-страницы.
-// Каждая страница автономна: рядом лежат sedmaya.css и dc-lite.js, компонент Tower вшит в страницу,
-// двойной клик открывает её в любом браузере; CSS, размеры и токены видны в DevTools.
-// Запуск: node tools/export-design.js [папка-вывода]   (по умолчанию design/export, в CI — dist/design)
-const fs = require('fs');
-const path = require('path');
+// Выход: страницы экранов, index.html (превью), catalog.html (токены, анимации, классы деталей из sedmaya.css),
+// source/ (исходники как есть) и sources.zip. Страницы автономны: рядом sedmaya.css и dc-lite.js,
+// компонент Tower вшит в страницу, открываются двойным кликом; CSS и размеры видны в DevTools.
+// Запуск:
+//   node tools/export-design.js [папка]     сборка (по умолчанию design/export, в CI — dist/design)
+//   node tools/export-design.js --serve     сервер http://localhost:5174 с пересборкой и перезагрузкой по правке
+//                                           design/project/* и tools/dc-lite.js (npm run design)
+const fs = require('node:fs');
+const http = require('node:http');
+const path = require('node:path');
+const zlib = require('node:zlib');
 
 const root = path.join(__dirname, '..');
 const srcDir = path.join(root, 'design', 'project');
-const outDir = path.resolve(process.argv[2] || path.join(root, 'design', 'export'));
+const REPO = process.env.GITHUB_REPOSITORY || 'SurveDern1/hakaton';
 
-const canvas = JSON.parse(fs.readFileSync(path.join(srcDir, 'canvas.json'), 'utf8'));
 const read = (f) => fs.readFileSync(path.join(srcDir, f), 'utf8');
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// ---------- страницы экранов ----------
 
 // Шаблон и скрипт компонента из <name>.dc.html
 function component(name) {
@@ -38,39 +45,234 @@ function page(file) {
   return html.replace(/(\w+)\.dc\.html/g, '$1.html');
 }
 
-fs.mkdirSync(outDir, { recursive: true });
-const boards = canvas.order.map((file) => ({ file, ...canvas.boards[file], out: file.replace('.dc.html', '.html') }));
-for (const b of boards) fs.writeFileSync(path.join(outDir, b.out), page(b.file));
-fs.copyFileSync(path.join(srcDir, 'sedmaya.css'), path.join(outDir, 'sedmaya.css'));
-fs.copyFileSync(path.join(__dirname, 'dc-lite.js'), path.join(outDir, 'dc-lite.js'));
+// ---------- разбор sedmaya.css для каталога ----------
 
-const BOX_W = 360;
-const BOX_H = 240;
-const cards = boards
-  .map((b) => {
-    const k = Math.min(BOX_W / b.w, BOX_H / b.h);
-    const tag = b.is_interactive ? ' <span class="tag">двигается</span>' : '';
-    return `<a class="card" href="${b.out}">
+function parseCss(css) {
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const tokens = [];
+  const rootBlock = /:root\s*\{([^}]*)\}/.exec(clean);
+  for (const m of (rootBlock?.[1] || '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) tokens.push([m[1], m[2].trim()]);
+
+  const keyframes = [];
+  for (const m of clean.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g)) {
+    keyframes.push({ name: m[1], body: m[2].trim().replace(/\s+/g, ' ') });
+  }
+  const body = clean.replace(/@keyframes\s+[\w-]+\s*\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
+
+  const rules = [];
+  for (const m of body.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+    const sel = m[1].trim();
+    if (sel) rules.push({ sel, decl: m[2].trim() });
+  }
+
+  const usage = new Map();
+  for (const r of rules) {
+    const a = /(?:^|;|\s)animation\s*:\s*([^;]+)/.exec(r.decl);
+    if (!a) continue;
+    for (const part of a[1].split(/,(?![^(]*\))/)) {
+      const [name, ...rest] = part.trim().split(/\s+/);
+      if (!keyframes.some((k) => k.name === name)) continue;
+      if (!usage.has(name)) usage.set(name, { sels: [], spec: rest.join(' ') });
+      usage.get(name).sels.push(r.sel);
+    }
+  }
+
+  const classes = new Map();
+  for (const r of rules) {
+    for (const sel of r.sel.split(',')) {
+      const m = /\.tw\s+\.([\w-]+)/.exec(sel);
+      if (!m) continue;
+      if (!classes.has(m[1])) classes.set(m[1], []);
+      classes.get(m[1]).push(`${r.sel} {\n  ${r.decl.replace(/;\s*/g, ';\n  ').trim()}\n}`);
+      break;
+    }
+  }
+  return { tokens, keyframes, usage, classes };
+}
+
+const SHELL_CSS = `:root{--bg:#10252a;--card:#1a3437;--text:#f3e9d2;--muted:#9fb3b3;--accent:#e8743b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+main{max-width:1280px;margin:0 auto;padding:32px 24px 64px}
+h1{margin:0 0 8px;font-size:32px}h2{margin:40px 0 12px;font-size:22px}
+p{margin:0 0 12px;color:var(--muted);max-width:75ch}
+a{color:var(--accent)}code,pre{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+nav{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}`;
+
+function catalog(css) {
+  const { tokens, keyframes, usage, classes } = parseCss(css);
+
+  const swatches = tokens
+    .filter(([, v]) => /^#|^rgb/.test(v))
+    .map(
+      ([n, v]) =>
+        `<div class="sw"><i style="background:${esc(v)}"></i><b>${esc(n)}</b><span>${esc(v)}</span></div>`,
+    )
+    .join('');
+  const fonts = tokens
+    .filter(([n]) => n.startsWith('--f-'))
+    .map(
+      ([n, v]) =>
+        `<div class="font"><span style="font-family:${esc(v)}">Седьмое ноября · 0123456789</span><code>${esc(n)}: ${esc(v)}</code></div>`,
+    )
+    .join('');
+
+  const anims = keyframes
+    .map((k) => {
+      const u = usage.get(k.name);
+      const spec = u ? u.spec : '2s ease-in-out infinite';
+      const sels = u ? [...new Set(u.sels)].map((s) => `<code>${esc(s)}</code>`).join(' ') : '<em>не привязана</em>';
+      return `<div class="anim"><div class="stage"><i style="animation:${esc(k.name)} ${esc(spec)}"></i></div>
+<div><b>${esc(k.name)}</b> <code>${esc(spec)}</code><div class="sels">${sels}</div>
+<details><summary>keyframes</summary><pre>@keyframes ${esc(k.name)} { ${esc(k.body)} }</pre></details></div></div>`;
+    })
+    .join('\n');
+
+  const cls = [...classes.entries()]
+    .map(([name, list]) => {
+      const animated = list.some((r) => /animation\s*:/.test(r)) ? ' <span class="tag">анимация</span>' : '';
+      return `<details class="cls" data-n="${esc(name)}"><summary><code>.tw .${esc(name)}</code>${animated}</summary><pre>${esc(list.join('\n\n'))}</pre></details>`;
+    })
+    .join('\n');
+
+  return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Седьмая — каталог</title>
+<style>
+${SHELL_CSS}
+.sws{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.sw{display:flex;flex-direction:column;background:var(--card);padding:8px;font-size:13px}
+.sw i{height:44px;margin-bottom:6px;border:1px solid #fff2}.sw span{color:var(--muted)}
+.font{background:var(--card);padding:10px 14px;margin-bottom:8px;display:flex;flex-direction:column;gap:2px}
+.font span{font-size:22px}
+.anim{display:flex;gap:16px;background:var(--card);padding:12px;margin-bottom:8px;align-items:flex-start;--lift:30px;--fall:50px;--walk:30px}
+.stage{flex:none;width:140px;height:80px;background:#0b1a1d;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.stage i{display:block;width:34px;height:34px;border-radius:6px;background:var(--accent);transform-origin:50% 0}
+.sels{margin:4px 0}.sels code{display:inline-block;margin:0 6px 2px 0;color:var(--muted)}
+.cls{background:var(--card);margin-bottom:4px;padding:6px 12px}.cls summary{cursor:pointer}
+pre{margin:8px 0 4px;white-space:pre-wrap;word-break:break-word;color:#d7e4e1}
+.tag{font-size:12px;color:var(--bg);background:var(--accent);padding:0 8px}
+#q{width:100%;max-width:420px;padding:8px 10px;font:inherit;background:var(--card);color:var(--text);border:1px solid #fff3}
+@media (prefers-reduced-motion:reduce){.stage i{animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+<nav><a href="index.html">← Макеты</a><a href="source/sedmaya.css">sedmaya.css</a><a href="sources.zip">Все исходники (zip)</a></nav>
+<h1>Каталог: токены, анимации, детали</h1>
+<p>Собирается из <code>design/project/sedmaya.css</code> при каждой сборке: правка файла сразу меняет каталог. Деталь башни — класс <code>.tw .имя</code>; как они выглядят на экранах, смотрите в «Блоки: здания» и «Состояния башни». Оранжевый квадрат в примерах показывает только кривую и время; на экранах та же анимация крутит реальные детали.</p>
+<h2>Цвета</h2><div class="sws">${swatches}</div>
+<h2>Шрифты</h2>${fonts}
+<h2>Анимации (${keyframes.length})</h2>
+<p>Каждая крутится с теми же временем и кривой, что в CSS. При <code>prefers-reduced-motion</code> движения нет.</p>
+${anims}
+<h2>Классы деталей башни (${classes.size})</h2>
+<p><input id="q" type="search" placeholder="Поиск по имени класса" aria-label="Поиск по имени класса"></p>
+<div id="cls">${cls}</div>
+</main>
+<script>
+document.getElementById('q').addEventListener('input', function (e) {
+  var v = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.cls').forEach(function (d) { d.hidden = v && d.dataset.n.toLowerCase().indexOf(v) < 0; });
+});
+</script>
+</body>
+</html>
+`;
+}
+
+// ---------- zip (store/deflate, без зависимостей) ----------
+
+function zip(files) {
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  for (const [name, data] of files) {
+    const nameBuf = Buffer.from(name, 'utf8');
+    const comp = zlib.deflateRawSync(data);
+    const crc = zlib.crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6); // UTF-8 имена
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(comp.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    parts.push(local, nameBuf, comp);
+    const c = Buffer.alloc(46);
+    c.writeUInt32LE(0x02014b50, 0);
+    c.writeUInt16LE(20, 4);
+    c.writeUInt16LE(20, 6);
+    c.writeUInt16LE(0x0800, 8);
+    c.writeUInt16LE(8, 10);
+    c.writeUInt32LE(crc, 16);
+    c.writeUInt32LE(comp.length, 20);
+    c.writeUInt32LE(data.length, 24);
+    c.writeUInt16LE(nameBuf.length, 28);
+    c.writeUInt32LE(offset, 42);
+    central.push(c, nameBuf);
+    offset += local.length + nameBuf.length + comp.length;
+  }
+  const cdBuf = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(files.length, 8);
+  end.writeUInt16LE(files.length, 10);
+  end.writeUInt32LE(cdBuf.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, cdBuf, end]);
+}
+
+// ---------- сборка ----------
+
+function build(outDir) {
+  const canvas = JSON.parse(read('canvas.json'));
+  fs.mkdirSync(path.join(outDir, 'source'), { recursive: true });
+  const boards = canvas.order.map((file) => ({ file, ...canvas.boards[file], out: file.replace('.dc.html', '.html') }));
+  for (const b of boards) fs.writeFileSync(path.join(outDir, b.out), page(b.file));
+
+  const css = read('sedmaya.css');
+  fs.writeFileSync(path.join(outDir, 'sedmaya.css'), css);
+  fs.copyFileSync(path.join(__dirname, 'dc-lite.js'), path.join(outDir, 'dc-lite.js'));
+  fs.writeFileSync(path.join(outDir, 'catalog.html'), catalog(css));
+
+  // Исходники как есть: макеты, стили, холст; плюс скрипты сборки, чтобы пересобрать у себя
+  const sources = fs.readdirSync(srcDir).filter((f) => fs.statSync(path.join(srcDir, f)).isFile());
+  for (const f of sources) fs.copyFileSync(path.join(srcDir, f), path.join(outDir, 'source', f));
+  const zipFiles = sources.map((f) => [`design/project/${f}`, fs.readFileSync(path.join(srcDir, f))]);
+  for (const f of ['tools/export-design.js', 'tools/dc-lite.js']) {
+    zipFiles.push([f, fs.readFileSync(path.join(root, f))]);
+  }
+  fs.writeFileSync(path.join(outDir, 'sources.zip'), zip(zipFiles));
+
+  const BOX_W = 360;
+  const BOX_H = 240;
+  const cards = boards
+    .map((b) => {
+      const k = Math.min(BOX_W / b.w, BOX_H / b.h);
+      const tag = b.is_interactive ? ' <span class="tag">двигается</span>' : '';
+      return `<a class="card" href="${b.out}">
   <div class="shot"><iframe src="${b.out}" title="${esc(b.title)}" loading="lazy" tabindex="-1" scrolling="no" style="width:${b.w}px;height:${b.h}px;transform:scale(${k.toFixed(4)})"></iframe></div>
   <div class="cap"><b>${esc(b.title)}</b>${tag}<span>${b.w}×${b.h} · ${b.out}</span></div>
 </a>`;
-  })
-  .join('\n');
+    })
+    .join('\n');
+  const srcLinks = sources.map((f) => `<li><a href="source/${esc(f)}">${esc(f)}</a></li>`).join('');
+  const repoUrl = `https://github.com/${REPO}/tree/main/design/project`;
 
-const index = `<!doctype html>
+  const index = `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Седьмая — макеты</title>
 <style>
-:root{--bg:#10252a;--card:#1a3437;--text:#f3e9d2;--muted:#9fb3b3;--accent:#e8743b}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
-main{max-width:1280px;margin:0 auto;padding:32px 24px 64px}
-h1{margin:0 0 8px;font-size:32px}
-p{margin:0 0 12px;color:var(--muted);max-width:70ch}
-a{color:var(--accent)}
+${SHELL_CSS}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(${BOX_W}px,1fr));gap:20px;margin-top:28px}
 .card{display:block;color:inherit;text-decoration:none;background:var(--card);border-top:4px solid var(--accent)}
 .card:hover,.card:focus-visible{outline:2px solid var(--accent)}
@@ -79,18 +281,80 @@ a{color:var(--accent)}
 .cap{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .cap span{color:var(--muted);font-size:13px}
 .tag{align-self:flex-start;font-size:12px;color:var(--bg);background:var(--accent);padding:0 8px}
+.src{columns:3 220px;margin:0;padding-left:18px}
 </style>
 </head>
 <body>
 <main>
+<nav><a href="catalog.html">Каталог: токены, анимации, детали башни</a><a href="sources.zip">Все исходники (zip)</a><a href="${repoUrl}">Репозиторий</a></nav>
 <h1>Седьмая — макеты</h1>
-<p>Экраны игры. Каждый открывается как обычная страница: нажмите карточку, затем F12 — видны размеры, классы и CSS-переменные. Токены (цвета, шрифты, анимации) собраны в <a href="sedmaya.css">sedmaya.css</a>. Шрифты подгружаются из Google Fonts, нужен интернет.</p>
+<p>Экраны игры. Нажмите карточку, затем F12: видны размеры, классы и CSS-переменные. Цвета, шрифты и анимации — в каталоге; шрифты подгружаются из Google Fonts, нужен интернет.</p>
 <div class="grid">
 ${cards}
 </div>
+<h2>Исходники</h2>
+<p>Файлы как лежат в репозитории (<code>design/project/</code>): правьте их, дальше <code>npm run design</code> — локальная страница с перезагрузкой при каждом сохранении.</p>
+<ul class="src">${srcLinks}</ul>
 </main>
 </body>
 </html>
 `;
-fs.writeFileSync(path.join(outDir, 'index.html'), index);
-console.log(`Макеты: ${boards.length} стр. -> ${outDir}`);
+  fs.writeFileSync(path.join(outDir, 'index.html'), index);
+  return boards.length;
+}
+
+// ---------- сервер с перезагрузкой ----------
+
+function serve(port) {
+  const outDir = path.join(root, 'design', 'export');
+  const clients = new Set();
+  const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.zip': 'application/zip' };
+  const RELOAD = '<script>new EventSource("/__reload").onmessage=function(){location.reload()}</script>';
+  const rebuild = () => {
+    try {
+      build(outDir);
+      console.log(`${new Date().toLocaleTimeString()} собрано`);
+      for (const res of clients) res.write('data: 1\n\n');
+    } catch (e) {
+      console.error(`Ошибка сборки: ${e.message}`);
+    }
+  };
+  rebuild();
+  let timer;
+  const onChange = () => {
+    clearTimeout(timer);
+    timer = setTimeout(rebuild, 150);
+  };
+  fs.watch(srcDir, onChange);
+  fs.watch(path.join(__dirname, 'dc-lite.js'), onChange);
+
+  http
+    .createServer((req, res) => {
+      const url = decodeURIComponent(req.url.split('?')[0]);
+      if (url === '/__reload') {
+        res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+        clients.add(res);
+        req.on('close', () => clients.delete(res));
+        return;
+      }
+      const file = path.join(outDir, url === '/' ? 'index.html' : url);
+      if (!file.startsWith(outDir) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+        res.writeHead(404).end('нет такого файла');
+        return;
+      }
+      const ext = path.extname(file);
+      let body = fs.readFileSync(file);
+      if (ext === '.html') body = Buffer.from(body.toString('utf8').replace('</body>', `${RELOAD}</body>`));
+      res.writeHead(200, { 'content-type': `${MIME[ext] || 'application/octet-stream'}; charset=utf-8`, 'cache-control': 'no-store' });
+      res.end(body);
+    })
+    .listen(port, () => console.log(`Макеты: http://localhost:${port}/ (правка design/project/* перезагружает страницу)`));
+}
+
+const args = process.argv.slice(2);
+if (args.includes('--serve')) {
+  serve(Number(process.env.PORT) || 5174);
+} else {
+  const outDir = path.resolve(args[0] || path.join(root, 'design', 'export'));
+  console.log(`Макеты: ${build(outDir)} стр. -> ${outDir}`);
+}
