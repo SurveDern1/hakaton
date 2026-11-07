@@ -1,0 +1,14 @@
+/* Башня в игре: детали — классы .tw .* из design/project/sedmaya.css (подключается в ui/style.css).
+   Здесь только то, чего нет в макете: слои без размеров (координаты деталей локальные)
+   и пелена брошенного яруса. */
+.tw.tw-game,
+.tw-game .tw-layer,
+.tw-game .tw-group {
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Брошенный ярус: серо-бирюзовая пелена Мглы поверх окон и зданий */
+.tw .film.abandoned {
+  background: linear-gradient(180deg, rgba(143, 170, 173, 0.35), rgba(176, 206, 210, 0.6));
+}
