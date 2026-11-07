@@ -10,7 +10,7 @@
 | `data/events.json` | Все события: сюжетные `dNN_*`, отложенные `late_*`, пул `pool_*`, кризисы `crisis_*` |
 | `data/endings.json` | Концовки, судьбы персонажей, кристаллы памяти |
 | `tools/check-data.js` | Проверка данных: `node tools/check-data.js` |
-| `src/core/` | Логика игры на чистом TypeScript, без Phaser и DOM: типы данных и состояния (`types.ts`), загрузка `data/*.json` (`data.ts`), стартовое состояние (`state.ts`), условия `requires` (`requires.ts`), генератор с сидом (`rng.ts`). Тесты рядом: `*.test.ts` |
+| `src/core/` | Логика игры на чистом TypeScript, без Phaser и DOM: типы данных и состояния (`types.ts`), загрузка `data/*.json` (`data.ts`), стартовое состояние (`state.ts`), условия `requires` (`requires.ts`), генератор с сидом (`rng.ts`), расчёты по башне — жильё, рабочие, Мгла на ярусах, нужный эфир (`tower.ts`), ночной расчёт по ТЗ 4.5 `runNight` и прогноз `forecastNight`/`forecastWarnings` (`night.ts`), действия дня — стройка, снос, новый и сброшенный ярус, режим двигателя, декреты (`actions.ts`). Тесты рядом: `*.test.ts` |
 | `src/game/store.ts` | `GameStore`: текущее состояние в браузере; сцены и панели подписываются, меняют только через `dispatch` с функцией из core |
 | `src/scenes/` | Сцены Phaser: `TowerScene.ts` рисует башню и Мглу по состоянию |
 | `src/ui/` | Интерфейс обычным HTML/CSS поверх canvas (`#ui`): `hud.ts` — календарь и ресурсы, `style.css` — подключает токены из `design/project/sedmaya.css` |
