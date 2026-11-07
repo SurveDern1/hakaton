@@ -1,0 +1,31 @@
+{
+  "name": "sedmaya",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Седьмая — стратегия выживания о летающей башне над Мглой",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "check:data": "node tools/check-data.js",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run check:data"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.6",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  }
+}

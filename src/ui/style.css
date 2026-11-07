@@ -1,0 +1,66 @@
+/* Токены и кнопки берутся из макетов, чтобы игра и холст не расходились. */
+@import "../../design/project/sedmaya.css";
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--f-ui);
+}
+
+#game,
+#ui {
+  position: fixed;
+  inset: 0;
+}
+
+/* Слой интерфейса не перехватывает клики по canvas, кроме собственных панелей. */
+#ui {
+  pointer-events: none;
+}
+#ui > * {
+  pointer-events: auto;
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  align-items: center;
+  padding: 12px 20px;
+  background: color-mix(in srgb, var(--ink-2) 88%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+
+.hud-day {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud-day .disp {
+  font-size: 18px;
+  color: var(--paper);
+}
+
+.hud-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-stats li {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-stats .num {
+  font-size: 20px;
+  font-weight: 600;
+}
