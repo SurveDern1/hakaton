@@ -16,6 +16,7 @@
     "export:design": "node tools/export-design.js",
     "check:design": "node tools/export-design.js --check",
     "design": "node tools/export-design.js --serve",
+    "icons": "node tools/make-icons.js",
     "check": "npm run typecheck && npm run lint && npm run test && npm run check:data && npm run check:design"
   },
   "engines": {

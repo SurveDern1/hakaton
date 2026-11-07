@@ -16,6 +16,12 @@ const srcDir = path.join(root, 'design', 'project');
 const REPO = process.env.GITHUB_REPOSITORY || 'SurveDern1/hakaton';
 
 const read = (f) => fs.readFileSync(path.join(srcDir, f), 'utf8');
+// Иконка вкладки для страниц выгрузки — та же, что у игры (public/favicon.svg), вшита в страницу.
+const ICON = `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${fs
+  .readFileSync(path.join(root, 'public', 'favicon.svg'))
+  .toString('base64')}">`;
+const withIcon = (html) =>
+  /<meta charset="utf-8">/i.test(html) ? html.replace(/(<meta charset="utf-8">)/i, `$1\n${ICON}`) : ICON + html;
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // ---------- страницы экранов ----------
@@ -42,7 +48,7 @@ function page(file) {
   if (!html.includes('<script src="./support.js"></script>')) throw new Error(`${file}: нет support.js`);
   html = html.replace('<script src="./support.js"></script>', `${embedded}<script src="./dc-lite.js"></script>`);
   // Ссылки между экранами: Paper.dc.html -> Paper.html
-  return html.replace(/(\w+)\.dc\.html/g, '$1.html');
+  return withIcon(html.replace(/(\w+)\.dc\.html/g, '$1.html'));
 }
 
 // ---------- проверка: только то, что понимает dc-lite ----------
@@ -189,6 +195,7 @@ function catalog(css) {
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+${ICON}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Седьмая — каталог</title>
 <link rel="stylesheet" href="sedmaya.css">
@@ -360,6 +367,7 @@ function build(outDir) {
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+${ICON}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Седьмая — макеты</title>
 <style>

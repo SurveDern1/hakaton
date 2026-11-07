@@ -53,6 +53,7 @@ npm ci
 | `npm run format` | Исправить формат и порядок импортов |
 | `npm run build` | Сборка в `dist/` |
 | `npm run design` | Макеты для дизайнеров в браузере |
+| `npm run icons` | Перерисовать иконки в `public/` после правки `tools/make-icons.js` (нужен Chrome) |
 
 Отладка в браузере: `?preset=good` — только башня из макета, `?event=d02_raft` — сразу окно события.
 В консоли браузера доступен `window.sedmaya` (`store`, `loop`, `events`, `tower`, `sound`).
