@@ -16,7 +16,7 @@
 | `src/ui/` | Интерфейс обычным HTML/CSS поверх canvas (`#ui`): `hud.ts` — календарь и ресурсы, `style.css` — подключает токены из `design/project/sedmaya.css` |
 | `src/main.ts`, `index.html` | Точка входа: core → `GameStore` → Phaser и DOM. В консоли браузера доступно `window.sedmaya` |
 | `.github/workflows/deploy.yml` | Пуш в `main` → `npm run check`, сборка и выкладка на GitHub Pages |
-| `design/project/` | Макеты экранов, холст Claude Design «Седьмая — макеты»: `*.dc.html` — артборды, `Tower.dc.html` — функция `renderTower(state)`, `sedmaya.css` — токены и анимации |
+| `design/project/` | Макеты экранов, холст Claude Design «Седьмая — макеты»: `*.dc.html` — артборды, `Tower.dc.html` — функция `renderTower(state)`, `Blocks.dc.html` — лист зданий в трёх стадиях и крупные планы ярусов, `sedmaya.css` — токены, детали башни `.tw .*` и анимации |
 
 Правила:
 - Числа меняются в `data/balance.json`, затем таблицы в ТЗ (раздел 4) приводятся в соответствие.
@@ -44,3 +44,8 @@
 - Макеты опубликованы в https://claude.ai/artifact/Ev5Tb85HnfCwh86g4f8Y3z. После правки файлов в
   `design/project/` их публикуют туда же, корень публикации — `design/`. Сами по себе `.dc.html`
   в браузере не открываются: им нужен `support.js` холста.
+- Башня рисуется во внутреннем масштабе `TOWER_K = 12,5` px на метр (ярус 125 px). Артборд, который
+  встраивает `Tower`, задаёт `width` в этих пикселях и уменьшает их через `scale`; `hint-size` равен
+  итоговому размеру. Режимы компонента: вся башня, `focus="root|tier|spire"` — крупный план яруса,
+  `part="building" b="farm" stage="2"` — одно здание. Проверка без браузера: вырезать скрипт из
+  `Tower.dc.html` и прогнать `renderTower` в node на всех `TOWER_PRESETS`.

@@ -22,20 +22,32 @@
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"preset":{"editor":"enum","options":["day2","good","bad","scars","harbor"],"default":"day2"},"scale":{"editor":"float","min":0.3,"max":3,"step":0.05,"default":1},"labels":{"editor":"boolean","default":false},"width":{"editor":"int","min":300,"max":1400,"default":360},"topm":{"editor":"int","min":0,"max":300,"default":0},"sky":{"editor":"boolean","default":true},"state":{"editor":null},"$preview":{"width":360,"height":560}}'>
-/* Башня «Седьмая»: изображение из состояния игры (ТЗ §7.4).
+<script type="text/x-dc" data-dc-script data-props='{"preset":{"editor":"enum","options":["day2","good","bad","scars","harbor"],"default":"day2"},"scale":{"editor":"float","min":0.1,"max":3,"step":0.02,"default":1},"labels":{"editor":"boolean","default":false},"width":{"editor":"int","min":300,"max":4000,"default":900},"topm":{"editor":"int","min":0,"max":300,"default":0},"sky":{"editor":"boolean","default":true},"focus":{"editor":"enum","options":["","root","tier","spire"],"default":""},"part":{"editor":"enum","options":["tower","building"],"default":"tower"},"b":{"editor":"enum","options":["housing","farm","catcher","core","council","infirmary","guard","scrap","radio","corner","observatory","empty"],"default":"housing"},"stage":{"editor":"int","min":1,"max":3,"default":1},"state":{"editor":null},"$preview":{"width":900,"height":1400}}'>
+/* Башня «Седьмая»: изображение из состояния игры (ТЗ §5.3, §7.2–7.4).
    renderTower(state, opts) — чистая функция без DOM: возвращает размеры и три слоя
    деталей {c: классы, s: координаты и стиль, t: подпись}. В игре тот же список
-   рисуется на Canvas/Phaser; классы описаны в sedmaya.css.
+   рисуется на Canvas/Phaser; вид деталей описан классами .tw .* в sedmaya.css.
+   Масштаб TOWER_K px на метр: ярус 10 м = 125 px, на крупном плане видны фасады,
+   рамы, перила и жители.
    state = { altitude, mist, ether 0..1, stats {trust, solidarity, health, order},
-             tiers [{kind: root|tier|spire, slots: [...]}], scars {patches, stumpAt, memorial} } */
+             tiers [{kind: root|tier|spire, slots: ['farm' | {b: 'farm', stage: 1..3} | null]}],
+             scars {patches [[ярус, доля ширины, доля высоты]], stumpAt, memorial} }
+   opts  = { W, topM, labels } — вся башня; { part: 'building', slot, bw, bh } — одно здание.
+   Возврат: { W, H, back, tower, front, boxes (рамки ярусов для крупного плана), count, tiltStyle }. */
+var TOWER_K = 12.5;
+var TW_GEOM = { wid: { root: 525, tier: 475, spire: 375 }, over: 24, truss: 14, deck: 12 };
+var TW_ALIAS = { salvage: 'scrap', red_corner: 'corner' };
+var TW_FIXED = { core: true, council: true };
+var TW_NAMES = { core: 'Ядро', catcher: 'Уловитель', housing: 'Жилой', farm: 'Ферма', council: 'Совет', infirmary: 'Лазарет', guard: 'Стража', scrap: 'Разборка', radio: 'Радио', corner: 'Кр. уголок', observatory: 'Обсерватория' };
+var TW_STAGES = ['', 'Времянка', 'Мастерская', 'Эфирная'];
+
 var TOWER_PRESETS = {
   day2: {
     altitude: 60, mist: 23.1, ether: 0.85,
     stats: { trust: 68, solidarity: 69, health: 60, order: 54 },
     tiers: [
       { kind: 'root', slots: ['core', 'catcher', null] },
-      { kind: 'tier', slots: ['housing', 'housing', 'farm'] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, 'housing', 'farm'] },
       { kind: 'spire', slots: ['council', null, null] }
     ]
   },
@@ -43,10 +55,10 @@ var TOWER_PRESETS = {
     altitude: 90, mist: 38, ether: 1,
     stats: { trust: 84, solidarity: 78, health: 82, order: 74 },
     tiers: [
-      { kind: 'root', slots: ['core', 'catcher', 'catcher'] },
-      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
-      { kind: 'tier', slots: ['housing', 'farm', 'guard'] },
-      { kind: 'spire', slots: ['council', 'radio', 'housing'] }
+      { kind: 'root', slots: [{ b: 'core', stage: 3 }, { b: 'catcher', stage: 3 }, { b: 'catcher', stage: 2 }] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, { b: 'farm', stage: 3 }, { b: 'infirmary', stage: 2 }] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, { b: 'farm', stage: 2 }, { b: 'guard', stage: 2 }] },
+      { kind: 'spire', slots: [{ b: 'council', stage: 3 }, { b: 'radio', stage: 2 }, { b: 'housing', stage: 1 }] }
     ]
   },
   bad: {
@@ -54,18 +66,18 @@ var TOWER_PRESETS = {
     stats: { trust: 42, solidarity: 22, health: 26, order: 24 },
     tiers: [
       { kind: 'root', slots: ['core', 'catcher', 'scrap'] },
-      { kind: 'tier', slots: ['housing', 'housing', 'farm'] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, 'housing', 'farm'] },
       { kind: 'tier', slots: ['housing', 'scrap', null] },
-      { kind: 'spire', slots: ['council', 'guard', null] }
+      { kind: 'spire', slots: ['council', { b: 'guard', stage: 2 }, null] }
     ]
   },
   scars: {
     altitude: 72, mist: 44, ether: 0.7,
     stats: { trust: 62, solidarity: 48, health: 58, order: 56 },
     tiers: [
-      { kind: 'root', slots: ['core', 'catcher', 'scrap'] },
-      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
-      { kind: 'tier', slots: ['housing', 'housing', 'guard'] },
+      { kind: 'root', slots: ['core', { b: 'catcher', stage: 2 }, 'scrap'] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, 'farm', { b: 'infirmary', stage: 2 }] },
+      { kind: 'tier', slots: ['housing', { b: 'housing', stage: 2 }, 'guard'] },
       { kind: 'spire', slots: ['council', 'radio', null] }
     ],
     scars: { patches: [[0, 0.62, 0.15], [1, 0.12, 0.3], [1, 0.78, 0.2], [2, 0.45, 0.25]], stumpAt: 1, memorial: true }
@@ -74,219 +86,461 @@ var TOWER_PRESETS = {
     altitude: 96, mist: 41, ether: 0.95,
     stats: { trust: 78, solidarity: 74, health: 76, order: 66 },
     tiers: [
-      { kind: 'root', slots: ['core', 'catcher', 'catcher'] },
-      { kind: 'tier', slots: ['housing', 'farm', 'infirmary'] },
-      { kind: 'tier', slots: ['housing', 'farm', 'housing'] },
-      { kind: 'spire', slots: ['council', 'radio', 'housing'] }
+      { kind: 'root', slots: [{ b: 'core', stage: 3 }, { b: 'catcher', stage: 3 }, { b: 'catcher', stage: 3 }] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 3 }, { b: 'farm', stage: 3 }, { b: 'infirmary', stage: 2 }] },
+      { kind: 'tier', slots: [{ b: 'housing', stage: 2 }, { b: 'farm', stage: 3 }, { b: 'corner', stage: 2 }] },
+      { kind: 'spire', slots: [{ b: 'council', stage: 3 }, { b: 'radio', stage: 3 }, { b: 'observatory', stage: 2 }] }
     ],
     scars: { patches: [[1, 0.7, 0.25], [2, 0.2, 0.2]], stumpAt: 1, memorial: true }
   }
 };
 
-var TW_NAMES = { core: 'Ядро', catcher: 'Уловитель', housing: 'Жилой', farm: 'Ферма', council: 'Совет', infirmary: 'Лазарет', guard: 'Стража', scrap: 'Разборка', radio: 'Радио' };
-
 function twHash(i) { var x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); }
 function twClamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function twM(v) { var s = (Math.round(v * 10) / 10).toFixed(1).replace('.', ','); return s.slice(-2) === ',0' ? s.slice(0, -2) : s; }
+// Слот: строка 'farm' (стадия 1, у Ядра и Совета — 2) или {b, stage}; пусто — null
+function twSlot(v) {
+  if (!v) return null;
+  var b = typeof v === 'string' ? v : v.b;
+  if (!b || b === 'empty') return null;
+  b = TW_ALIAS[b] || b;
+  var st = (typeof v === 'object' && v.stage) || (TW_FIXED[b] ? 2 : 1);
+  return { b: b, stage: twClamp(Math.round(st), 1, 3) };
+}
 
 function renderTower(s, o) {
   o = o || {};
-  var K = 5, W = o.W || 360, CX = Math.round(W / 2);
-  var tiers = s.tiers, n = tiers.length, A = s.altitude, M = s.mist;
-  var st = s.stats, e = twClamp(s.ether, 0, 1), sc = s.scars || {};
-  var topM = o.topM || (A + 10 * n + 22);
-  var H = Math.round(topM * K);
+  var K = TOWER_K, U = K / 5, G = TW_GEOM, OV = G.over;
+  var st = s.stats || { trust: 60, solidarity: 60, health: 60, order: 60 };
+  var e = twClamp(s.ether == null ? 1 : s.ether, 0, 1), sc = s.scars || {};
   var labels = !!o.labels;
   var back = [], tower = [], front = [];
-  var WID = { root: 210, tier: 190, spire: 150 };
-  var TINTS = ['#5b3b31', '#2f4b4c', '#5b5131', '#3d3557', '#4b3a2a'];
   var lit = twClamp((st.health - 15) / 70, 0, 1);
-  var lowOrder = st.order < 35, lowSol = st.solidarity < 35, lowHealth = st.health < 35;
-  var close = (A - M) < 10;
-  var winIdx = 0;
-  function y(m) { return Math.round((topM - m) * K); }
+  var lowOrder = st.order < 35, lowSol = st.solidarity < 35, lowHealth = st.health < 35, lowTrust = st.trust < 35;
+  var hiOrder = st.order >= 70, hiSol = st.solidarity >= 70, hiHealth = st.health >= 70, hiTrust = st.trust >= 70;
+  var TINTS = ['#5b3b31', '#2f4b4c', '#5b5131', '#3d3557', '#4b3a2a'];
+  var CLOTH = ['#8e2a20', '#2f5a5c', '#8a6a2a', '#4a3f6b', '#3a4150', '#a8471f'];
+  var close = false, winIdx = 0, figIdx = 0;
+
+  function r1(v) { return Math.round(v * 10) / 10; }
   function px(L, c, x, yy, w, h, extra, t) {
-    L.push({ c: 'p ' + c, s: 'left:' + Math.round(x) + 'px;top:' + Math.round(yy) + 'px;width:' + Math.round(w) + 'px;height:' + Math.round(h) + 'px;' + (extra || ''), t: t || '' });
+    L.push({ c: 'p ' + c, s: 'left:' + r1(x) + 'px;top:' + r1(yy) + 'px;width:' + r1(w) + 'px;height:' + r1(h) + 'px;' + (extra || ''), t: t || '' });
   }
-  var mY = y(M), botY = y(A), topY = y(A + 10 * n);
-  var rootW = WID[tiers[0].kind] || 210;
+  function op(v) { return 'opacity:' + v.toFixed(2) + ';'; }
+  // Тонкая деталь от точки к точке: трос, растяжка, верёвка
+  function line(L, c, x1, y1, x2, y2, t) {
+    var dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy), a = Math.atan2(dy, dx) * 180 / Math.PI;
+    px(L, c, x1, y1 - t / 2, len, t, 'transform:rotate(' + a.toFixed(1) + 'deg);transform-origin:0 50%;');
+  }
+  // Житель: силуэт 9×22 px (1,75 м); x — центр, yb — пол. При высокой солидарности одежда разноцветная
+  function fig(x, yb, cls, extra) {
+    var i = figIdx++;
+    var col = hiSol ? CLOTH[Math.floor(twHash(i + 31) * CLOTH.length)] : '#191c23';
+    px(tower, 'man' + (cls ? ' ' + cls : ''), x - 4.5, yb - 22, 9, 22, '--cc:' + col + ';' + (extra || ''));
+  }
+  function win(x, yy, w, h, ti, S) {
+    var k = winIdx++;
+    var cls = 'win w' + S + (twHash(k) < lit ? ' on' : '') + (lowOrder && twHash(k + 97) > 0.58 ? ' broken' : '') + (ti === 0 && close ? ' frost' : '');
+    px(tower, cls, x, yy, w, h);
+  }
+
+  // Здание в слоте: x, y — левый верх, w × h, низ стоит на палубе. Стадия меняет материал:
+  // 1 — доски, брезент, верёвки; 2 — металл, заклёпки, трубы; 3 — латунь, кристаллы, голубое свечение
+  function building(sl, x, y, w, h, ti) {
+    function P(c, rx, ry, rw, rh, ex, t) { px(tower, c, x + rx, y + ry, rw, rh, ex, t); }
+    function L(c, ax, ay, bx, by, t) { line(tower, c, x + ax, y + ay, x + bx, y + by, t); }
+    if (!sl) { P('slot-empty', 0, 10, w, h - 10, '', '+'); return; }
+    var b = sl.b, S = sl.stage, sS = ' s' + S;
+    function shell(bc, rx, ry, rw, rh, noTop) {
+      P('fac' + sS, rx, ry, rw, rh, '--bc:' + bc + ';');
+      if (S === 1) {
+        if (!noTop) {
+          P('tarp', rx - 4, ry - 9, rw + 8, 15);
+          L('rope', rx - 3, ry - 1, rx + 7, ry + 20, 1.5);
+          L('rope', rx + rw + 3, ry - 1, rx + rw - 7, ry + 20, 1.5);
+        } else P('cap1', rx - 2, ry - 4, rw + 4, 5);
+      } else if (S === 2) {
+        P('cap2', rx - 3, ry - 6, rw + 6, 7);
+      } else {
+        P('cap3', rx - 3, ry - 7, rw + 6, 8);
+        if (!noTop) {
+          P('crystal-glow', rx + rw / 2 - 20, ry - 36, 40, 40, op(0.3 + 0.7 * e));
+          P('crystal', rx + rw / 2 - 6, ry - 26, 12, 20);
+        }
+      }
+    }
+    function grid(ax, ay, aw, ah, cols, rows, ww, wh, skip) {
+      var gx = (aw - cols * ww) / (cols + 1), gy = (ah - rows * wh) / (rows + 1);
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+        if (skip && skip(r, c)) continue;
+        win(x + ax + gx + c * (ww + gx), y + ay + gy + r * (wh + gy), ww, wh, ti, S);
+      }
+      return { gx: gx, gy: gy };
+    }
+
+    if (b === 'housing') {
+      shell('#b7a886', 0, 12, w, h - 12);
+      var aw = w - 22, g = grid(4, 14, aw, h - 16, 3, 2, 20, 19, function (r, c) { return r === 1 && c === 1; });
+      P('door d' + S, 4 + 2 * g.gx + 22, h - 27, 16, 27);
+      var balY = 14 + g.gy + 19;
+      fig(x + 4 + g.gx * 3 + 50, y + balY + 3, 'walk', '--walk:-14px;');
+      P('rail r' + S, 4 + g.gx * 2 + 18, balY - 6, aw - 2 * g.gx - 16, 10);
+      P('ladder l' + S, w - 14, 10, 9, h - 10);
+      if (S === 2) {
+        P('pipe', w * 0.72, -6, 8, 18); P('pipecap', w * 0.72 - 2, -9, 12, 4);
+        P('ant', 12, -18, 2, 20);
+        P('laundry', 13, -12, w * 0.72 - 15, 11);
+      } else if (S === 1) P('laundry', 6, 22, w * 0.5, 11);
+    }
+    else if (b === 'farm') {
+      var dry = lowHealth ? ' dry' : '';
+      P('dome-back d' + S, 3, 2, w - 6, h - 16);
+      P('bed' + dry, 30, h - 64, w - 60, 13);
+      P('bed' + dry, 17, h - 46, w - 34, 13);
+      P('bed' + dry, 9, h - 28, w - 18, 13);
+      fig(x + w * 0.68, y + h - 16);
+      if (S === 3) P('growlamp', 18, 16, w - 36, 5, op(0.4 + 0.6 * e));
+      P('dome d' + S, 3, 2, w - 6, h - 16);
+      if (S === 1) { L('rope', 2, h - 18, w * 0.3, 6, 1.5); L('rope', w - 2, h - 18, w * 0.7, 6, 1.5); }
+      P('fac' + sS, 0, h - 16, w, 16, '--bc:#5b5f52;');
+      P('pipeh p' + S, 0, h - 11, w, 5);
+      if (S >= 2) P('valve', w - 18, h - 14, 10, 10);
+    }
+    else if (b === 'catcher') {
+      var cx = w / 2;
+      shell('#8a7a5a', w * 0.18, h - 30, w * 0.64, 30, true);
+      win(x + w * 0.18 + 9, y + h - 22, 14, 12, ti, S);
+      win(x + w * 0.82 - 23, y + h - 22, 14, 12, ti, S);
+      P('pylon y' + S, cx - 9, 16, 18, h - 46);
+      P('ether-flow', cx - 2, 12, 4, h - 42, op(0.15 + 0.85 * e));
+      if (S === 1) { L('rope', cx, 22, w * 0.2, h - 30, 1.5); L('rope', cx, 22, w * 0.8, h - 30, 1.5); }
+      P('horn h' + S, cx - 38, -8, 76, 30);
+      if (S >= 2) { P('ant', cx - 34, -30, 2, 24); P('ant', cx + 32, -26, 2, 20); P('ant-tip', cx - 36, -33, 6, 6); P('ant-tip', cx + 30, -29, 6, 6); }
+      if (S === 3) P('crystal', cx - 6, 10, 12, 20);
+      P('spark', cx - 15, -26, 30, 30, op(0.25 + 0.75 * e));
+      fig(x + w * 0.1, y + h);
+    }
+    else if (b === 'core') {
+      var d = Math.min(w - 40, h) - 16, ccx = w / 2, ccy = h / 2 + 2;
+      P('core-halo', ccx - d, ccy - d, d * 2, d * 2, op(0.15 + 0.85 * e));
+      P('pipeh p' + S, 0, h - 28, w, 9);
+      P('core-base b' + S, ccx - d * 0.55, h - 14, d * 1.1, 14);
+      P('core-orbit', ccx - d / 2 - 18, ccy - 9, d + 36, 18, op(0.3 + 0.7 * e));
+      P('core-orbit tilt', ccx - d / 2 - 12, ccy - 7, d + 24, 14, 'transform:rotate(58deg);' + op(0.2 + 0.6 * e));
+      P('core', ccx - d / 2, ccy - d / 2, d, d, op(0.35 + 0.65 * e));
+      P('core-cage c' + S, ccx - d / 2 - 5, ccy - d / 2 - 5, d + 10, d + 10);
+      P('core-orbit front', ccx - d / 2 - 18, ccy - 9, d + 36, 18, op(0.3 + 0.7 * e));
+      P('clamp c' + S, ccx - 10, ccy - d / 2 - 13, 20, 9);
+      P('gauge', 6, h - 56, 18, 18);
+      if (S === 3) { P('crystal', 8, h - 50, 10, 18); P('crystal', w - 18, h - 50, 10, 18); }
+      if (S === 1) { L('rope', ccx - d / 2 - 4, ccy - d / 3, ccx - d * 0.55, h - 12, 1.5); L('rope', ccx + d / 2 + 4, ccy - d / 3, ccx + d * 0.55, h - 12, 1.5); }
+      fig(x + w - 14, y + h);
+    }
+    else if (b === 'council') {
+      shell('#a8241b', 0, 18, w, h - 18, true);
+      P('attic a' + S, w * 0.14, 3, w * 0.72, 16);
+      P('emblem e' + S, w / 2 - 13, -16, 26, 26);
+      P('star sm' + (S === 3 ? ' glow' : ''), w / 2 - 8, -12, 16, 16);
+      P('council-t', 6, 21, w - 12, 13, '', 'СОВЕТ');
+      P('pilasters', 6, 36, w - 12, h - 44);
+      grid(6, 36, w - 12, h - 46, 3, 1, 14, 28, function (r, c) { return c === 1; });
+      P('door d' + S, w / 2 - 9, h - 30, 18, 30);
+      P('steps', w / 2 - 20, h - 6, 40, 6);
+      fig(x + w * 0.3, y + h);
+    }
+    else if (b === 'infirmary') {
+      if (S === 1) {
+        P('tent', 0, 6, w, h - 6);
+        L('rope', 2, h - 2, w * 0.18, 26, 1.5); L('rope', w - 2, h - 2, w * 0.82, 26, 1.5);
+        P('tent-door', w / 2 - 13, h - 36, 26, 36);
+        P('cross-sign', w / 2 - 12, 18, 24, 24);
+      } else {
+        shell('#d9d3c4', 0, 12, w, h - 12);
+        grid(2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
+        grid(w * 0.7 - 2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
+        P('cross-sign' + (S === 3 ? ' glow' : ''), w / 2 - 15, 18, 30, 30);
+        P('door d' + S, w / 2 - 9, h - 28, 18, 28);
+        P('awning', w / 2 - 20, h - 36, 40, 9);
+      }
+      fig(x + w * 0.8, y + h, 'medic');
+    }
+    else if (b === 'guard') {
+      shell('#4b505b', 0, 22, w, h - 22, true);
+      P('beam', w / 2 + 14, -36, 110, 48, op(lowOrder ? 0.12 : 0.6));
+      P('booth b' + S, w / 2 - 20, -4, 40, 27);
+      P('booth-cap', w / 2 - 26, -13, 52, 10);
+      P('slit', w / 2 - 14, 4, 28, 5);
+      P('lamp' + (S === 3 ? ' ether' : ''), w / 2 + 10, -6, 12, 12);
+      grid(4, 26, w - 8, h - 34, 3, 1, 7, 20, function (r, c) { return c === 1; });
+      P('door d' + S, w / 2 - 9, h - 30, 18, 30);
+      if (S === 1) { P('sandbags', 2, h - 14, w * 0.36, 14); P('sandbags', w * 0.64 - 2, h - 14, w * 0.36, 14); }
+      else P('siren', w - 22, 28, 14, 10);
+      fig(x + w * 0.2, y + h, 'guard');
+    }
+    else if (b === 'scrap') {
+      shell('#6b6250', w * 0.46, h - 36, w * 0.54, 36, true);
+      P('gate', w * 0.46 + 10, h - 26, w * 0.54 - 20, 26);
+      P('lattice y' + S, 10, 2, 12, h - 2);
+      P('jib y' + S, 2, 2, w - 12, 9);
+      P('cweight', 0, 11, 16, 13);
+      P('hookline', w - 18, 11, 1.5, h * 0.36);
+      P(S === 3 ? 'magnet' : 'hook', w - 23, 11 + h * 0.36, 11, 10);
+      if (S === 1) L('rope', 16, 4, w * 0.4, h - 24, 1.5);
+      P('b-pile', w * 0.02, h - 24, w * 0.5, 24);
+      P('gear', w * 0.2, h - 20, 16, 16);
+      fig(x + w * 0.4, y + h);
+    }
+    else if (b === 'radio') {
+      shell('#7a705a', 6, h - 30, w - 12, 30, true);
+      win(x + 14, y + h - 22, 14, 12, ti, S);
+      L('wire', w / 2, -30, 8, h - 30, 1.2); L('wire', w / 2, -30, w - 8, h - 30, 1.2);
+      P('radiomast y' + S, w / 2 - 10, -40, 20, h + 10);
+      P('dish', w - 34, h - 56, 24, 24);
+      P('ring', w / 2 - 12, -52, 24, 24, op(0.4 + 0.6 * e));
+      P('ring', w / 2 - 22, -62, 44, 44, op(0.2 + 0.4 * e));
+      P('ring', w / 2 - 32, -72, 64, 64, op(0.1 + 0.25 * e));
+      P('beacon', w / 2 - 3, -46, 6, 6);
+    }
+    else if (b === 'corner') {
+      shell('#8e2a20', 0, 12, w, h - 12);
+      P('poster', 8, 20, w * 0.34, h - 38);
+      P('star sm', 8 + w * 0.17 - 7, 26, 14, 14);
+      grid(w * 0.42, 14, w * 0.58 - 4, h * 0.42, 2, 1, 22, 18);
+      fig(x + w * 0.54, y + h - 2); fig(x + w * 0.86, y + h - 2);
+      P('table t' + S, w * 0.46, h - 16, w * 0.46, 16);
+      P('garland', 6, 12, w - 12, 10);
+    }
+    else if (b === 'observatory') {
+      shell('#6f6a5e', 0, h * 0.45, w, h * 0.55, true);
+      P('scope', w / 2 - 3, -14, 7, 40, 'transform:rotate(32deg);transform-origin:50% 100%;');
+      P('obsdome o' + S, w * 0.12, 6, w * 0.76, h * 0.45);
+      P('slit dark', w / 2 - 4, 10, 8, h * 0.3);
+      grid(4, h * 0.45 + 4, w - 8, h * 0.55 - 8, 3, 1, 14, 14);
+    }
+  }
+
+  // Одно здание для листа «Блоки»: кусок стены яруса, здание, палуба
+  if (o.part === 'building') {
+    var bw = o.bw || 150, bh = o.bh || 91, pad = 30, head = 72;
+    var PW = bw + 2 * pad, PH = head + bh + G.deck + 24;
+    px(tower, 'tier', 0, head - 14, PW, bh + 14);
+    px(tower, 'cornice', 0, head - 14, PW, 7);
+    building(twSlot(o.slot), pad, head, bw, bh, 1);
+    px(tower, 'deck', 0, head + bh, PW, G.deck + 4);
+    return { W: PW, H: PH, back: back, tower: tower, front: front, boxes: [], count: tower.length,
+      tiltStyle: 'position:absolute;left:0;top:0;width:' + PW + 'px;height:' + PH + 'px;' };
+  }
+
+  var tiers = s.tiers, n = tiers.length, A = s.altitude, M = s.mist;
+  close = (A - M) < 10;
+  var W = o.W || 900, CX = Math.round(W / 2);
+  var topM = o.topM || (A + 10 * n + 22);
+  var H = Math.round(topM * K);
+  function ym(m) { return r1((topM - m) * K); }
+  function tw(i) { return G.wid[tiers[i].kind] || G.wid.tier; }
+  var mY = ym(M), botY = ym(A), topY = ym(A + 10 * n);
+  var rootW = tw(0), boxes = [];
 
   function mistLayer(L, i) {
     var cols = ['rgba(104,110,120,.6)', 'rgba(141,147,155,.7)', 'rgba(178,183,190,.82)'];
-    var c = cols[i], top = mY - 16 + i * 12;
-    px(L, 'mist m' + i, -160, top, W + 320, H - top + 24,
-      'background:radial-gradient(40px 15px at 40px 15px,' + c + ' 96%,transparent 100%) 0 0/80px 15px repeat-x,linear-gradient(' + c + ',' + c + ') 0 14px/100% 100% no-repeat;');
-  }
-  function win(x, yy, w, h, ti) {
-    var k = winIdx++;
-    var cls = 'win' + (twHash(k) < lit ? ' on' : '') + (lowOrder && twHash(k + 97) > 0.58 ? ' broken' : '') + (ti === 0 && close ? ' frost' : '');
-    px(tower, cls, x, yy, w, h);
-  }
-  function windows(x, yy, w, h, cols, rows, ti) {
-    var ww = 6, wh = 7, gx = (w - cols * ww) / (cols + 1), gy = (h - rows * wh) / (rows + 1);
-    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) win(x + gx + c * (ww + gx), yy + gy + r * (wh + gy), ww, wh, ti);
-  }
-  function building(b, x, yy, w, h, ti) {
-    if (!b) { px(tower, 'slot-empty', x, yy + 4, w, h - 4, '', labels ? '' : '+'); return; }
-    if (b === 'housing') { px(tower, 'b-house', x, yy + 4, w, h - 4); windows(x, yy + 5, w, h - 6, 3, 2, ti); }
-    else if (b === 'farm') {
-      px(tower, 'b-farm', x, yy + 6, w, h - 6);
-      for (var r = 0; r < 3; r++) px(tower, 'farm-row', x + 7, yy + h - 7 - r * 7, w - 14, 3, lowHealth ? 'background:#7a6a48;' : '');
-    }
-    else if (b === 'catcher') {
-      px(tower, 'b-catch', x + 4, yy + 12, w - 8, h - 12);
-      px(tower, 'mast-thin', x + w / 2 - 1, yy + 3, 2, 10);
-      px(tower, 'spark', x + w / 2 - 6, yy - 3, 12, 12, 'opacity:' + (0.25 + 0.75 * e).toFixed(2) + ';');
-    }
-    else if (b === 'core') {
-      var d = Math.min(w, h) - 6, cx = x + w / 2, cy = yy + h / 2 + 2;
-      px(tower, 'core-halo', cx - d, cy - d, d * 2, d * 2, 'opacity:' + (0.15 + 0.85 * e).toFixed(2) + ';');
-      px(tower, 'core-ring', cx - d / 2 - 5, cy - d / 2 - 5, d + 10, d + 10, 'opacity:' + (0.3 + 0.7 * e).toFixed(2) + ';');
-      px(tower, 'core', cx - d / 2, cy - d / 2, d, d, 'opacity:' + (0.35 + 0.65 * e).toFixed(2) + ';');
-    }
-    else if (b === 'council') { px(tower, 'b-council', x, yy + 4, w, h - 4); px(tower, 'council-t', x, yy + 6, w, 9, '', 'СОВЕТ'); windows(x, yy + 15, w, h - 16, 3, 1, ti); }
-    else if (b === 'infirmary') { px(tower, 'b-house', x, yy + 4, w, h - 4); px(tower, 'cross', x + w / 2 - 2, yy + 9, 4, 16); px(tower, 'cross', x + w / 2 - 8, yy + 15, 16, 4); }
-    else if (b === 'guard') { px(tower, 'b-guard', x, yy + 4, w, h - 4); px(tower, 'lamp', x + w / 2 - 4, yy + 8, 8, 8); windows(x, yy + 18, w, h - 19, 2, 1, ti); }
-    else if (b === 'scrap') {
-      px(tower, 'crane', x + 8, yy + 2, 3, h - 2); px(tower, 'crane', x + 8, yy + 4, w - 12, 3);
-      px(tower, 'hook', x + w - 8, yy + 7, 1, 14); px(tower, 'b-pile', x + w * 0.35, yy + h - 13, w * 0.62, 13);
-    }
-    else if (b === 'radio') {
-      px(tower, 'mast-thin', x + w / 2 - 1, yy + 1, 2, h - 1);
-      px(tower, 'ring', x + w / 2 - 8, yy + 4, 16, 16, 'opacity:' + (0.4 + 0.6 * e).toFixed(2) + ';');
-      px(tower, 'ring', x + w / 2 - 13, yy - 1, 26, 26, 'opacity:' + (0.2 + 0.4 * e).toFixed(2) + ';');
-      px(tower, 'b-house', x + 4, yy + h - 14, w - 8, 14);
-    }
+    var c = cols[i], top = mY - 40 + i * 30;
+    px(L, 'mist m' + i, -400, top, W + 800, H - top + 60,
+      'background:radial-gradient(100px 38px at 100px 38px,' + c + ' 96%,transparent 100%) 0 0/200px 38px repeat-x,linear-gradient(' + c + ',' + c + ') 0 36px/100% 100% no-repeat;');
   }
 
   // Небо: облака и тёплый свет над Мглой
   [[0.05, 0.08, 96], [0.6, 0.04, 124], [0.74, 0.27, 82], [0.1, 0.4, 70]].forEach(function (c, i) {
-    px(back, 'cloud cl' + (i % 2), c[0] * W, c[1] * H, c[2], c[2] * 0.28);
+    var cw = c[2] * U;
+    px(back, 'cloud cl' + (i % 2), c[0] * W, c[1] * H, cw, cw * 0.28);
   });
-  px(back, 'glow', 0, mY - 130, W, 150, 'background:linear-gradient(180deg,rgba(217,154,43,0),rgba(217,154,43,.2));');
+  px(back, 'glow', 0, mY - 130 * U, W, 150 * U, 'background:linear-gradient(180deg,rgba(217,154,43,0),rgba(217,154,43,.2));');
   mistLayer(back, 0);
 
-  // Лифт, киль, пропеллеры, выхлоп эфира
-  var liftX = CX - rootW / 2 - 14;
-  px(tower, 'cable', liftX, topY, 2, botY - topY);
-  px(tower, 'lift', liftX - 4, botY - 16, 10, 12, '--lift:' + (-(botY - topY - 24)) + 'px;');
-  px(tower, 'exhaust', CX - 50, botY + 6, 100, 74, 'opacity:' + (0.12 + 0.6 * e).toFixed(2) + ';');
-  px(tower, 'keel', CX - 38, botY, 76, 30);
-  [-1, 1].forEach(function (side) {
-    var x = CX + side * 80;
-    px(tower, 'pod', x - 9, botY, 18, 12);
-    px(tower, 'prop', x - 30, botY + 14, 60, 5, 'animation-duration:' + (0.18 / Math.max(e, 0.08)).toFixed(2) + 's;');
-  });
-
-  // Ярусы снизу вверх
+  // Центральная шахта: видна в фермах между ярусами, под килем и над крышей
+  var roofTop = topY - 46;
+  px(tower, 'shaft', CX - 16, roofTop, 32, botY - roofTop + 44);
+  // Внешний лифт: решётчатая шахта слева, мостки к каждой палубе, кабина ездит от Корня к Шпилю
+  var liftX = CX - rootW / 2 - OV - 44;
+  var spYb = n > 1 ? ym(A + 10 * (n - 1)) : botY;
+  px(tower, 'liftshaft', liftX, spYb - 44, 18, botY - spYb + 56);
   tiers.forEach(function (t, i) {
-    var w = WID[t.kind] || 190, x0 = CX - w / 2, yt = y(A + 10 * (i + 1)), yb = y(A + 10 * i), h = yb - yt;
-    px(tower, 'tier', x0, yt, w, h, 'background:' + (lowSol ? TINTS[i % TINTS.length] : '#2b3039') + ';');
-    px(tower, 'deck', x0 - 6, yb - 4, w + 12, 6);
-    var slotW = (w - 12) / 3, sh = labels ? h - 17 : h - 9;
-    t.slots.forEach(function (b, j) {
-      var sx = x0 + 6 + j * slotW;
-      building(b, sx + 2, yt + 4, slotW - 4, sh, i);
-      if (labels) px(tower, 'slab' + (b ? '' : ' empty'), sx, yb - 14, slotW, 10, '', b ? TW_NAMES[b] : '+ слот');
+    var gy = ym(A + 10 * i), gx = CX - tw(i) / 2 - OV;
+    px(tower, 'gang', liftX + 18, gy - G.deck, gx - liftX - 18, 5);
+  });
+  px(tower, 'lift', liftX + 2, botY - G.deck - 22, 14, 20, '--lift:' + r1(-(botY - spYb)) + 'px;');
+
+  // Двигатели и киль под Корнем: гондолы, кольцевые обтекатели, пропеллеры, сопло эфира
+  var spin = 'animation-duration:' + (0.18 / Math.max(e, 0.08)).toFixed(2) + 's;';
+  px(tower, 'exhaust', CX - 90, botY + 60, 180, 190, op(0.12 + 0.6 * e));
+  [-1, 1].forEach(function (side) {
+    var ex = CX + side * 200;
+    px(tower, 'podglow', ex - 60, botY + 64, 120, 64, op(0.1 + 0.6 * e));
+    line(tower, 'strut-d', CX + side * 96, botY + 6, ex - side * 30, botY + 32, 6);
+    px(tower, 'strut', ex - 5, botY, 10, 24);
+    px(tower, 'pod', ex - 40, botY + 20, 80, 30);
+    px(tower, 'pod-nose ' + (side < 0 ? 'l' : 'r'), side < 0 ? ex - 54 : ex + 38, botY + 24, 16, 22);
+    px(tower, 'hub', ex - 7, botY + 46, 14, 12);
+    px(tower, 'duct', ex - 72, botY + 52, 144, 16);
+    px(tower, 'prop', ex - 66, botY + 56, 132, 8, spin);
+  });
+  px(tower, 'keel', CX - 110, botY, 220, 66);
+  px(tower, 'nozzle-glow', CX - 32, botY + 70, 64, 34, op(0.2 + 0.8 * e));
+  px(tower, 'nozzle', CX - 24, botY + 58, 48, 18);
+  if (close) px(tower, 'icicles', CX - rootW / 2 - OV, botY + 4, rootW + 2 * OV, 14);
+
+  // Ярусы снизу вверх: ферма под палубой верхнего, стена, карниз, пилоны, здания, палуба с перилами
+  tiers.forEach(function (t, i) {
+    var w = tw(i), x0 = CX - w / 2, yt = ym(A + 10 * (i + 1)), yb = ym(A + 10 * i), h = yb - yt;
+    var top = t.kind === 'spire';
+    px(tower, top ? 'frieze' : 'truss', x0 + (top ? 0 : 10), yt, w - (top ? 0 : 20), G.truss);
+    px(tower, 'tier', x0, yt + G.truss, w, h - G.truss, lowSol ? '--tc:' + TINTS[i % TINTS.length] + ';' : '');
+    px(tower, 'cornice', x0 - 4, yt + G.truss, w + 8, 7);
+    px(tower, 'pillar', x0, yt + G.truss + 7, 10, h - G.truss - 7);
+    px(tower, 'pillar', x0 + w - 10, yt + G.truss + 7, 10, h - G.truss - 7);
+    var box = { kind: t.kind, x: x0 - OV - 40, y: yt - 30, w: w + 2 * OV + 80, h: h + 60 };
+    if (top) box = spireRoof(t, w, x0, yt, yb);
+    var inner = 12, slotW = (w - 2 * inner) / 3, by = yt + G.truss + 9, bh = yb - G.deck - by;
+    t.slots.forEach(function (v, j) {
+      var sx = x0 + inner + j * slotW, sl = twSlot(v);
+      building(sl, sx + 3, by, slotW - 6, bh, i);
+      if (labels) px(tower, 'slab' + (sl ? '' : ' empty'), sx + 10, yb - G.deck - 25, slotW - 20, 22, '', sl ? TW_NAMES[sl.b] : '+ слот');
     });
-    // Сады на балконах (здоровье)
-    if (st.health >= 70 && t.kind !== 'spire') {
-      px(tower, 'bush', x0 - 7, yb - 14, 11, 11); px(tower, 'bush', x0 + w - 4, yb - 12, 10, 9);
-    } else if (lowHealth && t.kind !== 'spire') {
-      px(tower, 'bush dry', x0 - 7, yb - 9, 9, 6);
+    px(tower, 'deck', x0 - OV, yb - G.deck, w + 2 * OV, G.deck + 4);
+    px(tower, 'bracket l', x0 - OV, yb + 4, OV, 18);
+    px(tower, 'bracket r', x0 + w, yb + 4, OV, 18);
+
+    // Жители на балконе
+    if (twHash(i + 5) > 0.35 && !lowHealth) fig(x0 + w + 12, yb - G.deck, 'walk', '--walk:-8px;animation-duration:' + (5 + i) + 's;');
+    // Сады на балконах и плющ под палубой (здоровье)
+    if (!top && hiHealth) {
+      px(tower, 'bush', x0 - OV + 1, yb - G.deck - 15, 13, 15); px(tower, 'bush', x0 - OV + 9, yb - G.deck - 19, 12, 19);
+      px(tower, 'bush', x0 + w + OV - 13, yb - G.deck - 14, 12, 14);
+      px(tower, 'vine', x0 - OV, yb + 4, OV, 26); px(tower, 'vine', x0 + w, yb + 4, OV, 20);
+    } else if (!top && lowHealth) {
+      px(tower, 'bush dry', x0 - OV + 2, yb - G.deck - 10, 14, 10);
     }
+    px(tower, 'rail', x0 - OV, yb - G.deck - 14, OV - 2, 14);
+    px(tower, 'rail', x0 + w + 2, yb - G.deck - 14, OV - 2, 14);
     // Патрули с фонарями (порядок)
-    if (st.order >= 70) {
-      px(tower, 'lantern', x0 + 3, yb + 2, 5, 7); px(tower, 'lantern', x0 + w - 8, yb + 2, 5, 7);
-      px(tower, 'figure', x0 - 3, yb - 13, 4, 9);
+    if (hiOrder) {
+      px(tower, 'lantern', x0 - OV + 4, yb + 6, 8, 12); px(tower, 'lantern', x0 + w + OV - 12, yb + 6, 8, 12);
+      fig(x0 - OV + 12, yb - G.deck, 'guard walk', '--walk:6px;animation-duration:7s;');
     }
-    // Флажки-гирлянды (солидарность)
-    if (st.solidarity >= 70 && t.kind !== 'spire') {
-      for (var k = 0; k < Math.floor((w - 8) / 13); k++) px(tower, 'pennant ' + (k % 2 ? 'o' : 'r'), x0 + 5 + k * 13, yt + 1, 8, 8);
-    }
-    // Крыша Шпиля, мачта и звезда (доверие)
-    if (t.kind === 'spire') {
-      var rh = 24, ry = yt - rh, my = ry - 34;
-      px(tower, 'roof', x0, ry, w, rh);
-      px(tower, 'mast', CX - 2, my, 4, 34);
-      var mode = st.trust >= 60 ? 'on' : st.trust >= 30 ? 'blink' : 'off';
-      px(tower, 'star-halo ' + (mode === 'off' ? 'off' : mode === 'blink' ? 'blink' : ''), CX - 27, my - 38, 54, 54);
-      px(tower, 'star ' + (mode === 'off' ? 'off' : mode === 'blink' ? 'blink' : ''), CX - 14, my - 25, 28, 28);
-      if (st.trust >= 70) {
-        [x0 + 2, x0 + w - 4].forEach(function (fx) { px(tower, 'pole', fx, yt - 30, 2, 30); px(tower, 'flag', fx + 2, yt - 30, 18, 11); });
-      }
-    }
+    // Гирлянда флажков под палубой верхнего яруса (солидарность)
+    if (hiSol && !top) px(tower, 'garland', x0 + 12, yt + 1, w - 24, 16);
+    if (i === 0) box = { kind: t.kind, x: liftX - 20, y: yt - 30, w: (x0 + w + OV + 40) - (liftX - 20), h: botY + 140 - (yt - 30) };
+    boxes.push(box);
   });
 
-  // Баррикады между ярусами (солидарность)
+  // Крыша Шпиля в три ступени, мачта с растяжками, звезда с гранями (доверие).
+  // Рисуется до зданий Шпиля, чтобы антенны и герб стояли перед крышей.
+  function spireRoof(t, w, x0, yt, yb) {
+      var r1y = yt - 16, r2y = yt - 32, r3y = yt - 46, mh = 92, my = r3y - mh;
+      px(tower, 'roofstep', x0 + 8, r1y, w - 16, 16);
+      px(tower, 'roofstep', x0 + 52, r2y, w - 104, 16);
+      px(tower, 'roofstep hi', x0 + 100, r3y, w - 200, 14);
+      line(tower, 'wire', CX, my + 26, x0 + 16, r1y + 1, 1.5);
+      line(tower, 'wire', CX, my + 26, x0 + w - 16, r1y + 1, 1.5);
+      line(tower, 'wire', CX, my + 52, x0 + 58, r2y + 1, 1.5);
+      line(tower, 'wire', CX, my + 52, x0 + w - 58, r2y + 1, 1.5);
+      px(tower, 'mast', CX - 8, my, 16, mh);
+      var mode = st.trust >= 60 ? '' : st.trust >= 30 ? ' blink' : ' off';
+      px(tower, 'star-halo' + mode, CX - 62, my - 92, 124, 124);
+      px(tower, 'star rim' + mode, CX - 36, my - 66, 72, 72);
+      px(tower, 'star big' + mode, CX - 31, my - 60, 62, 62);
+      if (hiTrust) {
+        [x0 + 12, x0 + w - 15].forEach(function (fx, k) {
+          px(tower, 'pole', fx, r1y - 54, 3, 54);
+          px(tower, 'flag', fx + 3, r1y - 54, 36, 21, k ? 'animation-delay:-.7s;' : '');
+        });
+      }
+      if (lowTrust) {
+        fig(x0 + w + 6, yb - G.deck); fig(x0 + w + 14, yb - G.deck + 1); fig(x0 + w + 21, yb - G.deck);
+        px(tower, 'placard', x0 + w + 8, yb - G.deck - 40, 16, 12, '', '!');
+      }
+      return { kind: t.kind, x: x0 - OV - 50, y: my - 100, w: w + 2 * OV + 100, h: yb + 30 - (my - 100) };
+  }
+
+  // Баррикады на балконах, ярусы разных цветов, надписи (солидарность)
   if (lowSol) {
     for (var i = 1; i < n; i++) {
-      var jy = y(A + 10 * i), jw = WID[tiers[i].kind] || 190;
-      [CX - jw / 2 + 8, CX + jw / 2 - 32].forEach(function (bx) {
-        px(tower, 'plank', bx, jy - 10, 24, 3, 'transform:rotate(28deg);');
-        px(tower, 'plank', bx, jy - 10, 24, 3, 'transform:rotate(-28deg);');
+      var jy = ym(A + 10 * i) - G.deck, jw = tw(i), jx = CX - jw / 2;
+      [jx - OV + 1, jx + jw + 1].forEach(function (bx) {
+        px(tower, 'crate', bx + 2, jy - 12, 13, 12);
+        px(tower, 'plank', bx - 3, jy - 16, 30, 4, 'transform:rotate(28deg);');
+        px(tower, 'plank', bx - 3, jy - 16, 30, 4, 'transform:rotate(-28deg);');
       });
+      if (i < n - 1) px(tower, 'graffiti', jx + jw * 0.3, jy, 150, 14, 'transform:rotate(-3deg);', i % 2 ? 'НАШ ЯРУС' : 'ВЕРХ ДЛЯ ВЕРХНИХ?');
     }
   }
   // Транспарант (доверие)
-  if (n > 2 && (st.trust >= 70 || st.trust < 35)) {
-    var bw = WID[tiers[1].kind] || 190;
-    if (st.trust >= 70) px(tower, 'banner', CX + bw / 2 - 1, y(A + 20) + 3, 14, 74, '', 'ВСЕ НА ВЫСОТУ');
-    else px(tower, 'banner torn', CX + bw / 2 - 1, y(A + 20) + 3, 14, 48, '', 'ВСЕ НА');
+  if (n > 2 && (hiTrust || lowTrust)) {
+    var bx1 = CX + tw(1) / 2 + OV + 6, by1 = ym(A + 20) + 2;
+    px(tower, 'rod', bx1 - 4, by1, 40, 4);
+    if (hiTrust) px(tower, 'banner', bx1, by1 + 4, 30, 200, '', 'ВСЕ НА ВЫСОТУ');
+    else px(tower, 'banner torn', bx1, by1 + 4, 30, 120, '', 'ВСЕ НА');
   }
-  // Дым, разбитые стёкла и костёр (порядок)
+  // Дым, костёр в бочке, толпа (порядок)
   if (lowOrder) {
-    var t1 = Math.min(1, n - 1), w1 = WID[tiers[t1].kind] || 190;
-    [[CX + w1 / 2 - 26, y(A + 10 * (t1 + 1)) - 10], [CX - rootW / 2 + 10, y(A + 10) - 10]].forEach(function (p) {
-      for (var s2 = 0; s2 < 3; s2++) px(front, 'smoke s' + s2, p[0], p[1], 18, 18);
+    var t1 = Math.min(1, n - 1), w1 = tw(t1), x1 = CX - w1 / 2, yb1 = ym(A + 10 * t1) - G.deck;
+    [[CX + w1 / 2 - 60, ym(A + 10 * (t1 + 1)) - 20], [CX - rootW / 2 + 24, ym(A + 10) - 20]].forEach(function (p) {
+      for (var k = 0; k < 3; k++) px(front, 'smoke sd' + k, p[0], p[1], 44, 44);
     });
-    px(tower, 'fire', CX - w1 / 2 - 4, y(A + 10 * t1) - 9, 8, 6);
+    px(tower, 'fire', x1 - OV + 2, yb1 - 30, 16, 18);
+    px(tower, 'barrel', x1 - OV + 4, yb1 - 15, 12, 15);
+    var rx = CX + rootW / 2 + 2, ry = botY - G.deck;
+    fig(rx + 5, ry); fig(rx + 12, ry + 1); fig(rx + 19, ry);
   }
   // Серый налёт (здоровье)
-  if (lowHealth) px(tower, 'film', CX - rootW / 2 - 6, topY - 24, rootW + 12, botY - topY + 24);
+  if (lowHealth) px(tower, 'film', CX - rootW / 2 - OV, topY - 60, rootW + 2 * OV, botY - topY + 60);
 
-  // Шрамы: трещины с заплатами, обрубок балки, мемориал
+  // Шрамы: трещины с заплатами, обрубок балки с оборванными тросами, памятная табличка
   (sc.patches || []).forEach(function (pt) {
-    var ti = pt[0], tw2 = WID[tiers[ti].kind] || 190, tx = CX - tw2 / 2 + pt[1] * tw2, ty = y(A + 10 * (ti + 1)) + pt[2] * 50;
-    px(tower, 'crack', tx - 4, ty - 6, 1, 24);
-    px(tower, 'patch', tx - 7, ty, 15, 10);
+    var ti = pt[0]; if (!tiers[ti]) return;
+    var w2 = tw(ti), tx = CX - w2 / 2 + pt[1] * w2, ty = ym(A + 10 * (ti + 1)) + pt[2] * 10 * K;
+    px(tower, 'crack', tx - 7, ty - 12, 14, 52);
+    px(tower, 'patch', tx - 15, ty + 6, 30, 22);
   });
-  if (sc.stumpAt != null) {
-    var sj = sc.stumpAt, sw = WID[tiers[sj].kind] || 190, sy = y(A + 10 * (sj + 1));
-    px(tower, 'stump', CX + sw / 2 - 6, sy - 6, 56, 10);
-    px(tower, 'cable-hang', CX + sw / 2 + 40, sy + 3, 1, 26);
-    px(tower, 'cable-hang', CX + sw / 2 + 22, sy + 3, 1, 16, 'transform:rotate(-8deg);');
+  if (sc.stumpAt != null && tiers[sc.stumpAt]) {
+    var sj = sc.stumpAt, sw = tw(sj), sy = ym(A + 10 * (sj + 1));
+    px(tower, 'stump', CX + sw / 2 - 10, sy - 18, 132, 24);
+    px(tower, 'cable-hang', CX + sw / 2 + 108, sy + 4, 2, 64);
+    px(tower, 'cable-hang', CX + sw / 2 + 64, sy + 4, 2, 40, 'transform:rotate(-8deg);');
+    px(tower, 'cable-hang', CX + sw / 2 + 30, sy + 4, 2, 24, 'transform:rotate(14deg);');
     if (sc.memorial) {
-      px(tower, 'memorial', CX - sw / 2 - 2, sy - 18, 14, 12);
-      px(tower, 'star', CX - sw / 2 + 1, sy - 17, 8, 8, 'background:#c62a1f;');
+      var mw = tiers[sj + 1] ? tw(sj + 1) : sw, mx = CX - mw / 2 - OV + 1;
+      px(tower, 'memorial', mx, sy - G.deck - 30, 22, 28);
+      px(tower, 'star sm', mx + 6, sy - G.deck - 26, 10, 10);
+      px(tower, 'wreath', mx + 3, sy - G.deck - 14, 16, 10);
     }
   }
 
   // Мгла спереди и клубы у Корня
   mistLayer(front, 1);
   mistLayer(front, 2);
-  px(front, 'underglow', 0, mY + 20, W, H - mY);
+  px(front, 'underglow', 0, mY + 20 * U, W, H - mY);
   if (close) {
-    px(front, 'wisp', CX - 150, botY - 44, 300, 86);
-    px(front, 'wisp', CX - 100, botY - 74, 170, 64, 'animation-duration:8s;');
+    px(front, 'wisp', CX - 375, botY - 110, 750, 215);
+    px(front, 'wisp', CX - 250, botY - 185, 425, 160, 'animation-duration:8s;');
   }
 
   // Подписи: высоты, ярусы, уровень Мглы
   if (labels) {
     for (var m = Math.ceil(M / 10) * 10; m <= A + 10 * n; m += 10) {
-      px(front, 'tick', 8, y(m), 10, 1); px(front, 'tick-t', 22, y(m) - 7, 44, 14, '', m + ' м');
+      px(front, 'tick', 20, ym(m), 25, 2); px(front, 'tick-t', 55, ym(m) - 17, 110, 35, '', m + ' м');
     }
     tiers.forEach(function (t, i) {
-      var w = WID[t.kind] || 190, nm = t.kind === 'root' ? 'Корень' : t.kind === 'spire' ? 'Шпиль' : (i === 1 ? 'Нижний ярус' : 'Ярус ' + i);
-      px(front, 'tier-name', CX + w / 2 + 20, y(A + 10 * i) - 33, 100, 16, '', nm);
+      var nm = t.kind === 'root' ? 'Корень' : t.kind === 'spire' ? 'Шпиль' : (i === 1 ? 'Нижний ярус' : 'Ярус ' + i);
+      px(front, 'tier-name', CX + tw(i) / 2 + OV + 46, ym(A + 10 * i) - 82, 250, 40, '', nm);
     });
-    px(front, 'mist-line', 0, mY, W, 1);
-    px(front, 'mist-t', W - 190, mY - 22, 180, 16, '', 'Мгла · ' + twM(M) + ' м');
+    px(front, 'mist-line', 0, mY, W, 2);
+    px(front, 'mist-t', W - 475, mY - 55, 450, 40, '', 'Мгла · ' + twM(M) + ' м');
   }
 
   var tilt = e < 0.5 ? +((0.5 - e) * 8).toFixed(1) : 0;
   return {
-    W: W, H: H, back: back, tower: tower, front: front,
+    W: W, H: H, back: back, tower: tower, front: front, boxes: boxes,
+    count: back.length + tower.length + front.length,
     tiltStyle: 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;transform:rotate(' + tilt + 'deg);transform-origin:' + CX + 'px ' + botY + 'px;'
   };
 }
@@ -296,16 +550,26 @@ class Component extends DCLogic {
     var p = this.props;
     var s = p.state || TOWER_PRESETS[p.preset || 'day2'] || TOWER_PRESETS.day2;
     var sc = parseFloat(p.scale) || 1;
-    var W = parseInt(p.width, 10) || 360;
+    var W = parseInt(p.width, 10) || 900;
     var topM = parseInt(p.topm, 10) || 0;
     var labels = p.labels === true || p.labels === 'true';
     var sky = !(p.sky === false || p.sky === 'false');
-    var r = renderTower(s, { W: W, topM: topM || undefined, labels: labels });
+    var r, alt, box = null;
+    if (p.part === 'building') {
+      var slot = p.b && p.b !== 'empty' ? { b: p.b, stage: parseInt(p.stage, 10) || 1 } : null;
+      r = renderTower(s, { part: 'building', slot: slot });
+      alt = slot ? TW_NAMES[slot.b] + ', стадия «' + TW_STAGES[twSlot(slot).stage] + '»' : 'Пустой слот';
+    } else {
+      r = renderTower(s, { W: W, topM: topM || undefined, labels: labels });
+      var f = p.focus, bx = r.boxes;
+      if (f === 'root') box = bx[0]; else if (f === 'spire') box = bx[bx.length - 1]; else if (f === 'tier' && bx.length > 2) box = bx[1];
+      alt = 'Башня: ' + s.tiers.length + ' яруса, днище ' + s.altitude + ' м, Мгла ' + twM(s.mist) + ' м';
+    }
+    var cw = box ? box.w : r.W, ch = box ? box.h : r.H, ox = box ? box.x : 0, oy = box ? box.y : 0;
     return {
-      back: r.back, tower: r.tower, front: r.front, tiltStyle: r.tiltStyle,
-      alt: 'Башня: ' + s.tiers.length + ' яруса, днище ' + s.altitude + ' м, Мгла ' + twM(s.mist) + ' м',
-      rootStyle: 'width:' + Math.round(r.W * sc) + 'px;height:' + Math.round(r.H * sc) + 'px;',
-      innerStyle: 'position:absolute;left:0;top:0;width:' + r.W + 'px;height:' + r.H + 'px;transform:scale(' + sc + ');transform-origin:0 0;' +
+      back: r.back, tower: r.tower, front: r.front, tiltStyle: r.tiltStyle, alt: alt,
+      rootStyle: 'width:' + Math.round(cw * sc) + 'px;height:' + Math.round(ch * sc) + 'px;',
+      innerStyle: 'position:absolute;left:0;top:0;width:' + r.W + 'px;height:' + r.H + 'px;transform:scale(' + sc + ') translate(' + (-ox) + 'px,' + (-oy) + 'px);transform-origin:0 0;' +
         (sky ? 'background:linear-gradient(180deg,#172133 0%,#26354b 48%,#4b4b52 78%,#7d7f86 100%);' : '')
     };
   }

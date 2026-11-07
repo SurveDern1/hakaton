@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Блоки башни</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./sedmaya.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&amp;family=PT+Serif:ital,wght@0,400;0,700;1,400&amp;family=Rubik+Mono+One&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="sd" style="width: 1760px; height: 2980px; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 32px; background: var(--ink);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span class="plaque">Блоки башни</span>
+      <h1 class="disp" style="margin: 0; font-size: 44px;">Здания в трёх стадиях</h1>
+    </div>
+    <p class="serif" style="margin: 0; max-width: 70ch; font-size: 16px; line-height: 1.5; color: var(--muted);">Каждое здание рисует та же функция <code style="font-family: var(--f-ui); color: var(--ochre);">renderTower</code>, что и всю башню. Стадия задаётся в слоте: <code style="font-family: var(--f-ui); color: var(--ochre);">{b: 'farm', stage: 2}</code>. Времянка — доски, брезент и верёвки; мастерская — металл, заклёпки и трубы; эфирная — латунь, кристаллы и голубое свечение.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px;">
+    <sc-for list="{{cards}}" as="c" hint-placeholder-count="11">
+      <article style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--ink-2); border-top: 4px solid var(--red);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 16px;">
+          <span class="disp" style="font-size: 22px;">{{c.name}}</span>
+          <span style="font-size: 14px; color: var(--muted);">{{c.role}}</span>
+        </div>
+        <div style="display: flex; gap: 16px;">
+          <sc-for list="{{c.stages}}" as="s" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 8px; background: #172133;">
+              <dc-import name="Tower" part="building" b="{{s.b}}" stage="{{s.stage}}" scale="1.2" sky="false" hint-size="252px,239px"></dc-import>
+              <span class="lbl" style="padding: 0 10px 10px; color: var(--text);">{{s.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </article>
+    </sc-for>
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 20px; background: var(--ink-2); border-top: 4px solid var(--ether-deep);">
+      <span class="disp" style="font-size: 22px;">Как читать стадии</span>
+      <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px 18px; font-size: 15px; line-height: 1.45;">
+        <span class="plaque ink" style="align-self: start;">Времянка</span><span>Доски с гвоздями, брезентовая крыша на верёвках, деревянные рамы и лестницы. Базовый эффект.</span>
+        <span class="plaque ochre" style="align-self: start;">Мастерская</span><span>Стальные панели с заклёпками, трубы и антенны, стёкла в металлических рамах. Эффект +50 %.</span>
+        <span class="plaque ether" style="align-self: start;">Эфирная</span><span>Латунные рамы, кристалл на крыше, голубые окна и подсветка. Эффект +100 %, расходует 1 эфир в ночь.</span>
+      </div>
+      <p class="serif" style="margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted);">Окна горят по здоровью колонии, бьются при низком порядке, покрываются инеем, когда Мгла у Корня. Жители одеты пёстро при высокой солидарности.</p>
+    </article>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <h2 class="disp" style="margin: 0; font-size: 28px;">Крупные планы башни</h2>
+    <div style="display: flex; gap: 24px; align-items: flex-end;">
+      <figure style="margin: 0; width: 609px; flex: none; display: flex; flex-direction: column; gap: 10px;">
+        <dc-import name="Tower" preset="good" width="900" focus="root" scale="0.9" hint-size="609px,266px"></dc-import>
+        <figcaption style="font-size: 14px; color: var(--muted);"><b style="color: var(--text);">Корень.</b> Ядро в клетке, уловители, лифт с мостками, гондолы с обтекателями, киль и сопло эфира.</figcaption>
+      </figure>
+      <figure style="margin: 0; width: 543px; flex: none; display: flex; flex-direction: column; gap: 10px;">
+        <dc-import name="Tower" preset="good" width="900" focus="tier" scale="0.9" hint-size="543px,167px"></dc-import>
+        <figcaption style="font-size: 14px; color: var(--muted);"><b style="color: var(--text);">Ярус.</b> Ферма под палубой, красный карниз, пилоны, балконы с перилами, сады и гирлянды.</figcaption>
+      </figure>
+      <figure style="margin: 0; width: 471px; flex: none; display: flex; flex-direction: column; gap: 10px;">
+        <dc-import name="Tower" preset="good" width="900" focus="spire" scale="0.9" hint-size="471px,354px"></dc-import>
+        <figcaption style="font-size: 14px; color: var(--muted);"><b style="color: var(--text);">Шпиль.</b> Крыша в три ступени, мачта на растяжках, звезда с гранями, флаги.</figcaption>
+      </figure>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1760,"height":2980}}'>
+var BL_LIST = [
+  ['core', 'Ядро', 'Держит башню в воздухе · неснимаемое'],
+  ['council', 'Совет', 'Решения и декреты · неснимаемый'],
+  ['housing', 'Жилой модуль', '+6 мест жилья'],
+  ['farm', 'Гидропонная ферма', '+7 еды в день'],
+  ['catcher', 'Уловитель эфира', '+8 эфира · Корень и ярус над ним'],
+  ['scrap', 'Разборка', '+6 материалов в день'],
+  ['infirmary', 'Лазарет', '+3 здоровья в день'],
+  ['guard', 'Стража', '+3 порядка в день'],
+  ['radio', 'Радиорубка', 'Сигнал в отчёте · только Шпиль'],
+  ['corner', 'Красный уголок', '+1 солидарности и доверия'],
+  ['observatory', 'Обсерватория', 'Прогноз Мглы на 3 ночи']
+];
+var BL_STAGES = ['Времянка', 'Мастерская', 'Эфирная'];
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      cards: BL_LIST.map(function (r) {
+        return {
+          name: r[1], role: r[2],
+          stages: BL_STAGES.map(function (label, i) { return { b: r[0], stage: i + 1, label: label }; })
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

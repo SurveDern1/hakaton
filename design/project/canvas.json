@@ -13,7 +13,8 @@
     "Final.dc.html": { "x": 2700, "y": 1280, "w": 1440, "h": 900, "title": "Финал · Гавань" },
     "States.dc.html": { "x": 0, "y": 2560, "w": 1440, "h": 980, "title": "Состояния башни" },
     "Playground.dc.html": { "x": 1520, "y": 2560, "w": 1200, "h": 800, "title": "Башня от показателей", "is_interactive": true },
-    "Tower.dc.html": { "x": 2800, "y": 2560, "w": 360, "h": 560, "title": "Компонент башни" }
+    "Tower.dc.html": { "x": 2800, "y": 2560, "w": 900, "h": 1400, "title": "Компонент башни" },
+    "Blocks.dc.html": { "x": 3780, "y": 2560, "w": 1760, "h": 2980, "title": "Блоки: здания в трёх стадиях" }
   },
   "order": [
     "Main.dc.html",
@@ -24,13 +25,14 @@
     "Final.dc.html",
     "States.dc.html",
     "Playground.dc.html",
-    "Tower.dc.html"
+    "Tower.dc.html",
+    "Blocks.dc.html"
   ],
   "notes": {
     "row1": { "x": 0, "y": -260, "text": "Седьмая: день над Мглой", "kind": "title1", "maxW": 3430 },
     "row2": { "x": 0, "y": 1020, "text": "Событие, стенгазета, финал", "kind": "title1", "maxW": 4140 },
-    "row3": { "x": 0, "y": 2300, "text": "Башня отражает колонию", "kind": "title1", "maxW": 3160 },
-    "towerNote": { "x": 3240, "y": 2560, "w": 320, "text": "Башня рисуется одной функцией renderTower(state) из Tower.dc.html. Она возвращает список деталей с координатами, без DOM. В игре тот же список рисуется на Canvas или в Phaser.", "fill": "orange" }
+    "row3": { "x": 0, "y": 2300, "text": "Башня отражает колонию", "kind": "title1", "maxW": 5540 },
+    "towerNote": { "x": 5620, "y": 2560, "w": 320, "text": "Башня рисуется одной функцией renderTower(state) из Tower.dc.html: 12,5 px на метр, ярус 125 px. Она возвращает список деталей с координатами, без DOM. В игре тот же список рисуется на Canvas или в Phaser. Слот здания — строка или {b, stage}, стадии 1–3.", "fill": "orange" }
   },
   "designSystems": []
 }
