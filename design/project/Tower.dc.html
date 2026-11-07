@@ -379,9 +379,9 @@ function renderTower(s, o) {
   px(tower, 'cushion', CX - 270, botY + 30, 540, reach + 60, op(0.15 + 0.6 * e) + dur(3.2));
   px(tower, 'motes', CX - 130, botY + 72, 260, reach, op(0.1 + 0.8 * e) + dur(2.2));
   [-1, 1].forEach(function (side) {
-    px(tower, 'jet side', CX + side * 200 - 62, botY + 66, 124, reach * 0.7, op(0.1 + 0.5 * e) + dur(1.1));
+    px(tower, 'jet side' + (e < 0.5 ? ' weak' : ''), CX + side * 200 - 62, botY + 66, 124, reach * 0.7, op(0.1 + 0.5 * e) + dur(1.1));
   });
-  px(tower, 'jet', CX - 26, botY + 74, 52, reach, op(0.15 + 0.75 * e) + dur(0.9));
+  px(tower, 'jet' + (e < 0.5 ? ' weak' : ''), CX - 26, botY + 74, 52, reach, op(0.15 + 0.75 * e) + dur(0.9));
   if (e > 0.15) for (var k = 0; k < 3; k++) {
     px(tower, 'shock', CX - 46, botY + 78, 92, 18, '--fall:' + Math.round(reach * 0.75) + 'px;' + dur(2.4) + 'animation-delay:' + (-0.8 * k * pace).toFixed(2) + 's;');
   }

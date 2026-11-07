@@ -144,6 +144,7 @@
 .tw .prop { border-radius: 50%; background: linear-gradient(90deg, rgba(236, 224, 196, .1), rgba(236, 224, 196, .8) 50%, rgba(236, 224, 196, .1)); animation: twSpin .2s linear infinite; }
 .tw .cushion { border-radius: 50%; transform-origin: 50% 0; background: radial-gradient(closest-side, rgba(160, 232, 255, .45), rgba(108, 212, 255, .16) 55%, rgba(108, 212, 255, 0)); animation: twCushion 3.2s ease-in-out infinite; }
 .tw .jet { clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); background: repeating-linear-gradient(180deg, rgba(232, 251, 255, .6) 0 9px, rgba(232, 251, 255, 0) 9px 26px), linear-gradient(180deg, rgba(190, 240, 255, .95), rgba(108, 212, 255, .4) 45%, rgba(108, 212, 255, 0)); -webkit-mask-image: linear-gradient(#000 50%, transparent); mask-image: linear-gradient(#000 50%, transparent); animation: twJet .9s linear infinite; }
+.tw .jet.weak { -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 30px, #000 30px 40px, transparent 40px 58px), linear-gradient(#000 35%, transparent); -webkit-mask-composite: source-in; mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 30px, #000 30px 40px, transparent 40px 58px), linear-gradient(#000 35%, transparent); mask-composite: intersect; animation: twJet .9s linear infinite, twFlicker .6s steps(2, end) infinite; }
 .tw .jet.side { clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%); }
 .tw .shock { border-radius: 50%; border: 2px solid rgba(200, 242, 255, .85); box-shadow: 0 0 10px rgba(108, 212, 255, .6), inset 0 0 8px rgba(108, 212, 255, .5); animation: twShock 2.4s ease-out infinite; }
 .tw .motes { background: radial-gradient(circle, rgba(232, 251, 255, .95) 0 1.4px, transparent 2px) 0 0 / 23px 31px, radial-gradient(circle, rgba(108, 212, 255, .9) 0 1px, transparent 1.6px) 11px 15px / 17px 23px; -webkit-mask-image: radial-gradient(closest-side, #000 25%, transparent); mask-image: radial-gradient(closest-side, #000 25%, transparent); animation: twMotes 2.2s linear infinite; }
@@ -357,6 +358,7 @@
 @keyframes twWalk { 0%, 100% { translate: 0 0; } 50% { translate: var(--walk, 8px) 0; } }
 @keyframes twCushion { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.05, .9); } }
 @keyframes twJet { to { background-position: 0 26px, 0 0; } }
+@keyframes twFlicker { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(.4); } }
 @keyframes twShock { 0% { transform: translateY(0) scale(.5); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(var(--fall)) scale(2.6); opacity: 0; } }
 @keyframes twMotes { to { background-position: 0 31px, 11px 38px; } }
 @keyframes twRipple { 0% { transform: scale(.3); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
