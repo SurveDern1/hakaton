@@ -1,0 +1,678 @@
+<title>Летучий город</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sky map canvas left, command panel right (stacks on phone); single deliberate dusk-sky dark look */
+:root{
+  color-scheme: dark;
+  --night:#111529; --ice:#1a2038; --frost:#252c4a; --line:#343d63;
+  --snow:#eef0fa; --mist:#9aa3c7;
+  --ember:#f4b24a; --ember-2:#ffd38a; --ether:#6fe3ff;
+  --good:#6fd39a; --warn:#f2c14e; --bad:#ff6b6b;
+  --f-display:"Unbounded", "Segoe UI", sans-serif;
+  --f-body:"Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--snow);font-family:var(--f-body);font-size:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;box-sizing:border-box}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
+
+.app{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px}
+h1{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0;letter-spacing:.01em}
+h1 span{color:var(--ember)}
+.clock{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--f-mono);color:var(--mist);font-size:13px}
+.clock b{color:var(--snow);font-weight:500}
+
+.res{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;background:var(--ice);border:1px solid var(--line);border-radius:8px;padding:6px 10px;position:relative}
+.chip .lbl{color:var(--mist);font-size:12px}
+.chip .val{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:15px}
+.chip .sub{font-family:var(--f-mono);font-size:11px;color:var(--mist)}
+.dot{width:8px;height:8px;border-radius:2px}
+.alt .val{color:var(--ether)}
+.alt.low .val{color:var(--bad)}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:12px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.mapwrap{background:var(--ice);border:1px solid var(--line);border-radius:10px;padding:8px;min-width:0}
+canvas{display:block;width:100%;height:auto;touch-action:manipulation;border-radius:6px}
+.hint{color:var(--mist);font-size:12px;padding:6px 4px 0}
+
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--ice);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.box h2{font-family:var(--f-display);font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin:0}
+
+.stat{display:grid;grid-template-columns:96px minmax(0,1fr) 34px;align-items:center;gap:8px;position:relative}
+.stat .name{font-size:13px}
+.bar{height:8px;background:var(--night);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;transition:width .5s ease, background-color .5s}
+.stat .num{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.float{position:absolute;right:-4px;top:-14px;font-family:var(--f-mono);font-size:12px;pointer-events:none;animation:float 1.4s ease-out forwards}
+@keyframes float{from{opacity:1;transform:translateY(4px)}to{opacity:0;transform:translateY(-14px)}}
+
+.builds{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bbtn{background:var(--frost);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:left;display:flex;flex-direction:column;gap:2px;transition:border-color .15s, background .15s}
+.bbtn:hover:not(:disabled){border-color:var(--mist)}
+.bbtn.on{border-color:var(--ember);background:#2f2c3a}
+.bbtn:disabled{opacity:.45;cursor:not-allowed}
+.bbtn .t{font-weight:600;font-size:13px}
+.bbtn .c{font-family:var(--f-mono);font-size:11px;color:var(--mist)}
+.bbtn .d{font-size:11px;color:var(--mist);line-height:1.3}
+
+.endday{background:var(--ember);color:#24170a;border:0;border-radius:10px;padding:14px;font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.02em;transition:filter .15s, transform .1s}
+.endday:hover{filter:brightness(1.08)}
+.endday:active{transform:translateY(1px)}
+.endday:disabled{opacity:.5;cursor:wait}
+
+.forecast{font-family:var(--f-mono);font-size:12px;color:var(--mist);display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.forecast .neg{color:var(--bad)} .forecast .pos{color:var(--good)}
+
+.log{max-height:150px;overflow:auto;font-size:12px;color:var(--mist);display:flex;flex-direction:column;gap:4px}
+.log p{margin:0}.log b{color:var(--snow);font-weight:500}
+
+/* modal */
+.veil{position:fixed;inset:0;background:rgba(8,10,22,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20;animation:fade .2s ease}
+.card{background:var(--ice);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:calc(100% - 16px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px;animation:rise .25s ease}
+.card .eyebrow{font-family:var(--f-mono);font-size:11px;color:var(--ember-2);letter-spacing:.06em;text-transform:uppercase}
+.card h3{font-family:var(--f-display);font-weight:700;font-size:19px;margin:0;text-wrap:balance}
+.card p{margin:0;line-height:1.55;color:#cfd4ea}
+.report{background:var(--night);border-radius:8px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.report .bad{color:var(--bad)} .report .ok{color:var(--good)}
+.choices{display:flex;flex-direction:column;gap:8px}
+.choice{background:var(--frost);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:6px;transition:border-color .15s, background .15s}
+.choice:hover:not(:disabled){border-color:var(--ember);background:#2c3354}
+.choice:disabled{opacity:.45;cursor:not-allowed}
+.choice .t{font-weight:600}
+.effs{display:flex;flex-wrap:wrap;gap:4px}
+.eff{font-family:var(--f-mono);font-size:11px;padding:2px 6px;border-radius:4px;background:var(--night)}
+.eff.p{color:var(--good)} .eff.n{color:var(--bad)}
+.why{font-size:11px;color:var(--bad)}
+.primary{background:var(--ember);color:#24170a;border:0;border-radius:10px;padding:12px;font-weight:600}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Летучий <span>город</span></h1>
+    <div class="clock">
+      <span>День <b id="day">1</b> / <b id="maxday">20</b></span>
+      <span>Ветер <b id="wind">3 балла</b></span>
+      <span>До гавани <b id="left">19 дн.</b></span>
+    </div>
+  </header>
+
+  <div class="res" id="res"></div>
+
+  <div class="main">
+    <div class="mapwrap">
+      <canvas id="map" width="960" height="640" aria-label="Карта летучего города"></canvas>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <div class="panel">
+      <div class="box">
+        <h2>Настроение жителей</h2>
+        <div id="stats"></div>
+      </div>
+      <div class="box">
+        <h2>Строительство</h2>
+        <div class="builds" id="builds"></div>
+      </div>
+      <div class="box">
+        <h2>Прогноз на ночь</h2>
+        <div class="forecast" id="forecast"></div>
+      </div>
+      <button class="endday" id="endday">Завершить день</button>
+      <div class="box">
+        <h2>Бортовой журнал</h2>
+        <div class="log" id="log" role="log" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="modal"></div>
+
+<script>
+// Ход игры: игрок строит днём → «Завершить день» → endDay() считает производство, еду, эфир, высоту и кризисы
+// → showEvent() показывает утреннее событие с выбором → эффекты выбора применяются к показателям.
+// ===== Константы =====
+const W = 12, H = 8, MAX_DAY = 20, MAX_ALT = 1000;
+const RES = {
+  food:{name:'Еда', color:'#9bd36f'},
+  ether:{name:'Эфир', color:'#6fe3ff'},
+  mat:{name:'Материалы', color:'#c9b38f'},
+};
+const STATS = {
+  trust:{name:'Доверие'},
+  tol:{name:'Терпимость'},
+  health:{name:'Здоровье'},
+  order:{name:'Порядок'},
+};
+const LABEL = {food:'еда', ether:'эфир', mat:'материалы', pop:'жители', alt:'высота', trust:'доверие', tol:'терпимость', health:'здоровье', order:'порядок'};
+const TERRAIN_NAME = {deck:'камень острова', crystal:'эфирные кристаллы', wreck:'обломки'};
+
+// Здания: стоимость в материалах, рабочие места, что дают в день, на какой клетке ставятся
+const BUILD = {
+  house:  {name:'Дом',          cost:10, workers:0, terrain:'deck',    desc:'+6 мест жилья', color:'#d9b48a'},
+  farm:   {name:'Висячий сад',  cost:15, workers:3, terrain:'deck',    desc:'+7 еды в день', color:'#6fbf73', prod:{food:7}},
+  pump:   {name:'Экстрактор',   cost:10, workers:3, terrain:'crystal', desc:'+8 эфира, на кристаллах', color:'#4aa8c9', prod:{ether:8}},
+  salvage:{name:'Разборка',     cost:8,  workers:3, terrain:'wreck',   desc:'+6 материалов, на обломках', color:'#8f8a99', prod:{mat:6}},
+  clinic: {name:'Лазарет',      cost:20, workers:2, terrain:'deck',    desc:'+3 здоровья в день', color:'#eef0fa', prod:{health:3}},
+  guard:  {name:'Стража',       cost:15, workers:2, terrain:'deck',    desc:'+3 порядка в день', color:'#6a7fd6', prod:{order:3}},
+};
+
+// ===== События: каждое решение тянет показатели в разные стороны =====
+const EVENTS = [
+ {id:'refugees', title:'Подбитый дирижабль', text:'К краю острова прибило горящий дирижабль. На борту 12 человек, некоторые ранены. Просят разрешения пришвартоваться.',
+  choices:[
+   {t:'Принять всех', e:{pop:12, tol:5, trust:4, health:-6}},
+   {t:'Принять только здоровых', e:{pop:7, tol:-8, trust:-2}},
+   {t:'Обрубить швартовы', e:{trust:-8, tol:-6, order:3}},
+ ]},
+ {id:'thief', title:'Вор на складе', text:'Ночью поймали женщину с мешком еды. Говорит, что кормила детей.',
+  choices:[
+   {t:'Простить и отпустить', e:{tol:6, order:-8}},
+   {t:'Наказать при всех', e:{order:10, trust:-6, tol:-4}},
+   {t:'Отправить на тяжёлые работы', e:{order:4, mat:6, trust:-2}},
+ ]},
+ {id:'storm', title:'Грозовой фронт', text:'Впереди стена туч с молниями. Обойти — значит сжечь лишний эфир. Пройти насквозь — рискнуть городом.',
+  choices:[
+   {t:'Обойти грозу', e:{ether:-15}},
+   {t:'Идти напролом', e:{alt:-120, health:-4}},
+   {t:'Подняться над тучами', e:{ether:-8, health:-6, trust:-2}},
+ ]},
+ {id:'fight', title:'Драка на нижней палубе', text:'Старожилы обвиняют новоприбывших, что те едят за двоих. Дело дошло до кулаков.',
+  choices:[
+   {t:'Наказать новоприбывших', e:{tol:-12, order:6, trust:2}},
+   {t:'Наказать обе стороны', e:{order:5, trust:-3}},
+   {t:'Устроить общий ужин', e:{food:-15, tol:10, trust:3}},
+ ]},
+ {id:'ballast', title:'Сбросить балласт', text:'Механик предлагает облегчить город: выбросить за борт старые склады и мастерские.',
+  choices:[
+   {t:'Сбросить склады', e:{alt:150, mat:-15, trust:-3}},
+   {t:'Сбросить часть припасов', e:{alt:100, food:-15}},
+   {t:'Ничего не трогать', e:{}},
+ ]},
+ {id:'elders', title:'Просьба стариков', text:'Старейшина просит увеличить пайки пожилым: они не работают, но слабеют быстрее всех.',
+  choices:[
+   {t:'Увеличить пайки', e:{food:-12, trust:6, health:3}},
+   {t:'Отказать: еда работающим', e:{trust:-6, tol:-3, order:2}},
+   {t:'Дать им лёгкую работу за паёк', e:{trust:2, mat:4}},
+ ]},
+ {id:'debris', title:'Поле обломков', text:'Город проплывает через облако обломков старой эскадры. Там может быть что угодно.',
+  choices:[
+   {t:'Выслать сборщиков на тросах', e:{mat:25, food:10, pop:-1, trust:-2}},
+   {t:'Ловить сетями с края', e:{mat:12, health:-2}},
+   {t:'Пролететь мимо', e:{}},
+ ]},
+ {id:'plague', title:'Высотная хворь', text:'В одном из бараков слегли пятеро: кровь из носа, слабость. Лекарь боится, что это заразно.',
+  choices:[
+   {t:'Изолировать барак', e:{health:8, trust:-8, tol:-4}},
+   {t:'Лечить всех за счёт пайков', e:{food:-12, health:3, trust:5}},
+   {t:'Молчать, чтобы не было паники', e:{order:3, health:-10}},
+ ]},
+ {id:'preacher', title:'Культ Ветра', text:'Один из жителей говорит, что город несёт сам Ветер, а двигатель — богохульство. У него уже есть последователи.',
+  choices:[
+   {t:'Разрешить проповеди', e:{trust:5, order:4, tol:-6}},
+   {t:'Запретить', e:{trust:-6, order:3}},
+   {t:'Отдать им смотровую площадку для всех', e:{mat:-12, tol:6, trust:3}},
+ ]},
+ {id:'strike', title:'Кочегары бастуют', text:'Бригада у двигателя требует сократить смены: люди падают от жара и усталости.',
+  choices:[
+   {t:'Сократить смены', e:{trust:8, health:3, ether:-10}},
+   {t:'Отказать', e:{trust:-7, order:2, health:-3}},
+   {t:'Дополнительный паёк вместо отдыха', e:{food:-10, trust:3}},
+ ]},
+ {id:'rays', title:'Стая небесных скатов', text:'Под городом проходит стая крупных скатов. Охотники могут спуститься на тросах.',
+  choices:[
+   {t:'Отправить охотников', e:{food:25, health:-3}},
+   {t:'Только добровольцев', e:{food:12, trust:2}},
+   {t:'Не рисковать', e:{}},
+ ]},
+ {id:'fall', title:'Монтажник на тросе', text:'Порыв ветра сорвал монтажника с края. Он висит на страховке под островом, трос перетирается.',
+  choices:[
+   {t:'Спасать, остановив двигатель', e:{trust:8, alt:-80, tol:3}},
+   {t:'Спускать людей на канатах', e:{trust:4, health:-5}},
+   {t:'Слишком опасно', e:{trust:-10, pop:-1}},
+ ]},
+ {id:'traders', title:'Воздушные торговцы', text:'К городу подходит торговый клипер. Цены высокие, но выбор есть.',
+  choices:[
+   {t:'Отдать 20 эфира за 25 еды', e:{ether:-20, food:25}},
+   {t:'Отдать 15 материалов за 20 эфира', e:{mat:-15, ether:20}},
+   {t:'Отказаться', e:{}},
+ ]},
+ {id:'curfew', title:'Запрет на края', text:'Стража предлагает запретить ночью выходить к краям острова и к шлюпкам.',
+  choices:[
+   {t:'Ввести', e:{order:12, trust:-5, tol:-3}},
+   {t:'Отказаться', e:{order:-4, trust:3}},
+ ]},
+ {id:'quarter', title:'Своя палуба', text:'Новоприбывшие просят отдать им нижнюю палубу и разрешить своих старост.',
+  choices:[
+   {t:'Разрешить', e:{tol:-6, trust:4, order:2}},
+   {t:'Селить всех вперемешку', e:{tol:7, order:-5}},
+   {t:'Отказать без объяснений', e:{tol:-8, trust:-3}},
+ ]},
+ {id:'engine', title:'Двигатель стучит', text:'Механик говорит, что треснула лопасть. Без ремонта двигатель будет жрать больше эфира, а город — проседать.',
+  choices:[
+   {t:'Чинить из материалов', e:{mat:-15}},
+   {t:'Чинить на ходу, снаружи', e:{health:-6, trust:2}},
+   {t:'Оставить как есть', e:{ether:-10, alt:-60}},
+ ]},
+ {id:'deserters', title:'Угнанная шлюпка', text:'Семь человек готовят спасательную шлюпку: говорят, внизу есть земля и они спустятся сами.',
+  choices:[
+   {t:'Отпустить', e:{pop:-7, trust:-3, food:6}},
+   {t:'Уговорить остаться, пообещав больше еды', e:{food:-10, trust:4}},
+   {t:'Запереть шлюпки', e:{order:6, trust:-8, tol:-3}},
+ ]},
+];
+
+// ===== Состояние =====
+let S;
+function rng(seed){ return ()=>{ seed = (seed*1664525+1013904223)>>>0; return seed/4294967296; }; }
+
+function newGame(){
+  const r = rng(Math.floor(Math.random()*1e9));
+  const grid = [];
+  const cx = Math.floor(W/2), cy = Math.floor(H/2);
+  // остров — эллипс с рваным краем; всё вокруг — небо
+  for(let y=0;y<H;y++){ grid.push([]); for(let x=0;x<W;x++){
+    const dx = (x+0.5-W/2)/(W/2), dy = (y+0.5-H/2)/(H/2);
+    const land = dx*dx + dy*dy <= 0.92 + (r()-0.5)*0.25;
+    grid[y].push({terrain: land ? 'deck' : 'sky', b:null, seed:r()});
+  }}
+  const landTiles = () => { const t=[]; grid.forEach((row,y)=>row.forEach((c,x)=>{ if(c.terrain==='deck' && (Math.abs(x-cx)>1 || Math.abs(y-cy)>1)) t.push({x,y}); })); return t; };
+  const place = (kind, clusters, size)=>{
+    for(let c=0;c<clusters;c++){
+      const tiles = landTiles(); let {x,y} = tiles[Math.floor(r()*tiles.length)];
+      for(let i=0;i<size;i++){
+        if(grid[y][x].terrain==='deck' && (Math.abs(x-cx)>1 || Math.abs(y-cy)>1)) grid[y][x].terrain = kind;
+        const nx = Math.max(0,Math.min(W-1,x+Math.round(r()*2-1))), ny = Math.max(0,Math.min(H-1,y+Math.round(r()*2-1)));
+        if(grid[ny][nx].terrain!=='sky'){ x=nx; y=ny; }
+      }
+    }
+  };
+  place('crystal', 3, 4);
+  place('wreck', 3, 3);
+  grid[cy][cx].terrain = 'deck';
+  grid[cy][cx].b = 'engine';
+  S = {
+    day:1, grid, cx, cy, built:0,
+    pop:20, food:40, ether:30, mat:45, alt:MAX_ALT,
+    trust:60, tol:60, health:60, order:60,
+    selected:null, usedEvents:[], over:false, log:[],
+  };
+  addLog('Город поднялся в воздух. 20 человек на борту, до Тихой гавани 20 дней пути.');
+}
+
+// ===== Расчёты =====
+const wind = d => 3 + Math.floor(d/3);                       // ветер крепчает
+const fuelNeed = () => 2 + wind(S.day) + Math.ceil(S.pop/10); // эфир на удержание высоты
+const foodNeed = () => Math.ceil(S.pop*0.5);
+const housing = () => 10 + count('house')*6;
+function count(k){ let n=0; for(const row of S.grid) for(const c of row) if(c.b===k) n++; return n; }
+function buildings(){ const out=[]; S.grid.forEach((row,y)=>row.forEach((c,x)=>{ if(c.b && c.b!=='engine') out.push({k:c.b,x,y,t:c.t||0}); })); return out; }
+
+// Рабочие распределяются по зданиям в порядке постройки; кому не хватило — простаивает
+function staffing(){
+  let free = S.pop; const res = new Map();
+  for(const b of buildings().sort((a,b)=>a.t-b.t)){
+    const need = BUILD[b.k].workers;
+    const got = Math.min(need, free); free -= got;
+    res.set(b.x+','+b.y, need ? got/need : 1);
+  }
+  return {res, free};
+}
+function production(){
+  const p = {food:0, ether:0, mat:0, health:0, order:0};
+  const {res} = staffing();
+  for(const b of buildings()){
+    const pr = BUILD[b.k].prod; if(!pr) continue;
+    const k = res.get(b.x+','+b.y);
+    for(const key in pr) p[key] += Math.floor(pr[key]*k);
+  }
+  return p;
+}
+
+// ===== Конец дня =====
+function endDay(){
+  if(S.over) return;
+  const before = snapshot();
+  const rep = [];
+  const p = production();
+  S.food += p.food; S.ether += p.ether; S.mat += p.mat;
+  S.health += p.health; S.order += p.order;
+
+  const fn = foodNeed();
+  if(S.food >= fn){ S.food -= fn; }
+  else { const miss = fn - S.food; S.food = 0; S.health -= Math.min(15, 4+miss); S.trust -= 6; rep.push(['bad', `Не хватило еды: голодали ${miss*2} человек.`]); }
+
+  const en = fuelNeed();
+  if(S.ether >= en){ S.ether -= en; if(S.alt < MAX_ALT){ S.alt = Math.min(MAX_ALT, S.alt+40); rep.push(['ok','Двигатель работал ровно, город набрал высоту.']); } }
+  else { S.ether = 0; S.alt -= 200; S.trust -= 8; S.order -= 4; rep.push(['bad','Эфир кончился ночью: двигатель заглох, город просел на 200 м.']); }
+
+  const homeless = Math.max(0, S.pop - housing());
+  if(homeless){ S.health -= Math.min(10, Math.ceil(homeless/2)); rep.push(['bad', `${homeless} человек спали на открытом ветру.`]); }
+
+  S.order -= 1; S.tol -= 1; // напряжение растёт само
+  clampAll();
+
+  if(S.health < 30){ const d = 1 + Math.floor((30-S.health)/8); S.pop -= d; rep.push(['bad', `Умерли от болезней и истощения: ${d}.`]); }
+  if(S.order < 30){ const stolen = Math.ceil(S.food*0.2); S.food -= stolen; rep.push(['bad', `Со склада украли ${stolen} еды.`]); }
+  if(S.tol < 25){ S.pop -= 3; S.order -= 4; rep.push(['bad','Стычки между старожилами и новыми: трое ушли на шлюпке.']); }
+  if(S.trust < 25){ rep.push(['bad','Люди шепчутся о смене капитана.']); }
+  clampAll();
+  if(!rep.length) rep.push(['ok','Ночь прошла спокойно.']);
+
+  S.day++;
+  showDelta(before);
+  rep.forEach(r=>addLog(`<b>Ночь ${S.day-1}.</b> ${r[1]}`));
+
+  if(checkEnd()) return;
+  if(S.day > MAX_DAY) return victory();
+  render();
+  showEvent(rep);
+}
+function checkEnd(){
+  if(S.alt <= 0){ gameOver('Город упал', 'Двигатель не удержал остров. Город рухнул в облака, и больше его никто не видел.'); return true; }
+  if(S.pop <= 0){ gameOver('Город опустел', 'Последние жители ушли или погибли. Остров плывёт дальше без людей.'); return true; }
+  if(S.trust <= 0){ gameOver('Вас свергли', 'Доверие кончилось. Ночью совет собрался без вас и выбрал нового капитана.'); return true; }
+  return false;
+}
+
+function snapshot(){ return {pop:S.pop,food:S.food,ether:S.ether,mat:S.mat,alt:S.alt,trust:S.trust,tol:S.tol,health:S.health,order:S.order}; }
+function clampAll(){
+  for(const k of Object.keys(STATS)) S[k] = Math.max(0, Math.min(100, Math.round(S[k])));
+  for(const k of ['pop','food','ether','mat']) S[k] = Math.max(0, Math.round(S[k]));
+  S.alt = Math.max(0, Math.min(MAX_ALT, Math.round(S.alt)));
+}
+
+// ===== События =====
+function pickEvent(){
+  let pool = EVENTS.filter(e=>!S.usedEvents.includes(e.id));
+  if(!pool.length){ S.usedEvents = []; pool = EVENTS; }
+  const e = pool[Math.floor(Math.random()*pool.length)];
+  S.usedEvents.push(e.id);
+  return e;
+}
+function canAfford(e){
+  for(const k of ['food','ether','mat']) if(e[k] < 0 && S[k] + e[k] < 0) return `Не хватает: ${LABEL[k]}`;
+  return '';
+}
+function effChips(e){
+  const keys = Object.keys(e);
+  if(!keys.length) return '<span class="eff">без последствий</span>';
+  return keys.map(k=>`<span class="eff ${e[k]>0?'p':'n'}">${LABEL[k]} ${e[k]>0?'+':'−'}${Math.abs(e[k])}${k==='alt'?' м':''}</span>`).join('');
+}
+function showEvent(rep){
+  const ev = pickEvent();
+  const repHtml = rep.map(r=>`<div class="${r[0]}">${r[1]}</div>`).join('');
+  openModal(`
+    <div class="eyebrow">Утро дня ${S.day} · высота ${S.alt} м · ветер ${wind(S.day)} балла</div>
+    <div class="report">${repHtml}</div>
+    <h3>${ev.title}</h3>
+    <p>${ev.text}</p>
+    <div class="choices">${ev.choices.map((c,i)=>{
+      const why = canAfford(c.e);
+      return `<button class="choice" data-i="${i}" ${why?'disabled':''}><span class="t">${c.t}</span><span class="effs">${effChips(c.e)}</span>${why?`<span class="why">${why}</span>`:''}</button>`;
+    }).join('')}</div>`, card=>{
+    card.querySelectorAll('.choice').forEach(btn=>btn.onclick=()=>{
+      const c = ev.choices[+btn.dataset.i];
+      const before = snapshot();
+      for(const k in c.e) S[k] += c.e[k];
+      clampAll();
+      addLog(`<b>${ev.title}:</b> ${c.t.charAt(0).toLowerCase()+c.t.slice(1)}.`);
+      closeModal();
+      showDelta(before);
+      if(checkEnd()) return;
+      render();
+    });
+    card.querySelector('.choice:not(:disabled)')?.focus();
+  });
+}
+
+// ===== Финал =====
+function verdict(){
+  const lines = [];
+  lines.push(S.trust>=60 ? 'Люди верили вам до конца.' : S.trust>=30 ? 'Вас слушали, но без особой любви.' : 'Вас терпели, потому что выбора не было.');
+  lines.push(S.tol>=60 ? 'Старожилы и новоприбывшие стали одним городом.' : S.tol>=30 ? 'Старые обиды никуда не делись.' : 'Город раскололся на своих и чужих.');
+  lines.push(S.order>=60 ? 'На палубах было спокойно.' : 'Порядок держался на честном слове.');
+  return lines.join(' ');
+}
+function victory(){
+  S.over = true; render();
+  const score = S.pop*10 + Math.round(S.alt/10) + S.trust + S.tol + S.health + S.order;
+  openModal(`<div class="eyebrow">День ${MAX_DAY} · Тихая гавань</div><h3>Город долетел</h3>
+    <p>В гавань причалили ${S.pop} человек на высоте ${S.alt} м. ${verdict()}</p>
+    <div class="report"><div>Очки: <b>${score}</b></div><div>Доверие ${S.trust} · Терпимость ${S.tol} · Здоровье ${S.health} · Порядок ${S.order}</div></div>
+    <button class="primary" id="again">Сыграть ещё раз</button>`, card=>{ card.querySelector('#again').onclick=()=>{closeModal(); start();}; });
+}
+function gameOver(title, text){
+  S.over = true; render();
+  openModal(`<div class="eyebrow">День ${S.day}</div><h3>${title}</h3><p>${text}</p>
+    <button class="primary" id="again">Начать заново</button>`, card=>{ card.querySelector('#again').onclick=()=>{closeModal(); start();}; });
+}
+
+// ===== Модалка =====
+function openModal(html, bind){
+  const m = document.getElementById('modal');
+  m.innerHTML = `<div class="veil" role="dialog" aria-modal="true"><div class="card">${html}</div></div>`;
+  document.getElementById('endday').disabled = true;
+  bind && bind(m.querySelector('.card'));
+}
+function closeModal(){ document.getElementById('modal').innerHTML=''; document.getElementById('endday').disabled = S.over; }
+
+// ===== Интерфейс =====
+function addLog(html){ S.log.unshift(html); S.log = S.log.slice(0,40); }
+
+function showDelta(before){
+  const after = snapshot();
+  for(const k in after){
+    const d = after[k]-before[k]; if(!d) continue;
+    const host = document.querySelector(`[data-k="${k}"]`); if(!host) continue;
+    const f = document.createElement('span');
+    f.className='float'; f.style.color = d>0 ? 'var(--good)' : 'var(--bad)';
+    f.textContent = (d>0?'+':'−')+Math.abs(d);
+    host.appendChild(f); setTimeout(()=>f.remove(), 1500);
+  }
+}
+
+function render(){
+  document.getElementById('day').textContent = Math.min(S.day, MAX_DAY);
+  document.getElementById('maxday').textContent = MAX_DAY;
+  document.getElementById('wind').textContent = wind(S.day)+' балла';
+  document.getElementById('left').textContent = Math.max(0, MAX_DAY - S.day)+' дн.';
+  const p = production(), {free} = staffing();
+  const house = housing(), en = fuelNeed();
+  document.getElementById('res').innerHTML =
+    `<div class="chip alt ${S.alt<=400?'low':''}" data-k="alt"><span class="lbl">Высота</span><span class="val">${S.alt} м</span><span class="sub">−200 м за ночь без эфира</span></div>` +
+    `<div class="chip" data-k="pop"><span class="lbl">Жители</span><span class="val">${S.pop}</span><span class="sub">жильё ${house} · свободны ${free}</span></div>` +
+    ['food','ether','mat'].map(k=>{
+      const net = k==='food' ? p.food - foodNeed() : k==='ether' ? p.ether - en : p.mat;
+      return `<div class="chip" data-k="${k}"><span class="dot" style="background:${RES[k].color}"></span><span class="lbl">${RES[k].name}</span><span class="val">${S[k]}</span><span class="sub" style="color:${net<0?'var(--bad)':'var(--mist)'}">${net>=0?'+':'−'}${Math.abs(net)}/день</span></div>`;
+    }).join('');
+
+  document.getElementById('stats').innerHTML = Object.entries(STATS).map(([k,s])=>{
+    const v = S[k]; const col = v>=50 ? 'var(--good)' : v>=30 ? 'var(--warn)' : 'var(--bad)';
+    return `<div class="stat" data-k="${k}"><span class="name">${s.name}</span><span class="bar"><i style="width:${v}%;background:${col}"></i></span><span class="num">${v}</span></div>`;
+  }).join('');
+
+  document.getElementById('builds').innerHTML = Object.entries(BUILD).map(([k,b])=>
+    `<button class="bbtn ${S.selected===k?'on':''}" id="b-${k}" data-b="${k}" ${S.mat<b.cost||S.over?'disabled':''} aria-pressed="${S.selected===k}">
+      <span class="t">${b.name}</span><span class="c">${b.cost} мат.${b.workers?` · ${b.workers} раб.`:''}</span><span class="d">${b.desc}</span></button>`).join('');
+  document.querySelectorAll('.bbtn').forEach(btn=>btn.onclick=()=>{ S.selected = S.selected===btn.dataset.b ? null : btn.dataset.b; render(); });
+
+  const homeless = Math.max(0, S.pop-house), fn = foodNeed();
+  const row = (l, v, bad) => `<span>${l}</span><span class="${bad?'neg':'pos'}">${v}</span>`;
+  document.getElementById('forecast').innerHTML =
+    row('Съедят еды', `${fn} из ${S.food + p.food}`, S.food + p.food < fn) +
+    row('Двигатель сожжёт эфира', `${en} из ${S.ether + p.ether}`, S.ether + p.ether < en) +
+    row('Без крыши', homeless ? `${homeless} чел.` : 'никого', homeless>0);
+
+  document.getElementById('log').innerHTML = S.log.map(l=>`<p>${l}</p>`).join('');
+  document.getElementById('hint').textContent = S.selected
+    ? `Строим: ${BUILD[S.selected].name}. Подходящие клетки подсвечены. Нажмите на кнопку ещё раз, чтобы отменить.`
+    : 'Выберите здание справа и нажмите на клетку острова. Экстрактор ставят на голубые кристаллы, разборку — на обломки.';
+  draw();
+}
+
+// ===== Карта =====
+const cv = document.getElementById('map'), ctx = cv.getContext('2d');
+let T = 80, hover = null, clouds = [], streaks = [], tick = 0;
+function resize(){
+  const w = cv.clientWidth || 960; const dpr = window.devicePixelRatio || 1;
+  T = w / W; cv.width = Math.round(w*dpr); cv.height = Math.round(T*H*dpr);
+  cv.style.height = (T*H)+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); draw();
+}
+function canBuild(x,y,k){ const c = S.grid[y][x]; return !c.b && c.terrain===BUILD[k].terrain && S.mat>=BUILD[k].cost; }
+const isLand = (x,y) => x>=0 && y>=0 && x<W && y<H && S.grid[y][x].terrain!=='sky';
+
+function drawSky(){
+  const g = ctx.createLinearGradient(0,0,0,T*H);
+  // чем ниже город, тем темнее и грознее небо
+  const low = 1 - S.alt/MAX_ALT;
+  g.addColorStop(0, low>0.5 ? '#3a3f63' : '#5b7fc4');
+  g.addColorStop(1, low>0.5 ? '#1b1d33' : '#f0b98a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,T*W,T*H);
+  for(const c of clouds){
+    ctx.fillStyle = `rgba(255,255,255,${c.a})`;
+    for(let i=0;i<4;i++){ ctx.beginPath(); ctx.ellipse(c.x*T*W + i*c.s*0.6, c.y*T*H + (i%2)*c.s*0.15, c.s*0.55, c.s*0.3, 0, 0, Math.PI*2); ctx.fill(); }
+  }
+}
+function drawTile(x,y,c){
+  if(c.terrain==='sky') return;
+  const px=x*T, py=y*T;
+  // скала под островом, если снизу небо
+  if(!isLand(x,y+1)){
+    ctx.fillStyle='#5a4a42'; ctx.beginPath(); ctx.moveTo(px,py+T*0.9); ctx.lineTo(px+T,py+T*0.9);
+    ctx.lineTo(px+T*(0.55+c.seed*0.2),py+T*(1.45+c.seed*0.35)); ctx.fill();
+    ctx.fillStyle='#3d3230'; ctx.beginPath(); ctx.moveTo(px+T*0.5,py+T*0.9); ctx.lineTo(px+T,py+T*0.9); ctx.lineTo(px+T*(0.55+c.seed*0.2),py+T*(1.45+c.seed*0.35)); ctx.fill();
+  }
+  ctx.fillStyle = (x+y)%2 ? '#b6c98f' : '#adc287';
+  ctx.fillRect(px,py,T,T*0.92);
+  ctx.fillStyle='#7d6a5a'; ctx.fillRect(px,py+T*0.86,T,T*0.08);
+  if(c.terrain==='crystal' && !c.b){
+    for(let i=0;i<3;i++){ const tx = px + T*(0.25+0.25*i), ty = py + T*(0.55 + 0.12*((i+Math.floor(c.seed*3))%2));
+      const glow = 0.6+0.4*Math.sin(tick/25+i+c.seed*6);
+      ctx.fillStyle = `rgba(111,227,255,${0.25*glow})`; ctx.beginPath(); ctx.arc(tx,ty-T*0.1,T*0.16,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#6fe3ff'; ctx.beginPath(); ctx.moveTo(tx,ty-T*0.3); ctx.lineTo(tx-T*0.07,ty); ctx.lineTo(tx+T*0.07,ty); ctx.fill();
+      ctx.fillStyle = '#d6f7ff'; ctx.beginPath(); ctx.moveTo(tx,ty-T*0.3); ctx.lineTo(tx-T*0.02,ty-T*0.05); ctx.lineTo(tx+T*0.03,ty-T*0.05); ctx.fill(); }
+  }
+  if(c.terrain==='wreck' && !c.b){
+    ctx.fillStyle='#6d6878'; ctx.save(); ctx.translate(px+T*0.4,py+T*0.55); ctx.rotate(-0.4); ctx.fillRect(-T*0.25,-T*0.06,T*0.5,T*0.12); ctx.restore();
+    ctx.fillStyle='#8f8a99'; ctx.fillRect(px+T*0.55,py+T*0.3,T*0.2,T*0.35);
+    ctx.strokeStyle='#4a4553'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(px+T*0.2,py+T*0.25); ctx.lineTo(px+T*0.45,py+T*0.75); ctx.stroke();
+  }
+}
+function drawBuilding(x,y,k,staff){
+  const px=x*T, py=y*T, m=T*0.14;
+  if(k==='engine'){
+    const fuelOk = S.ether >= fuelNeed();
+    const pulse = 0.5+0.5*Math.sin(tick/15);
+    const g = ctx.createRadialGradient(px+T/2,py+T/2,2,px+T/2,py+T/2,T*1.4);
+    g.addColorStop(0, fuelOk?`rgba(111,227,255,${0.45+0.15*pulse})`:'rgba(120,120,120,.25)'); g.addColorStop(1,'rgba(111,227,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(px-T*1.5,py-T*1.5,T*4,T*4);
+    ctx.fillStyle='#3b3550'; ctx.beginPath(); ctx.arc(px+T/2,py+T/2,T*0.36,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#f4b24a'; ctx.lineWidth=T*0.05; ctx.beginPath(); ctx.arc(px+T/2,py+T/2,T*0.36,0,Math.PI*2); ctx.stroke();
+    // вращающиеся лопасти
+    const ang = fuelOk ? tick/10 : 0;
+    ctx.fillStyle = fuelOk ? '#6fe3ff' : '#777';
+    for(let i=0;i<3;i++){ const a = ang + i*Math.PI*2/3; ctx.beginPath(); ctx.ellipse(px+T/2+Math.cos(a)*T*0.16, py+T/2+Math.sin(a)*T*0.16, T*0.15, T*0.05, a, 0, Math.PI*2); ctx.fill(); }
+    ctx.fillStyle='#f4b24a'; ctx.beginPath(); ctx.arc(px+T/2,py+T/2,T*0.06,0,Math.PI*2); ctx.fill();
+    return;
+  }
+  const b = BUILD[k];
+  ctx.fillStyle='rgba(0,0,0,.18)'; ctx.fillRect(px+m+3,py+m+5,T-2*m,T-2*m);
+  ctx.fillStyle=b.color;
+  if(k==='house'){
+    ctx.fillRect(px+m,py+T*0.45,T-2*m,T*0.38);
+    ctx.fillStyle='#8a4f3a'; ctx.beginPath(); ctx.moveTo(px+m*0.6,py+T*0.47); ctx.lineTo(px+T/2,py+T*0.16); ctx.lineTo(px+T-m*0.6,py+T*0.47); ctx.fill();
+    ctx.fillStyle='#ffd27a'; ctx.fillRect(px+T*0.42,py+T*0.56,T*0.16,T*0.14);
+  } else if(k==='pump'){
+    ctx.fillRect(px+T*0.3,py+T*0.3,T*0.4,T*0.5);
+    ctx.fillStyle='#6fe3ff'; ctx.fillRect(px+T*0.38,py+T*0.42,T*0.24,T*0.3*(0.6+0.4*Math.sin(tick/20)));
+    ctx.fillStyle='#2f6f88'; ctx.fillRect(px+T*0.25,py+T*0.24,T*0.5,T*0.08);
+  } else {
+    ctx.fillRect(px+m,py+m,T-2*m,T-2*m);
+    ctx.fillStyle='rgba(0,0,0,.35)';
+    if(k==='farm'){ for(let i=0;i<3;i++) ctx.fillRect(px+m+4, py+m+6+i*(T-2*m-10)/3, T-2*m-8, 3);
+      ctx.fillStyle='#3f8f4a'; for(let i=0;i<4;i++) ctx.fillRect(px+m+6+i*(T-2*m-12)/3, py+T-m, 2, T*0.18); }
+    if(k==='salvage'){ ctx.fillRect(px+T*0.3,py+T*0.25,T*0.08,T*0.5); ctx.fillRect(px+T*0.3,py+T*0.25,T*0.4,T*0.07); ctx.fillRect(px+T*0.64,py+T*0.3,T*0.03,T*0.2); }
+    if(k==='clinic'){ ctx.fillStyle='#d94848'; ctx.fillRect(px+T*0.43,py+T*0.28,T*0.14,T*0.44); ctx.fillRect(px+T*0.28,py+T*0.43,T*0.44,T*0.14); }
+    if(k==='guard'){ ctx.fillStyle='#eef0fa'; ctx.beginPath(); ctx.moveTo(px+T/2,py+T*0.25); ctx.lineTo(px+T*0.7,py+T*0.4); ctx.lineTo(px+T*0.62,py+T*0.72); ctx.lineTo(px+T*0.38,py+T*0.72); ctx.lineTo(px+T*0.3,py+T*0.4); ctx.fill(); }
+  }
+  if(b.workers && staff < 1){ // простаивает: не хватает рабочих
+    ctx.fillStyle='#ff6b6b'; ctx.beginPath(); ctx.arc(px+T-m,py+m,T*0.1,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font=`bold ${Math.round(T*0.14)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',px+T-m,py+m+1);
+  }
+}
+function draw(){
+  if(!S) return;
+  drawSky();
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) drawTile(x,y,S.grid[y][x]);
+  const {res} = staffing();
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c=S.grid[y][x]; if(c.b) drawBuilding(x,y,c.b,res.get(x+','+y) ?? 1); }
+  if(S.selected){
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(canBuild(x,y,S.selected)){ ctx.fillStyle='rgba(255,211,138,.28)'; ctx.fillRect(x*T+2,y*T+2,T-4,T*0.92-4); }
+  }
+  if(hover && isLand(hover.x,hover.y)){
+    const ok = S.selected ? canBuild(hover.x,hover.y,S.selected) : false;
+    ctx.strokeStyle = S.selected ? (ok?'#f4b24a':'#ff6b6b') : 'rgba(17,21,41,.45)'; ctx.lineWidth=2;
+    ctx.strokeRect(hover.x*T+1,hover.y*T+1,T-2,T*0.92-2);
+  }
+  // порывы ветра
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5;
+  for(const s of streaks){ ctx.beginPath(); ctx.moveTo(s.x*T*W, s.y*T*H); ctx.lineTo(s.x*T*W - s.l, s.y*T*H); ctx.stroke(); }
+}
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function initClouds(){ clouds = Array.from({length:7},()=>({x:Math.random(), y:0.1+Math.random()*0.85, s:40+Math.random()*60, a:0.15+Math.random()*0.25, v:0.0002+Math.random()*0.0004})); }
+function loop(){
+  tick++;
+  if(!reduce && S){
+    for(const c of clouds){ c.x += c.v; if(c.x > 1.15) { c.x = -0.25; c.y = 0.1+Math.random()*0.85; } }
+    if(streaks.length < 4 + wind(S.day) && Math.random()<0.15) streaks.push({x:0, y:Math.random(), l:20+Math.random()*50, v:0.006+Math.random()*0.006});
+    for(const s of streaks) s.x += s.v;
+    streaks = streaks.filter(s=>s.x<1.2);
+  }
+  draw(); requestAnimationFrame(loop);
+}
+function cellAt(ev){
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((ev.clientX-r.left)/(r.width/W)), y = Math.floor((ev.clientY-r.top)/(r.height/H));
+  return (x>=0&&y>=0&&x<W&&y<H) ? {x,y} : null;
+}
+cv.addEventListener('mousemove', e=>{ hover = cellAt(e); });
+cv.addEventListener('mouseleave', ()=>{ hover=null; });
+cv.addEventListener('click', e=>{
+  const c = cellAt(e); if(!c || !S.selected || S.over) return;
+  const k = S.selected, cell = S.grid[c.y][c.x];
+  if(!canBuild(c.x,c.y,k)){
+    addLog(cell.terrain==='sky' ? 'Там пустое небо.' : cell.b ? 'Клетка занята.' : cell.terrain!==BUILD[k].terrain ? `${BUILD[k].name}: нужна клетка «${TERRAIN_NAME[BUILD[k].terrain]}».` : 'Не хватает материалов.');
+    return render();
+  }
+  const before = snapshot();
+  S.mat -= BUILD[k].cost;
+  cell.b = k; cell.t = ++S.built;
+  addLog(`Построено: <b>${BUILD[k].name}</b>.`);
+  if(S.mat < BUILD[k].cost) S.selected = null;
+  showDelta(before); render();
+});
+
+document.getElementById('endday').onclick = endDay;
+window.addEventListener('resize', resize);
+
+function start(){
+  newGame(); initClouds(); streaks=[]; render(); resize();
+  openModal(`<div class="eyebrow">Город над облаками</div><h3>Летучий город</h3>
+    <p>Земля внизу непригодна для жизни. Ваш город — остров в небе, его держит в воздухе эфирный двигатель. До Тихой гавани ${MAX_DAY} дней пути, ветер с каждым днём сильнее, и двигателю нужно всё больше эфира.</p>
+    <p>Стройте дома, сады и экстракторы. Каждое утро что-то случается, и решать вам. Если кончится эфир, город теряет высоту. Если кончится доверие, вас свергнут.</p>
+    <button class="primary" id="go">Поднять город</button>`, card=>{ const b=card.querySelector('#go'); b.onclick=closeModal; b.focus(); });
+}
+start(); loop();
+</script>
