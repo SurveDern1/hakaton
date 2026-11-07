@@ -1,0 +1,55 @@
+/* Выключатель звука в углу: стартовый экран и финал (в игре — пункт меню). Нота, перечёркнутая при выключенном звуке. */
+.snd-toggle {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: rgba(26, 52, 55, 0.72);
+  color: var(--paper);
+  font: 22px / 1 var(--f-text);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+.snd-toggle[hidden] {
+  display: none;
+}
+.snd-toggle::before {
+  content: "♪";
+}
+.snd-toggle::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 2px;
+  background: var(--red-hi);
+  transform: rotate(-45deg) scaleX(0);
+  transition: transform 0.2s ease;
+}
+.snd-toggle[data-muted="true"] {
+  color: var(--muted);
+}
+.snd-toggle[data-muted="true"]::after {
+  transform: rotate(-45deg) scaleX(1);
+}
+.snd-toggle:hover,
+.snd-toggle:focus-visible {
+  background: var(--paper);
+  color: var(--paper-ink);
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .snd-toggle,
+  .snd-toggle::after {
+    transition: none;
+  }
+}
