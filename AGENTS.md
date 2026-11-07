@@ -12,7 +12,7 @@
 | `tools/check-data.js` | Проверка данных: `node tools/check-data.js` |
 | `src/core/` | Логика игры на чистом TypeScript, без Phaser и DOM: типы данных и состояния (`types.ts`), загрузка `data/*.json` (`data.ts`), стартовое состояние (`state.ts`), условия `requires` (`requires.ts`), генератор с сидом (`rng.ts`), расчёты по башне — жильё, рабочие, Мгла на ярусах, нужный эфир (`tower.ts`), ночной расчёт по ТЗ 4.5 `runNight` и прогноз `forecastNight`/`forecastWarnings` (`night.ts`), очередь утра `buildMorningQueue` и текст с `extraText` (`events.ts`), доступность, применение и подсказка выбора `choiceAvailability`/`applyChoice`/`previewChoice` (`choice.ts`), концовка и судьбы `resolveEnding`/`characterFates` (`endings.ts`; `state.ending` — путь дня 20 или поражение от ночи), действия дня — стройка, снос, новый и сброшенный ярус, режим двигателя, декреты (`actions.ts`). Всё экспортируется из `index.ts`. Тесты рядом: `*.test.ts` |
 | `src/game/store.ts` | `GameStore`: текущее состояние в браузере; сцены и панели подписываются, меняют только через `dispatch` с функцией из core |
-| `src/scenes/` | Сцены Phaser: `TowerScene.ts` рисует башню и Мглу по состоянию |
+| `src/scenes/` | Башня. `tower-model.ts` — чистая модель без Phaser и DOM (перенос `renderTower` из `Tower.dc.html`): `towerInputFromState` (состояние → высота, Мгла, эфир 0..1, показатели, ярусы, шрамы) и `buildTower` (→ группы деталей с ключами, зазор до Мглы, крен, рамка камеры); тесты сверяют её с `renderTower` макета на всех пресетах. `tower-dom.ts` — детали в div с классами `.tw .*` из `sedmaya.css`, обновляет только изменившиеся, анимирует появление и падение ярусов. `TowerScene.ts` — `DOMElement` Phaser, твин 500 мс между состояниями, камера под экран 390–1920 px, небо. `tower-presets.ts` — наборы из макета: `?preset=day2|good|bad|scars|harbor|abandoned`, в консоли `sedmaya.tower.preset('bad')`, сэмплы последнего перехода — `sedmaya.tower.scene.samples` |
 | `src/ui/` | Интерфейс обычным HTML/CSS поверх canvas (`#ui`): `hud.ts` — календарь и ресурсы, `style.css` — подключает токены из `design/project/sedmaya.css` |
 | `src/main.ts`, `index.html` | Точка входа: core → `GameStore` → Phaser и DOM. В консоли браузера доступно `window.sedmaya` |
 | `tools/export-design.js`, `tools/dc-lite.js` | Макеты для дизайнеров и аниматоров без Claude Design. `npm run export:design` собирает из `design/project/` в `design/export/` (в git не хранится): страницу на каждый экран (компонент `Tower` вшит, открываются двойным кликом), `index.html` с превью, `catalog.html` (цвета, шрифты, 18 анимаций с живым показом, все классы `.tw .*` с CSS — строится из `sedmaya.css`), `source/` (исходники как есть) и `sources.zip`. `npm run design` — то же на http://localhost:5174 с пересборкой и перезагрузкой страницы при каждом сохранении файлов в `design/project/`: рабочий цикл для аниматора и агента — правишь `sedmaya.css` или `*.dc.html`, сразу видишь результат. `dc-lite.js` заменяет `support.js` холста: `{{…}}`, `sc-for`, `dc-import`, `onClick/onChange`, `renderVals/setState`. Новая конструкция в макетах, которой нет в `dc-lite.js`, на экспорте не отрисуется |
@@ -40,7 +40,10 @@
 - Все числа — в `data/balance.json`, в коде их нет. Случайность — только через `src/core/rng.ts`
   с состоянием в `GameState.rng`, не `Math.random`.
 - Текстовые окна (события, декреты, стенгазета, финал) делаются в `src/ui` на HTML/CSS по макетам
-  из `design/project/`; Phaser рисует башню, Мглу, анимации и частицы.
+  из `design/project/`. Башня и Мгла — та же разметка `.tw .*`, что в макетах, внутри `DOMElement` Phaser
+  (`src/scenes/tower-*.ts`): вид правится в `sedmaya.css` и сразу совпадает в игре и на холсте; Phaser ведёт
+  камеру, твины, небо и частицы. Новая деталь башни добавляется в `buildTower` и в `Tower.dc.html` одновременно —
+  иначе тест сверки с макетом упадёт.
 - Параллельные задачи — каждая в своей ветке и своём worktree, вливаются в `main` часто.
 - Макеты опубликованы в https://claude.ai/artifact/Ev5Tb85HnfCwh86g4f8Y3z. После правки файлов в
   `design/project/` их публикуют туда же, корень публикации — `design/`. Сами по себе `.dc.html`
