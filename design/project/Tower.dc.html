@@ -435,20 +435,37 @@ function renderTower(s, o) {
   // Крыша Шпиля в три ступени, мачта с растяжками, звезда с гранями (доверие).
   // Рисуется до зданий Шпиля, чтобы антенны и герб стояли перед крышей.
   function spireRoof(t, w, x0, yt, yb) {
-      var r1y = yt - 16, r2y = yt - 32, r3y = yt - 46, mh = 92, my = r3y - mh;
+      var r1y = yt - 16, r2y = yt - 32, r3y = yt - 46;
       px(tower, 'roofstep', x0 + 8, r1y, w - 16, 16);
       px(tower, 'roofstep', x0 + 52, r2y, w - 104, 16);
       px(tower, 'roofstep hi', x0 + 100, r3y, w - 200, 14);
-      line(tower, 'wire', CX, my + 26, x0 + 16, r1y + 1, 1.5);
-      line(tower, 'wire', CX, my + 26, x0 + w - 16, r1y + 1, 1.5);
-      line(tower, 'wire', CX, my + 52, x0 + 58, r2y + 1, 1.5);
-      line(tower, 'wire', CX, my + 52, x0 + w - 58, r2y + 1, 1.5);
-      px(tower, 'mast', CX - 8, my, 16, mh);
-      var mode = st.trust >= 60 ? '' : st.trust >= 30 ? ' blink' : ' off';
-      px(tower, 'star-halo' + mode, CX - 62, my - 92, 124, 124);
-      px(tower, 'star rim' + mode, CX - 36, my - 66, 72, 72);
-      px(tower, 'star big' + mode, CX - 31, my - 60, 62, 62);
-      if (hiTrust) {
+      // Антенна: цоколь, две решётчатые секции с площадками, ноги в красно-белую полосу,
+      // диполи с эфирными изоляторами, сигнальные огни, золотая игла и шар под звездой
+      var b0 = r3y - 10, p1 = b0 - 50, p2 = p1 - 4 - 38, ntop = p2 - 3 - 16, ballY = ntop - 8;
+      line(tower, 'wire', CX, p1 + 2, x0 + 16, r1y + 1, 1.5);
+      line(tower, 'wire', CX, p1 + 2, x0 + w - 16, r1y + 1, 1.5);
+      line(tower, 'wire', CX, p2 + 4, x0 + 58, r2y + 1, 1.5);
+      line(tower, 'wire', CX, p2 + 4, x0 + w - 58, r2y + 1, 1.5);
+      px(tower, 'mast-base', CX - 24, b0, 48, 10);
+      px(tower, 'mast', CX - 16, p1, 32, b0 - p1);
+      line(tower, 'mast-leg', CX - 16, b0, CX - 7, p1, 3);
+      line(tower, 'mast-leg', CX + 16, b0, CX + 7, p1, 3);
+      px(tower, 'mast-deck', CX - 19, p1 - 4, 38, 5);
+      px(tower, 'mast', CX - 8, p2, 16, p1 - 4 - p2);
+      line(tower, 'mast-leg', CX - 8, p1 - 4, CX - 3, p2, 2.5);
+      line(tower, 'mast-leg', CX + 8, p1 - 4, CX + 3, p2, 2.5);
+      px(tower, 'dipole', CX - 26, p2 + 12, 52, 3);
+      px(tower, 'dipole', CX - 18, p2 + 25, 36, 3);
+      px(tower, 'mast-deck', CX - 11, p2 - 3, 22, 4);
+      px(tower, 'needle', CX - 2, ntop, 4, p2 - 2 - ntop);
+      px(tower, 'avl', CX - 23, p1 - 10, 6, 6); px(tower, 'avl', CX + 17, p1 - 10, 6, 6, 'animation-delay:-1.2s;');
+      px(tower, 'avl', CX - 15, p2 - 9, 5, 5, 'animation-delay:-.6s;'); px(tower, 'avl', CX + 10, p2 - 9, 5, 5, 'animation-delay:-1.8s;');
+      px(tower, 'ball', CX - 6, ballY, 12, 12);
+      // Правильная пятиконечная звезда: центр на 54,8 % высоты рамки, нижние лучи — на 95,2 %
+      var mode = st.trust >= 60 ? '' : st.trust >= 30 ? ' blink' : ' off', cy = ballY + 4 - 0.4045 * 78, my = cy + 20;
+      px(tower, 'star-halo' + mode, CX - 68, cy - 68, 136, 136);
+      px(tower, 'star rim' + mode, CX - 39, cy - 0.5478 * 78, 78, 78);
+      px(tower, 'star big' + mode, CX - 32, cy - 0.5478 * 64, 64, 64);      if (hiTrust) {
         [x0 + 12, x0 + w - 15].forEach(function (fx, k) {
           px(tower, 'pole', fx, r1y - 54, 3, 54);
           px(tower, 'flag', fx + 3, r1y - 54, 36, 21, k ? 'animation-delay:-.7s;' : '');

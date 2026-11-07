@@ -149,19 +149,26 @@
 /* Шпиль: ступени крыши, мачта, звезда с гранями, флаги */
 .tw .roofstep { background: radial-gradient(circle, rgba(18, 20, 25, .5) 0 1.2px, transparent 1.7px) 0 9px / 14px 100% repeat-x, linear-gradient(180deg, var(--red-hi) 0 3px, var(--red) 3px calc(100% - 3px), var(--red-deep) 0); clip-path: polygon(3% 0, 97% 0, 100% 100%, 0 100%); }
 .tw .roofstep.hi { background: linear-gradient(#d9b25a 0 2px, transparent 2px), linear-gradient(180deg, var(--red-hi) 0 3px, var(--red) 3px calc(100% - 3px), var(--red-deep) 0); }
-.tw .mast, .tw .pylon, .tw .lattice, .tw .radiomast { --lc: #8b919c; background: linear-gradient(90deg, var(--lc) 0 2px, transparent 2px calc(100% - 2px), var(--lc) 0), repeating-linear-gradient(45deg, transparent 0 7px, var(--lc) 7px 8.5px), repeating-linear-gradient(-45deg, transparent 0 7px, var(--lc) 7px 8.5px); }
+.tw .pylon, .tw .lattice, .tw .radiomast { --lc: #8b919c; background: linear-gradient(90deg, var(--lc) 0 2px, transparent 2px calc(100% - 2px), var(--lc) 0), repeating-linear-gradient(45deg, transparent 0 7px, var(--lc) 7px 8.5px), repeating-linear-gradient(-45deg, transparent 0 7px, var(--lc) 7px 8.5px); }
 .tw .jib { --lc: #8b919c; background: linear-gradient(var(--lc) 0 2px, transparent 2px calc(100% - 2px), var(--lc) 0), repeating-linear-gradient(45deg, transparent 0 7px, var(--lc) 7px 8.5px), repeating-linear-gradient(-45deg, transparent 0 7px, var(--lc) 7px 8.5px); }
-.tw .mast { --lc: #c9b994; clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%); }
+.tw .mast { --lc: rgba(236, 224, 196, .8); background: repeating-linear-gradient(180deg, var(--lc) 0 2px, transparent 2px 12px), repeating-linear-gradient(58deg, transparent 0 8px, var(--lc) 8px 9.2px), repeating-linear-gradient(-58deg, transparent 0 8px, var(--lc) 8px 9.2px); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.tw .mast-leg { background: repeating-linear-gradient(90deg, #ece0c4 0 10px, var(--red) 10px 20px); border-radius: 1px; }
+.tw .mast-base { background: linear-gradient(#d9b25a 0 2px, transparent 2px), linear-gradient(180deg, #4b505b, #23272e); clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%); }
+.tw .mast-deck { background: linear-gradient(#d9b25a 0 1.5px, transparent 1.5px 55%, #3b4049 55%), repeating-linear-gradient(90deg, #d9b25a 0 1.2px, transparent 1.2px 4px); }
+.tw .dipole { border-radius: 1px; background: linear-gradient(90deg, var(--ether) 0 4px, #c9b994 4px calc(100% - 4px), var(--ether) 0); box-shadow: 0 0 4px rgba(108, 212, 255, .5); }
+.tw .needle { background: linear-gradient(90deg, #a8811f, #f0cf7a 50%, #a8811f); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.tw .ball { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff1c4 0 15%, #f0cf7a 35%, #a8811f 80%, #6b5214); }
+.tw .avl { border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 6px 2px rgba(255, 74, 58, .7); animation: twBlink 3s linear infinite; }
 .tw .pylon, .tw .radiomast { clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
 .tw .y1 { --lc: #9a7848; }
 .tw .y3 { --lc: #d9b25a; }
 .tw .wire { background: rgba(236, 224, 196, .5); }
-.tw .star { background: #ff3b2b; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
-.tw .star.big { background: repeating-conic-gradient(from 0deg at 50% 57%, #ff6a52 0 36deg, #b3170f 36deg 72deg); }
-.tw .star.rim { background: linear-gradient(135deg, #f0cf7a, #a8811f); }
+.tw .star { background: #ff3b2b; clip-path: polygon(50% 4.8%, 61.2% 39.3%, 97.6% 39.3%, 68.2% 60.7%, 79.4% 95.2%, 50% 73.9%, 20.6% 95.2%, 31.8% 60.7%, 2.4% 39.3%, 38.8% 39.3%); }
+.tw .star.big { background: repeating-conic-gradient(from 0deg at 50% 54.8%, #ff5b45 0 36deg, #a8160f 36deg 72deg); }
+.tw .star.rim { background: repeating-conic-gradient(from 0deg at 50% 54.8%, #f6dc8e 0 36deg, #a8811f 36deg 72deg); }
 .tw .star.glow { filter: brightness(1.25) saturate(1.2); }
 .tw .star.off { background: #4a2a26; }
-.tw .star.big.off { background: repeating-conic-gradient(from 0deg at 50% 57%, #5a322c 0 36deg, #2e1a17 36deg 72deg); }
+.tw .star.big.off { background: repeating-conic-gradient(from 0deg at 50% 54.8%, #5a322c 0 36deg, #2e1a17 36deg 72deg); }
 .tw .star.rim.off { background: #5b4a2e; }
 .tw .star-halo { border-radius: 50%; background: radial-gradient(circle, rgba(255, 80, 50, .6), rgba(255, 80, 50, 0) 65%); }
 .tw .star-halo.off { display: none; }
