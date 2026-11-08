@@ -1,27 +1,32 @@
 // Звук и музыка поверх игры без правок в панелях: initAudio подписывается на фазы GameLoop,
 // на изменения GameStore (stateCues) и смотрит за слоем #ui (MutationObserver) и кликами.
-// Фазы: start/day → тема «день», night/morning → «ночь» (утренние окна читаются под ночную тему),
+// Фазы: start/day → мелодия дня из настроек (waltz/march/wind), night/morning → «ночь»
+// (утренние окна читаются под ночную тему),
 // final → «финал». Звуки: клики по кнопкам, окно события и выбор (класс is-chosen у .ev-layer),
 // всплывающие числа .ev-float.up/.down, стенгазета .pp-layer, ночь, утро, финал.
-// Выключатель: пункты меню (menuItems), кнопка в углу на стартовом экране и в финале, клавиша M.
+// Выключатель: пункты меню (menuItems: «Звук», «Настройки…»), кнопка в углу на стартовом экране и в финале,
+// клавиша M. Окно «Настройки» — settings-window.ts (openSettings).
 import type { GameLoop, Phase } from '../game/loop';
 import type { GameStore } from '../game/store';
 import { AudioEngine, type AudioSettings } from './audio';
 import { stateCues } from './cues';
 import { Music } from './music';
+import { openSettings } from './settings-window';
 import { playSfx, type SfxName } from './sfx';
 import './audio.css';
 
 export interface SoundControls {
   engine: AudioEngine;
+  /** Музыка: `music.current` — какая тема звучит (для отладки из консоли). */
+  music: Music;
   play(name: SfxName, delay?: number): void;
   toggle(): void;
-  /** Пункты для меню игры: «Звук», «Музыка», «Эффекты»; подписи обновляются сами. */
-  menuItems(): HTMLElement[];
+  /** Пункты для меню игры: «Звук: вкл/выкл» и «Настройки…»; beforeOpen закрывает меню перед окном. */
+  menuItems(beforeOpen?: () => void): HTMLElement[];
+  /** Окно «Настройки» поверх игры. */
+  openSettings(): void;
 }
 
-/** Ступени громкости в меню, по кругу. */
-const LEVELS = [0, 0.3, 0.6, 1];
 /** Пауза между всплывающими числами, с: пачка чисел звучит как короткая россыпь, а не аккорд. */
 const FLOAT_GAP = 0.07;
 const FLOAT_MAX = 5;
@@ -55,7 +60,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
         play('tierUp', 1.6);
       }
     } else if (next === 'day' || next === 'start') {
-      music.set('day');
+      music.set(engine.settings.melody);
     } else if (next === 'final') {
       play('final');
       music.set('final');
@@ -63,7 +68,11 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     syncCorner();
   });
   // Музыка стартового экрана заиграет сама, как только жест разблокирует звук
-  if (!music.current) music.set('day');
+  if (!music.current) music.set(engine.settings.melody);
+  // Новая мелодия в настройках — сразу, если сейчас её время (день или стартовый экран)
+  engine.onSettings((s) => {
+    if ((phase === 'day' || phase === 'start') && music.current !== s.melody) music.set(s.melody);
+  });
 
   // ---- Действия дня по разнице состояний ----
   let last = opts.store.state;
@@ -107,6 +116,9 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     }
   }).observe(opts.root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
+  // Лист комикса (src/comics/viewer.ts)
+  opts.root.addEventListener('comic:turn', () => play('page'));
+
   // ---- Клики по кнопкам ----
   document.addEventListener(
     'click',
@@ -148,41 +160,35 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   engine.onSettings(paint);
   syncCorner();
 
-  function menuItems(): HTMLElement[] {
-    const item = (label: () => string, onClick: () => void) => {
+  const settings = () => openSettings(opts.root, { engine, preview: () => play('plus') });
+
+  function menuItems(beforeOpen?: () => void): HTMLElement[] {
+    const item = (text: string) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.setAttribute('role', 'menuitem');
       b.className = 'gm-item snd-item';
-      const set = () => {
-        b.textContent = label();
-      };
-      set();
-      b.addEventListener('click', () => {
-        onClick();
-        set();
-      });
-      // подписи обновляются и при переключении клавишей M, пока меню открыто
-      const off = engine.onSettings(() => (b.isConnected ? set() : off()));
+      b.textContent = text;
       return b;
     };
-    const pct = (v: number) => `${Math.round(v * 100)}%`;
-    const step = (v: number) => LEVELS[(LEVELS.findIndex((l) => l >= v - 0.01) + 1) % LEVELS.length] ?? 0;
-    return [
-      item(() => `Звук: ${engine.settings.muted ? 'выкл' : 'вкл'}`, toggle),
-      item(
-        () => `Музыка: ${pct(engine.settings.music)}`,
-        () => engine.update({ music: step(engine.settings.music) }),
-      ),
-      item(
-        () => `Эффекты: ${pct(engine.settings.sfx)}`,
-        () => {
-          engine.update({ sfx: step(engine.settings.sfx) });
-          play('plus');
-        },
-      ),
-    ];
+    const sound = item('');
+    const label = () => {
+      sound.textContent = `Звук: ${engine.settings.muted ? 'выкл' : 'вкл'}`;
+    };
+    label();
+    sound.addEventListener('click', () => {
+      toggle();
+      label();
+    });
+    // подпись обновляется и при переключении клавишей M, пока меню открыто
+    const off = engine.onSettings(() => (sound.isConnected ? label() : off()));
+    const open = item('Настройки…');
+    open.addEventListener('click', () => {
+      beforeOpen?.();
+      settings();
+    });
+    return [sound, open];
   }
 
-  return { engine, play, toggle, menuItems };
+  return { engine, music, play, toggle, menuItems, openSettings: settings };
 }

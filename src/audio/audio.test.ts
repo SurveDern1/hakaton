@@ -10,7 +10,19 @@ describe('настройки звука', () => {
     expect(parseSettings('42')).toEqual(DEFAULT_SETTINGS);
   });
   it('громкость обрезается до 0..1, выключение сохраняется', () => {
-    expect(parseSettings('{"muted":true,"music":3,"sfx":-1}')).toEqual({ muted: true, music: 1, sfx: 0 });
+    expect(parseSettings('{"muted":true,"music":3,"sfx":-1}')).toMatchObject({
+      muted: true,
+      music: 1,
+      sfx: 0,
+    });
+  });
+  it('старая запись без новых полей и чужая мелодия — значения по умолчанию', () => {
+    const s = parseSettings('{"music":0.3,"melody":"polka"}');
+    expect(s).toMatchObject({ master: 1, musicOn: true, sfxOn: true, melody: 'waltz', music: 0.3 });
+    expect(parseSettings('{"melody":"march","musicOn":false}')).toMatchObject({
+      melody: 'march',
+      musicOn: false,
+    });
   });
 });
 

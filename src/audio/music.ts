@@ -1,13 +1,16 @@
-// Генеративная музыка: три темы, каждая — гармоническая петля, поверх которой мелодия сочиняется
+// Генеративная музыка: темы — гармонические петли, поверх которых мелодия сочиняется
 // заново с сидом. Планировщик смотрит на 0,3 с вперёд и ставит ноты по часам AudioContext.
-// day   — вальс в ля-миноре (3/4): бас и орган на «раз», духовые «ум-па» на «два-три», кларнет сверху.
+// Мелодия дня выбирается в «Настройках» (settings.melody):
+// waltz — вальс в ля-миноре (3/4): бас и орган на «раз», духовые «ум-па» на «два-три», кларнет сверху.
+// march — марш в ми-миноре: бас на «раз» и «три», медь на слабые доли, малый барабан, труба с пунктиром.
+// wind  — «Тишина и ветер»: долгий органный бурдон, порывы ветра и редкий колокол, без мелодии.
 // night — ночь и утренние окна: ре-минор, медленный орган, гул и ветер, редкий колокол, тише.
 // final — гимн-марш в до-миноре: медные аккорды, литавры, в конце петли мажорный аккорд.
 // Смена темы — кроссфейд CROSSFADE секунд; под всеми темами тихий ламповый шум и потрескивание.
 import { type AudioEngine, makeRandom, midiToHz, ramp } from './audio';
 import { bell, noise, organ, tone } from './synth';
 
-export type ThemeName = 'day' | 'night' | 'final';
+export type ThemeName = 'waltz' | 'march' | 'wind' | 'night' | 'final';
 
 const CROSSFADE = 1.6;
 const LOOKAHEAD = 0.3;
@@ -73,8 +76,9 @@ function nearest(notes: number[], prev: number, rnd: () => number): number {
 function makeThemes(): Record<ThemeName, Theme> {
   let dayPrev = 69;
   let finPrev = 72;
+  let marchPrev = 71;
   return {
-    day: {
+    waltz: {
       bpm: 76,
       beats: 3,
       gain: 0.9,
@@ -124,6 +128,108 @@ function makeThemes(): Record<ThemeName, Theme> {
           dayPrev = nearest(b.next.notes, dayPrev + (rnd() < 0.5 ? 2 : -2), rnd);
           lead(b, dayPrev, 0.9, 0.032);
         }
+      },
+    },
+    march: {
+      bpm: 100,
+      beats: 4,
+      gain: 0.85,
+      // Em Am B7 Em | C Am B7 Em
+      bars: [
+        c(40, 55, 59, 64),
+        c(45, 57, 60, 64),
+        c(47, 54, 57, 59, 63),
+        c(40, 55, 59, 64),
+        c(48, 55, 60, 64),
+        c(45, 57, 60, 64),
+        c(47, 54, 57, 59, 63),
+        c(40, 55, 59, 64),
+      ],
+      play(b) {
+        const { e, t, spb, chord, out, rnd } = b;
+        if (b.beat === 0 || b.beat === 2) {
+          // «раз» и «три»: бас (на «три» — квинта) и большой барабан
+          organ(e, midiToHz(chord.bass + (b.beat === 2 ? 7 : 0)), t, spb * 0.8, 0.07, out, 0.2);
+          tone(e, { freq: 62, to: 45, t, dur: 0.02, release: 0.25, gain: 0.16, dest: out });
+        } else {
+          for (const n of chord.notes)
+            tone(e, {
+              type: 'sawtooth',
+              freq: midiToHz(n),
+              t,
+              dur: spb * 0.3,
+              attack: 0.015,
+              release: 0.1,
+              gain: 0.012,
+              filter: 1000,
+              dest: out,
+              send: 0.2,
+            });
+          noise(e, {
+            t,
+            dur: 0.02,
+            release: 0.08,
+            gain: 0.05,
+            dest: out,
+            filter: 'bandpass',
+            freq: 2800,
+            q: 1,
+          });
+        }
+        if (b.bar % 16 >= 8 && b.bar % 16 < 12) return;
+        if (b.beat === 0 || b.beat === 2) {
+          // пунктир: долгая нота на полторы доли и короткая перед следующей
+          marchPrev = nearest(chord.notes, marchPrev, rnd);
+          if (rnd() < 0.6) {
+            lead(b, marchPrev, 1.4, 0.036, 1900);
+            const step = nearest(
+              b.beat === 2 ? b.next.notes : chord.notes,
+              marchPrev + (rnd() < 0.5 ? 2 : -1),
+              rnd,
+            );
+            lead({ ...b, t: t + spb * 1.5 }, step, 0.45, 0.03, 1900);
+            marchPrev = step;
+          } else lead(b, marchPrev, 1.9, 0.036, 1900);
+        }
+      },
+    },
+    wind: {
+      bpm: 40,
+      beats: 4,
+      gain: 0.8,
+      // Am F Am Em — по два такта
+      bars: [
+        c(45, 57, 60, 64),
+        c(45, 57, 60, 64),
+        c(41, 57, 60, 65),
+        c(41, 57, 60, 65),
+        c(45, 57, 60, 64),
+        c(45, 57, 60, 64),
+        c(40, 55, 59, 64),
+        c(40, 55, 59, 64),
+      ],
+      play(b) {
+        const { e, t, spb, chord, out, rnd } = b;
+        if (b.beat === 0) {
+          if (b.bar % 2 === 0) {
+            for (const n of chord.notes) organ(e, midiToHz(n), t, spb * 7.6, 0.008, out, 0.8);
+            organ(e, midiToHz(chord.bass - 12), t, spb * 7.6, 0.03, out, 0.4);
+          }
+          noise(e, {
+            t,
+            dur: spb * 2.5,
+            attack: spb * 1.6,
+            release: spb * 1.8,
+            gain: 0.045,
+            dest: out,
+            filter: 'bandpass',
+            freq: 300 + rnd() * 500,
+            to: 400 + rnd() * 900,
+            q: 3,
+            send: 0.35,
+          });
+        }
+        if (b.beat === 2 && rnd() < 0.22) bell(e, midiToHz(pick(rnd, chord.notes) + 24), t, 0.016, out, 0.9);
       },
     },
     night: {
@@ -297,7 +403,7 @@ class ThemePlayer {
       const bars = this.theme.bars;
       const chord = bars[this.bar % bars.length] as Chord;
       const next = bars[(this.bar + 1) % bars.length] as Chord;
-      if (!this.e.settings.muted) {
+      if (this.e.musicAudible) {
         this.theme.play({
           e: this.e,
           t: this.nextTime,
@@ -365,7 +471,7 @@ export class Music {
     if (ctx.state !== 'running') return;
     for (const p of this.players) p.schedule(ctx.currentTime);
     // потрескивание старой пластинки: редкие щелчки
-    if (this.wanted && !this.e.settings.muted && this.crackle() < 0.04) {
+    if (this.wanted && this.e.musicAudible && this.crackle() < 0.04) {
       noise(this.e, {
         t: ctx.currentTime + 0.05,
         dur: 0.002,

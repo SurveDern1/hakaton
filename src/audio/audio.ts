@@ -4,16 +4,34 @@
 // Порядок: initAudio (index.ts) → engine.unlockOn(window) — контекст создаётся и запускается на первом
 // касании, клике или клавише (иначе браузер телефона не даст звука) → sfx/music берут engine.ctx.
 
+/** Мелодия дня (окно «Настройки»): ночь и финал звучат своими темами при любой. */
+export type Melody = 'waltz' | 'march' | 'wind';
+export const MELODIES: Melody[] = ['waltz', 'march', 'wind'];
+
 export interface AudioSettings {
+  /** «Без звука»: всё молчит, остальные настройки сохраняются. */
   muted: boolean;
+  /** Общая громкость 0..1. */
+  master: number;
   /** Громкость музыки 0..1. */
   music: number;
   /** Громкость звуков 0..1. */
   sfx: number;
+  musicOn: boolean;
+  sfxOn: boolean;
+  melody: Melody;
 }
 
 export const SETTINGS_KEY = 'sedmaya.audio';
-export const DEFAULT_SETTINGS: AudioSettings = { muted: false, music: 0.6, sfx: 0.8 };
+export const DEFAULT_SETTINGS: AudioSettings = {
+  muted: false,
+  master: 1,
+  music: 0.6,
+  sfx: 0.8,
+  musicOn: true,
+  sfxOn: true,
+  melody: 'waltz',
+};
 
 /** Общий уровень всего звука до шин: запас, чтобы аккорды и удары не перегружали выход. */
 const MASTER_LEVEL = 0.8;
@@ -31,8 +49,12 @@ export function parseSettings(raw: string | null): AudioSettings {
     if (!v || typeof v !== 'object') return { ...DEFAULT_SETTINGS };
     return {
       muted: v.muted === true,
+      master: clamp01(v.master, DEFAULT_SETTINGS.master),
       music: clamp01(v.music, DEFAULT_SETTINGS.music),
       sfx: clamp01(v.sfx, DEFAULT_SETTINGS.sfx),
+      musicOn: v.musicOn !== false,
+      sfxOn: v.sfxOn !== false,
+      melody: MELODIES.includes(v.melody as Melody) ? (v.melody as Melody) : DEFAULT_SETTINGS.melody,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -138,7 +160,7 @@ export class AudioEngine {
 
   private build(ctx: AudioContext): void {
     this.master = ctx.createGain();
-    this.master.gain.value = this.settings.muted ? 0 : MASTER_LEVEL;
+    this.master.gain.value = this.levels().master;
     // Мягкий ограничитель: громкие наложения не хрипят на динамике телефона
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14;
@@ -149,10 +171,10 @@ export class AudioEngine {
     this.master.connect(comp).connect(ctx.destination);
 
     this.musicBus = ctx.createGain();
-    this.musicBus.gain.value = this.settings.music;
+    this.musicBus.gain.value = this.levels().music;
     this.musicBus.connect(this.master);
     this.sfxBus = ctx.createGain();
-    this.sfxBus.gain.value = this.settings.sfx;
+    this.sfxBus.gain.value = this.levels().sfx;
     this.sfxBus.connect(this.master);
 
     // Реверберация «большого зала»: импульс из затухающего шума, 2,6 с
@@ -187,11 +209,31 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (ctx) {
       const t = ctx.currentTime;
-      ramp(this.master.gain, this.settings.muted ? 0 : MASTER_LEVEL, t, VOLUME_RAMP);
-      ramp(this.musicBus.gain, this.settings.music, t, VOLUME_RAMP);
-      ramp(this.sfxBus.gain, this.settings.sfx, t, VOLUME_RAMP);
+      const l = this.levels();
+      ramp(this.master.gain, l.master, t, VOLUME_RAMP);
+      ramp(this.musicBus.gain, l.music, t, VOLUME_RAMP);
+      ramp(this.sfxBus.gain, l.sfx, t, VOLUME_RAMP);
     }
     for (const fn of this.settingsListeners) fn(this.settings);
+  }
+
+  /** Действующие уровни шин с учётом «Без звука» и выключателей музыки и звуков. */
+  levels(): { master: number; music: number; sfx: number } {
+    const s = this.settings;
+    return {
+      master: s.muted ? 0 : MASTER_LEVEL * s.master,
+      music: s.musicOn ? s.music : 0,
+      sfx: s.sfxOn ? s.sfx : 0,
+    };
+  }
+
+  /** Музыку есть смысл сочинять: звук не выключен целиком и музыка включена. */
+  get musicAudible(): boolean {
+    return !this.settings.muted && this.settings.musicOn;
+  }
+
+  get sfxAudible(): boolean {
+    return !this.settings.muted && this.settings.sfxOn;
   }
 
   toggleMuted(): void {

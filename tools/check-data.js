@@ -79,6 +79,16 @@ for (const x of endings.endings.flatMap((e) => e.extraText || [])) {
   for (const f of x.requires.flags || []) if (!setFlags.has(f)) errors.push(`концовка: флаг ${f} нигде не ставится`);
 }
 
+// Комиксы: картинки кадров лежат в public/ (сетки и эпилоги проверяет src/comics/comics.test.ts)
+const comics = load('comics.json');
+for (const c of comics.comics) {
+  for (const page of c.pages) for (const panel of page.panels) {
+    if (panel.image && !fs.existsSync(path.join(__dirname, '..', 'public', panel.image))) {
+      errors.push(`комикс ${c.id}: нет файла public/${panel.image}`);
+    }
+  }
+}
+
 const unused = [...setFlags].filter((f) => !readFlags.has(f) && !JSON.stringify(endings).includes(`"${f}"`));
 console.log(`событий: ${events.length}, флагов ставится: ${setFlags.size}, читается: ${readFlags.size}`);
 if (unused.length) console.log(`флаги без чтения (для эпилога и будущих событий): ${unused.join(', ')}`);

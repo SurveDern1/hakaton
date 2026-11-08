@@ -4,6 +4,7 @@
 // Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу.
 import Phaser from 'phaser';
 import { initAudio } from './audio';
+import { getComic, outroFor, playComic } from './comics';
 import { createInitialState, forecastNight, gameData, type NightReport } from './core';
 import { GameLoop } from './game/loop';
 import { loadGame } from './game/save';
@@ -15,7 +16,7 @@ import { isPresetName, type PresetName, TOWER_PRESETS } from './scenes/tower-pre
 import { mountBuildMenu } from './ui/build-menu';
 import { fmtSigned, mountEventWindow } from './ui/event-window';
 import { flashHud, mountStatus } from './ui/feedback';
-import { showFinal } from './ui/final';
+import { finalEnding, showFinal } from './ui/final';
 import { h } from './ui/format';
 import { mountHud } from './ui/hud';
 import { playNight } from './ui/night';
@@ -124,7 +125,7 @@ function toggleMenu(force?: boolean) {
   });
   const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
   close.addEventListener('click', () => toggleMenu(false));
-  gameMenu.replaceChildren(restart, ...sound.menuItems(), close);
+  gameMenu.replaceChildren(restart, ...sound.menuItems(() => toggleMenu(false)), close);
   restart.focus();
 }
 gameMenu.addEventListener('keydown', (e) => {
@@ -152,20 +153,32 @@ towerScene.setSlotHandler((tier, slot, el) => menu.open(tier, slot, el));
 loop.onPhase((phase) => {
   document.body.dataset.phase = phase;
   hud.inert = phase !== 'day';
-  if (phase === 'final') {
-    showFinal(ui, store.state, { data, onRestart: () => void loop.newGame() });
-  }
+  if (phase === 'final') void showEnding();
 });
+
+// Финал: эпилог-комикс концовки (data/comics.json, outro_<id> или общий outro), затем итоги
+async function showEnding() {
+  const state = store.state;
+  const outro = outroFor(finalEnding(state, data).id);
+  if (outro) await playComic(ui as HTMLElement, outro);
+  showFinal(ui as HTMLElement, state, { data, onRestart: () => void loop.newGame() });
+}
+
+// Новая партия со стартового экрана: сначала пролог-комикс (его можно пропустить)
+async function newGameWithIntro() {
+  const intro = getComic('intro');
+  if (intro) await playComic(ui as HTMLElement, intro);
+  ui?.classList.remove('is-bare');
+  void loop.newGame();
+}
 
 function start() {
   ui?.classList.add('is-bare');
   showStart(ui as HTMLElement, {
     data,
     saved: loadGame(),
-    onNew: () => {
-      ui?.classList.remove('is-bare');
-      void loop.newGame();
-    },
+    onSettings: () => sound.openSettings(),
+    onNew: () => void newGameWithIntro(),
     onContinue: (state) => {
       ui?.classList.remove('is-bare');
       loop.continueGame(state);
@@ -174,11 +187,16 @@ function start() {
   });
 }
 
+// Проверка комикса: ?comic=intro, ?comic=outro_harbor — после него стартовый экран.
+const debugComic = getComic(params.get('comic') ?? '');
 // Проверка окна без цикла: ?event=d02_raft или ?event=d01_first_morning,d02_raft (до двух окон);
 // день — из события (или &day=17), &flags=a,b — с флагами.
 const eventIds = params.get('event')?.split(',').filter(Boolean) ?? [];
 if (presetInput) {
   ui.classList.add('is-bare', 'is-preset');
+} else if (debugComic) {
+  ui.classList.add('is-bare');
+  void playComic(ui, debugComic).then(start);
 } else if (eventIds.length) {
   const eventDay = data.events.find((e) => e.id === eventIds[0])?.day;
   const day = Number(params.get('day')) || eventDay;
@@ -198,6 +216,10 @@ Object.assign(window, {
     loop,
     events,
     panel,
+    comic: (id: string) => {
+      const c = getComic(id);
+      return c ? playComic(ui, c) : Promise.resolve();
+    },
     sound,
     tower: {
       scene: towerScene,
