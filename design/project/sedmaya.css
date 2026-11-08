@@ -115,37 +115,35 @@
 .tw .p { position: absolute; box-sizing: border-box; }
 
 /* Небо и Мгла */
-/* Облака: рваные силуэты по рисунку художницы, как вырезанные из бумаги и отпечатанные на старом
-   плакате. Четыре формы (.cl.a–.cl.d) — маски из контура рисунка (--cl-a…--cl-d), растянутые на рамку
-   детали; .flip — зеркально; .w — тёплый, абрикосовый тон бумаги. Цвет — бежевые тона в три плашки
-   (светлая верхушка, средний тон, тень к низу) с ровными границами, как у трафаретной печати; поверх —
-   крапины краски и бумаги (--cl-speck) и неровный прокрас (--cl-mottle). Под облаком — его тень .cl-sh:
-   тот же силуэт темнее и ниже, к низу — тёплая кайма от Мглы. Цвета дальних слоёв смешаны с небом
-   заранее (не прозрачность), чтобы тень не просвечивала сквозь облако.
+/* Облака: рваные силуэты по рисунку художницы, как вырезанные из бумаги. Четыре формы (.cl.a–.cl.d) —
+   маски из контура рисунка (--cl-a…--cl-d), растянутые на рамку детали; .flip — зеркально; .w — тёплый,
+   абрикосовый тон. Цвет — мягкий бежевый градиент: светлое пятно у верхушки, книзу плавно темнеет;
+   поверх — размытые светлые клубы (--cl-puffs), чтобы облако читалось пышным, а не плоским.
+   Зерно — общее, поверх экрана (--grain). Под облаком — его тень .cl-sh: тот же силуэт темнее и ниже,
+   к низу — тёплая кайма от Мглы. Цвета дальних слоёв смешаны с небом заранее (не прозрачность).
    Движение: облако дрейфует вбок и покачивается (twCloud, у дальних медленнее и короче — параллакс),
-   еле заметно дышит от низа (twBillow), тень дышит в своём ритме; крапины перескакивают, как зерно
-   старой плёнки (twSpeck, ступеньками). */
+   еле заметно дышит от низа (twBillow), тень дышит в своём ритме. */
 .tw { --cl-a: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 382' preserveAspectRatio='none'%3E%3Cpath d='M126 246L138 198L159 195L127 188L166 134L210 128L267 137L315 174L325 164L315 128L325 104L344 87L397 113L424 81L443 50L484 13L498 28L498 17L521 0L569 6L608 16L606 35L614 25L664 63L682 109L697 150L730 158L757 172L787 182L786 240L766 274L800 282L861 290L914 293L958 300L965 288L973 305L1000 312L993 326L917 346L911 335L899 347L850 349L724 338L722 324L706 341L609 351L556 376L552 370L540 376L471 351L399 382L322 374L281 356L195 302L170 300L165 285L155 308L86 318L0 300L20 301L12 290L25 259L80 247L122 252Z'/%3E%3C/svg%3E");
   --cl-b: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 447' preserveAspectRatio='none'%3E%3Cpath d='M637 203L674 195L727 230L737 252L755 226L791 206L828 221L844 238L857 255L841 258L847 265L836 300L842 288L845 310L872 308L928 297L953 304L1000 310L977 343L967 327L968 343L923 358L898 361L893 347L886 353L858 356L809 357L802 350L792 362L771 383L743 425L653 444L649 432L643 447L573 432L456 407L391 387L338 381L246 386L128 395L99 396L0 390L29 343L35 348L47 348L80 333L100 294L86 274L80 237L121 215L169 206L206 225L222 184L231 128L250 129L237 116L253 100L273 101L252 80L293 34L326 25L335 37L338 19L359 11L368 16L371 0L391 0L417 3L452 11L498 33L527 51L576 75L622 116L620 125L626 130L633 184Z'/%3E%3C/svg%3E");
   --cl-c: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 388' preserveAspectRatio='none'%3E%3Cpath d='M105 229L110 181L115 120L135 98L158 59L192 54L244 66L243 80L254 82L289 103L297 125L303 92L307 67L306 45L314 26L350 47L347 58L360 52L394 65L408 35L436 0L459 0L468 6L470 4L476 12L481 2L526 22L562 59L552 79L577 60L628 108L662 141L655 156L658 154L688 205L709 216L708 233L722 216L758 228L758 239L767 231L773 283L793 306L833 300L873 301L896 297L963 300L1000 321L947 349L827 354L746 354L675 341L623 334L608 350L508 374L395 382L387 377L387 388L334 380L277 363L251 354L211 335L211 321L202 325L182 309L115 303L55 322L27 320L0 262L38 238L61 226L82 230L90 222L90 234L96 226L101 236Z'/%3E%3C/svg%3E");
   --cl-d: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 431' preserveAspectRatio='none'%3E%3Cpath d='M635 246L664 256L699 262L713 277L711 287L730 279L761 266L782 266L835 271L835 298L845 320L903 318L970 312L1000 324L946 351L862 359L835 359L786 358L769 381L757 381L762 390L713 423L670 431L553 412L481 403L456 393L358 374L238 383L122 391L0 374L38 346L76 329L111 318L86 305L92 269L137 246L148 257L146 240L197 244L210 238L226 209L243 208L219 196L234 148L244 146L244 136L269 85L286 73L311 35L343 21L390 0L396 20L406 3L425 11L450 35L472 37L508 73L503 88L515 83L552 125L581 141L577 156L579 154L596 164L616 191L606 204L622 205L637 245Z'/%3E%3C/svg%3E");
-  --cl-speck: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .33 0 0 0 0 .24 0 0 0 0 .17 3.2 0 0 0 -1.95'/%3E%3C/filter%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='2' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .98 0 0 0 0 .94 0 0 0 0 .84 -3 0 0 0 1.05'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23d)'/%3E%3Crect width='100%' height='100%' filter='url(%23l)'/%3E%3C/svg%3E");
-  --cl-mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='3' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .3 0 0 0 0 .2 1 0 0 0 -.4'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23m)'/%3E%3C/svg%3E"); }
+  --cl-puffs: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 1.5 0 0 0 -.6'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23m)'/%3E%3C/svg%3E"); }
 .tw .cloud { --hi: #F3E2BF; --mid: #E2C79C; --sd: #C9A97E; --lo: #7E6650; --rim: #E08E5B;
   --drift: 240px; --bob: -18px; --dur: 20s; --grow: 1.025; }
 .tw .cloud.d1 { --hi: #B4AA8E; --mid: #A4977A; --sd: #8F826A; --lo: #4E5850; --rim: #92694F; --drift: 140px; --bob: -10px; --dur: 28s; --grow: 1.02; }
 .tw .cloud.d0 { --hi: #7C8174; --mid: #72776A; --sd: #686D62; --lo: #3E5251; --rim: #6A5B4B; --drift: 70px; --bob: -5px; --dur: 40s; --grow: 1.015; }
 .tw .cl { transform-origin: 50% 100%; -webkit-mask: var(--cl-a) 0 0 / 100% 100% no-repeat; mask: var(--cl-a) 0 0 / 100% 100% no-repeat;
-  background: var(--cl-speck) 0 0 / 180px 180px, var(--cl-mottle) 0 0 / 420px 420px,
-    linear-gradient(172deg, var(--hi) 0 41%, var(--mid) 41% 69%, var(--sd) 69%);
-  animation: twCloud var(--dur) ease-in-out infinite alternate, twBillow 9s ease-in-out infinite alternate, twSpeck 1.5s steps(3, end) infinite; }
+  background: var(--cl-puffs) 0 0 / 360px 360px,
+    radial-gradient(60% 75% at 46% 12%, var(--hi), transparent 72%),
+    linear-gradient(180deg, var(--hi) 0, var(--mid) 42%, var(--sd) 88%);
+  animation: twCloud var(--dur) ease-in-out infinite alternate, twBillow 9s ease-in-out infinite alternate; }
 .tw .cl.b { -webkit-mask-image: var(--cl-b); mask-image: var(--cl-b); }
 .tw .cl.c { -webkit-mask-image: var(--cl-c); mask-image: var(--cl-c); }
 .tw .cl.d { -webkit-mask-image: var(--cl-d); mask-image: var(--cl-d); }
 .tw .cl.flip { transform: scaleX(-1); }
 .tw .cl.w { filter: sepia(.15) saturate(1.15) hue-rotate(-6deg); }
-.tw .cl.cl-sh { background: var(--cl-speck) 0 0 / 180px 180px, linear-gradient(180deg, var(--lo) 0 58%, var(--rim) 100%); animation-duration: var(--dur), 6.5s, 1.5s; }
-@keyframes twSpeck { to { background-position: 180px 120px, 0 0, 0 0; } }
+.tw .cl.d0 { background: radial-gradient(60% 75% at 46% 12%, var(--hi), transparent 72%), linear-gradient(180deg, var(--hi) 0, var(--mid) 42%, var(--sd) 88%); }
+.tw .cl.cl-sh { background: linear-gradient(180deg, var(--lo) 0 50%, var(--rim) 100%); animation-duration: var(--dur), 6.5s; }
 .tw .streak { border-radius: 50%; background: radial-gradient(closest-side, rgba(201, 214, 210, .22), rgba(201, 214, 210, .08) 60%, transparent);
   animation: twCloud var(--dur) ease-in-out infinite alternate, twStretch 7s ease-in-out infinite alternate; }
 .tw .mist { animation: twDrift 12s linear infinite, twBreath 7s ease-in-out infinite; }
