@@ -134,23 +134,23 @@ export interface Slot {
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-// Облака неба (из Tower.dc.html): плоские силуэты по рисунку художницы, форма — маска в sedmaya.css
-// (.cl.a большое, .cl.b малое); высота облака — ширина × CLOUD_ASPECT.
-// Облака [x 0..1, y 0..1 высоты неба, ширина в U, слой глубины 0..2]
-const CLOUD_ASPECT = { a: 0.378, b: 0.439 } as const;
+// Облака неба (из Tower.dc.html): рваные силуэты по рисунку художницы, форма — маска в sedmaya.css
+// (.cl.a–.cl.d); высота облака — ширина × CLOUD_ASPECT.
+// Облака [x 0..1, y 0..1 высоты неба, ширина в U, слой глубины 0..2, форма и тон: «c flip w»]
+const CLOUD_ASPECT = { a: 0.382, b: 0.447, c: 0.388, d: 0.431 } as const;
 const CLOUD_STREAKS: readonly (readonly [number, number, number])[] = [
   [0.15, 0.17, 200],
   [0.58, 0.36, 170],
 ];
-const CLOUDS: readonly (readonly [number, number, number, number])[] = [
-  [0.3, 0.06, 58, 0],
-  [0.84, 0.15, 50, 0],
-  [0.01, 0.25, 46, 0],
-  [0.5, 0.31, 42, 0],
-  [0.6, 0.02, 98, 1],
-  [0.06, 0.12, 88, 1],
-  [0.7, 0.23, 132, 2],
-  [-0.07, 0.35, 120, 2],
+const CLOUDS: readonly (readonly [number, number, number, number, string])[] = [
+  [0.27, 0.05, 64, 0, 'a'],
+  [0.86, 0.13, 38, 0, 'd flip'],
+  [0.03, 0.27, 52, 0, 'c w'],
+  [0.47, 0.33, 30, 0, 'b'],
+  [0.62, 0.01, 104, 1, 'd'],
+  [0.1, 0.14, 72, 1, 'b flip w'],
+  [0.74, 0.25, 146, 2, 'c flip'],
+  [-0.12, 0.37, 110, 2, 'a w'],
 ];
 const op = (v: number) => `opacity:${v.toFixed(2)};`;
 
@@ -657,9 +657,8 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     const cw = c[2] * U;
     const x0 = c[0] * 900 - 450;
     const base = Math.min(skyTop + c[1] * skyH + 0.42 * cw, skyLow);
-    const f = i % 3 === 1 ? 'b' : 'a';
-    const ch = cw * CLOUD_ASPECT[f];
-    const cls = `cloud d${c[3]} cl ${f}${i % 2 === 1 ? ' flip' : ''}`;
+    const ch = cw * CLOUD_ASPECT[c[4].charAt(0) as keyof typeof CLOUD_ASPECT];
+    const cls = `cloud d${c[3]} cl ${c[4]}`;
     const d = `animation-delay:-${(i * 13) % 40}s,-${i % 5}s;`;
     px(`${cls} cl-sh`, x0 + 0.012 * cw, base - ch + 0.045 * cw, cw, ch, d);
     px(cls, x0, base - ch, cw, ch, d);
