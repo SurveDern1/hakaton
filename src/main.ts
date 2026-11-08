@@ -93,7 +93,7 @@ const towerScene = new TowerScene(towerSource, {
   },
 });
 
-const game = new Phaser.Game({
+new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#1a3437',
@@ -209,8 +209,7 @@ async function showEnding() {
 
 /** Сцена Phaser и DOM-башня под финалом: стоят и не перерисовываются, к новой партии — оживают. */
 function sceneAsleep(on: boolean) {
-  if (on) game.loop.sleep();
-  else game.loop.wake();
+  towerScene.hold(on);
   document.getElementById('game')?.classList.toggle('is-asleep', on);
 }
 

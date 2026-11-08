@@ -93,6 +93,16 @@ try {
   const woke2 = (await frame()) > f0;
   const y1 = await c.eval('window.sedmaya.tower.scene.cameras.main.midPoint.y');
   expect(woke2 && Math.abs(y1 - y0) > 1, `отступ шапки будит цикл и сдвигает камеру (${y0.toFixed(1)} → ${y1.toFixed(1)})`);
+  // Удержание (открытка финала): ни состояние, ни окно не будят, отпустили — проснулась
+  await c.eval('window.sedmaya.tower.scene.hold(true)');
+  f0 = await frame();
+  await c.eval(`window.sedmaya.store.dispatch((s) => ({ ...s, mist: s.mist + 20 }))`);
+  await size(390, 700);
+  await sleep(600);
+  expect((await frame()) === f0, 'удержанная сцена не просыпается');
+  await c.eval('window.sedmaya.tower.scene.hold(false)');
+  await sleep(300);
+  expect((await frame()) > f0 && (await asleep()), 'отпущенная сцена догоняет состояние и снова засыпает');
   c.close();
 } finally {
   chrome.kill();

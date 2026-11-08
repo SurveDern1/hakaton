@@ -72,6 +72,8 @@ export class TowerScene extends Phaser.Scene {
   private idleFrames = 0;
   private idlePoll = 0;
   private insetsKey = '';
+  /** Сцену держат спящей снаружи (hold): wake ничего не делает. */
+  private held = false;
 
   constructor(
     private source: TowerSource,
@@ -116,7 +118,7 @@ export class TowerScene extends Phaser.Scene {
     window.clearInterval(this.idlePoll);
     this.idlePoll = 0;
     const loop = this.game?.loop;
-    if (!loop || loop.running) return;
+    if (!loop || loop.running || this.held) return;
     loop.resetDelta();
     // Часы твинов (Date.now) засчитали бы сон короче 500 мс как прошедшее время, и переход
     // перескочил бы к концу: сдвигаем их на длительность сна.
@@ -125,6 +127,19 @@ export class TowerScene extends Phaser.Scene {
     tw.prevTime += slept;
     tw.startTime += slept;
     loop.wake();
+  }
+
+  /**
+   * Удержать сцену спящей (экран целиком закрыт, например открыткой финала): ни новое состояние,
+   * ни окно, ни отступы её не будят. false — отпустить и разбудить.
+   */
+  hold(on: boolean): void {
+    this.held = on;
+    if (on) {
+      window.clearInterval(this.idlePoll);
+      this.idlePoll = 0;
+      this.game?.loop.sleep();
+    } else this.wake();
   }
 
   private sleepIfIdle(moving: boolean): void {
