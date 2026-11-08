@@ -137,7 +137,7 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 // Облака неба (из Tower.dc.html): рваные силуэты по рисунку художницы, форма — маска в sedmaya.css
 // (.cl.a–.cl.d); высота облака — ширина × CLOUD_ASPECT.
 // Облака [x 0..1, y 0..1 высоты неба, ширина в U, слой глубины 0..2, форма и тон: «c flip w»]
-const CLOUD_ASPECT = { a: 0.382, b: 0.447, c: 0.388, d: 0.431 } as const;
+const CLOUD_ASPECT = { a: 0.381, b: 0.445, c: 0.379, d: 0.425 } as const;
 const CLOUD_STREAKS: readonly (readonly [number, number, number])[] = [
   [0.15, 0.17, 200],
   [0.58, 0.36, 170],
