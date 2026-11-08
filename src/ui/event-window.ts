@@ -94,8 +94,11 @@ export interface EventWindowOptions {
 }
 
 export interface EventWindow {
-  /** Показать одно событие; промис — после выбора и реплики. */
-  show(eventId: string, report?: MorningReport): Promise<ChoiceResult>;
+  /**
+   * Показать одно событие; промис — после выбора и реплики. `last` — последнее окно утра: промис
+   * выполняется сразу после выбора, реплика уходит сама, а день (декреты, стройка) уже доступен.
+   */
+  show(eventId: string, report?: MorningReport, last?: boolean): Promise<ChoiceResult>;
   /** Очередь утра: не больше balance.events.maxWindowsPerMorning окон подряд. */
   showMorning(eventIds: string[], report?: MorningReport): Promise<ChoiceResult[]>;
   readonly isOpen: boolean;
@@ -376,13 +379,14 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
             ),
           ),
         );
-    // Держим по длине текста; касание карточки, клавиша Enter/Пробел/Esc убирают её раньше
+    // Держим по длине текста; касание в любом месте экрана, клавиша Enter/Пробел/Esc убирают её раньше:
+    // игрок, который тянется к панели, не ждёт реплику впустую.
     const chars = card.textContent?.length ?? 0;
     const hold = Math.min(T_REPLY_MAX, Math.max(T_REPLY_MIN, T_REPLY_BASE + chars * T_REPLY_PER_CHAR));
     await new Promise<void>((done) => {
       const finish = () => {
         window.clearTimeout(timer);
-        card.removeEventListener('pointerdown', finish);
+        document.removeEventListener('pointerdown', finish, true);
         document.removeEventListener('keydown', onKey);
         done();
       };
@@ -390,7 +394,7 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') finish();
       };
       const timer = window.setTimeout(finish, hold);
-      card.addEventListener('pointerdown', finish);
+      document.addEventListener('pointerdown', finish, true);
       document.addEventListener('keydown', onKey);
     });
     card.classList.add('is-leaving');
@@ -398,7 +402,7 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
     card.remove();
   }
 
-  function show(eventId: string, report?: MorningReport): Promise<ChoiceResult> {
+  function show(eventId: string, report?: MorningReport, last = false): Promise<ChoiceResult> {
     const event = data.events.find((e) => e.id === eventId);
     if (!event) return Promise.reject(new Error(`Нет события ${eventId}`));
     open = true;
@@ -432,7 +436,9 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         open = false;
         returnFocus?.focus?.({ preventScroll: true });
         if (result) {
-          await feedback(result);
+          const shown = feedback(result);
+          // Финал (день 20, поражение) ждёт реплику: открытка не должна лечь под неё
+          if (!last || store.state.ending) await shown;
           resolve(result);
         }
       }
@@ -478,7 +484,8 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
   async function showMorning(eventIds: string[], report?: MorningReport): Promise<ChoiceResult[]> {
     const results: ChoiceResult[] = [];
     const ids = eventIds.slice(0, data.balance.events.maxWindowsPerMorning);
-    for (const [k, id] of ids.entries()) results.push(await show(id, k === 0 ? report : undefined));
+    for (const [k, id] of ids.entries())
+      results.push(await show(id, k === 0 ? report : undefined, k === ids.length - 1));
     return results;
   }
 
