@@ -4,7 +4,7 @@
 // Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу.
 import Phaser from 'phaser';
 import { initAudio } from './audio';
-import { getComic, outroFor, playComic } from './comics';
+import { getComic, outroFor, playComic, preloadComic } from './comics';
 import { createInitialState, forecastNight, gameData, type NightReport } from './core';
 import { GameLoop } from './game/loop';
 import { loadGame } from './game/save';
@@ -178,6 +178,9 @@ async function newGameWithIntro() {
 
 function start() {
   ui?.classList.add('is-bare');
+  // Пока игрок на стартовом экране, картинки пролога успевают загрузиться
+  const intro = getComic('intro');
+  if (intro) preloadComic(intro);
   showStart(ui as HTMLElement, {
     data,
     saved: loadGame(),

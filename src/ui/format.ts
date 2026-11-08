@@ -111,6 +111,31 @@ export function plural(n: number, one: string, few: string, many: string): strin
   return many;
 }
 
+/** Части заголовка: знаки препинания сразу после буквы — отдельно, чтобы обернуть их в `.dp`. */
+export function splitPunct(text: string): { text: string; punct: boolean }[] {
+  return text
+    .split(/(?<=[\p{L}\d»"')])([,.!?:;…]+)/u)
+    .map((s, i) => ({ text: s, punct: i % 2 === 1 }))
+    .filter((p) => p.text !== '');
+}
+
+/** Текст для `.disp`: в моноширинном Rubik Mono One запятая или «!» занимают клетку буквы
+ *  и отъезжают от слова, `.dp` (sedmaya.css) прижимает их обратно. */
+export function dispText(text: string): DocumentFragment {
+  const frag = document.createDocumentFragment();
+  for (const part of splitPunct(text)) {
+    if (!part.punct) {
+      frag.append(part.text);
+      continue;
+    }
+    const span = document.createElement('span');
+    span.className = 'dp';
+    span.textContent = part.text;
+    frag.append(span);
+  }
+  return frag;
+}
+
 type Child = Node | string | null | undefined | false;
 
 /** Короткая сборка разметки без шаблонов: атрибуты и дети. */

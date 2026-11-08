@@ -16,7 +16,7 @@ import {
 } from '../core';
 import type { GameStore } from '../game/store';
 import { flashHud } from './feedback';
-import { sgn } from './format';
+import { dispText, sgn } from './format';
 import { FACTION_ICONS, portraitOf, svgIcon } from './portraits';
 import './event-window.css';
 
@@ -211,7 +211,7 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         'div',
         { class: 'ev-caption' },
         el('span', { class: 'ev-kicker' }, p.kicker),
-        el('span', { class: 'disp ev-name' }, p.name),
+        el('span', { class: 'disp ev-name' }, dispText(p.name)),
         p.quote && el('span', { class: 'serif ev-quote' }, p.quote),
       ),
     );
@@ -312,7 +312,7 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         el(
           'div',
           { class: 'ev-main' },
-          el('h1', { class: 'disp ev-title', id: `${id}-title` }, event.title),
+          el('h1', { class: 'disp ev-title', id: `${id}-title` }, dispText(event.title)),
           text,
           list,
           legend,
