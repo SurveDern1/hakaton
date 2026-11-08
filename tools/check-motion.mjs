@@ -191,6 +191,12 @@ async function run() {
         fs.mkdirSync(shots, { recursive: true });
         fs.writeFileSync(path.join(shots, `tutorial-${vp.width}.png`), Buffer.from(shot.data, 'base64'));
       }
+      // Строк в тексте карточки: высота абзаца / межстрочный интервал (план: до трёх на 390 px).
+      const lines = await client.eval(`(() => {
+        const p = document.querySelector('.tut-layer > .tut .tut-text');
+        if (!p) return 0;
+        return Math.round(p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight));
+      })()`);
       const inRows = await client.eval('window.sedmaya.tutorial.samples.filter((r) => r.phase === "in")');
       // Уход: hide() ждёт конец tutOut.
       await client.eval('window.sedmaya.tutorial.coach.hide()');
@@ -200,7 +206,8 @@ async function run() {
       const gone = await client.eval('!document.querySelector(".tut-layer > .tut")');
       const errs = [...checkPhase(inRows, 'in'), ...checkPhase(outRows, 'out')];
       if (!gone) errs.push('out: карточка осталась на экране после ухода');
-      console.log(`${errs.length ? 'НЕТ' : 'ок '} ${vp.name}, шаг ${STEP}`);
+      if (lines > 3) errs.push(`текст карточки — ${lines} строки, больше трёх`);
+      console.log(`${errs.length ? 'НЕТ' : 'ок '} ${vp.name}, шаг ${STEP}, строк текста: ${lines}`);
       console.log(table(inRows));
       console.log(table(outRows));
       for (const e of errs) console.log(`  ! ${e}`);

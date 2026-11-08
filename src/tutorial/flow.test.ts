@@ -63,7 +63,7 @@ describe('карточка шага', () => {
   });
 
   it('день отладки — из when.minDay', () => {
-    expect(debugDay(step('hud_resources'))).toBe(1);
+    expect(debugDay(step('build'))).toBe(1);
     const late = steps.find((s) => (s.when?.minDay ?? 0) > 1);
     if (late) expect(debugDay(late)).toBe(late.when?.minDay);
   });

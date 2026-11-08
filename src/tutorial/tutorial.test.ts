@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../core';
 import { applyChoice, build, createInitialState, gameData, runNight, setEngineMode } from '../core';
 import { PORTRAITS } from '../ui/portraits';
-import { flowSteps, hasOk } from './flow';
+import { hasOk } from './flow';
 import {
   buildContext,
   currentStep,
@@ -130,8 +130,6 @@ describe('сценарий первых дней', () => {
 
     // День 1, телефон.
     const phone = { layout: 'phone' as const };
-    expectStep(p, ctx(s, 'day', phone), 'hud_resources', 'hud_resources');
-    ok('hud_resources');
     const closed = ctx(s, 'day', phone);
     expectStep(p, closed, 'build', 'slot_root_empty');
     expect(isDone(step('build'), closed, ctx(s, 'day', { ...phone, menuOpen: true }))).toBe(false);
@@ -154,13 +152,15 @@ describe('сценарий первых дней', () => {
     act('end_day', evening, ctx(s, 'night', phone));
     expect(shown(p, ctx(s, 'night', phone))).toBeNull();
 
-    // Утро 2: отчёт о ночи; день 2: Мгла и новый ярус.
+    // Утро 2: отчёт о ночи; день 2: запасы, Мгла и новый ярус.
     s = runNight(s, data).state;
     expect(s.day).toBe(2);
     expect(shown(p, ctx(s, 'morning', { eventOpen: true }))).toBeNull();
     const report = ctx(s, 'morning', { eventOpen: true, reportShown: true });
     expectStep(p, report, 'night_report', 'event_report');
     ok('night_report');
+    expectStep(p, ctx(s, 'day', phone), 'hud_resources', 'hud_resources');
+    ok('hud_resources');
     expectStep(p, ctx(s, 'day', phone), 'mist', 'hud_mist');
     ok('mist');
     expectStep(p, ctx(s, 'day', phone), 'new_tier', 'tab_night');
@@ -176,9 +176,9 @@ describe('сценарий первых дней', () => {
     ok('factions');
     expectStep(p, wide, 'decrees', 'decrees');
     ok('decrees');
-    // Не больше пяти карточек сценария за день (без приветствия).
+    // Не больше пяти карточек сценария за день, приветствие тоже в счёт.
     const perDay = new Map<number, number>();
-    for (const st of flowSteps(steps).filter((x) => x.chain === 'first')) {
+    for (const st of steps.filter((x) => x.chain === 'first')) {
       const d = st.when?.minDay ?? 1;
       perDay.set(d, (perDay.get(d) ?? 0) + 1);
     }
@@ -189,7 +189,7 @@ describe('сценарий первых дней', () => {
   it('пропущенный шаг дня не всплывает в другой день', () => {
     const s = { ...createInitialState(b, 'skip'), day: 2 };
     const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'night_report'] };
-    expect(shown(p, ctx(s, 'day'))?.step.id).toBe('mist');
+    expect(shown(p, ctx(s, 'day'))?.step.id).toBe('hud_resources');
   });
 
   it('продолжение посреди дня 1 показывает незаконченный шаг', () => {
