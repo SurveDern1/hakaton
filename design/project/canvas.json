@@ -72,6 +72,13 @@
       "w": 900,
       "x": 2800,
       "y": 2560
+    },
+    "Tutorial.dc.html": {
+      "h": 1100,
+      "title": "Обучение · подсказки первых дней",
+      "w": 3020,
+      "x": 0,
+      "y": 3820
     }
   },
   "createdOnFiles": {
@@ -113,6 +120,14 @@
       "w": 320,
       "x": 5620,
       "y": 2560
+    },
+    "row4": {
+      "kind": "title1",
+      "maxW": 3020,
+      "text": "Обучение: подсказки первых дней",
+      "w": 240,
+      "x": 0,
+      "y": 3640
     }
   },
   "order": [
@@ -125,7 +140,8 @@
     "States.dc.html",
     "Playground.dc.html",
     "Tower.dc.html",
-    "Blocks.dc.html"
+    "Blocks.dc.html",
+    "Tutorial.dc.html"
   ],
   "pages": [],
   "title": "Седьмая — макеты"
