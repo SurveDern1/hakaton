@@ -50,7 +50,7 @@ export interface StatusLine {
   say(text: string, tone?: 'good' | 'bad' | 'info'): void;
 }
 
-/** Строка статуса внизу экрана (role=status): текст держится ~2,6 с, затем уходит. */
+/** Строка статуса внизу экрана (role=status): текст держится ~3,6 с (ошибка ~4,8 с), затем уходит. */
 export function mountStatus(root: HTMLElement): StatusLine {
   const line = document.createElement('div');
   line.className = 'status-line';
@@ -66,7 +66,7 @@ export function mountStatus(root: HTMLElement): StatusLine {
       line.classList.remove('is-on');
       void line.offsetWidth;
       line.classList.add('is-on');
-      timer = window.setTimeout(() => line.classList.remove('is-on'), tone === 'bad' ? 3600 : 2600);
+      timer = window.setTimeout(() => line.classList.remove('is-on'), tone === 'bad' ? 4800 : 3600);
     },
   };
 }

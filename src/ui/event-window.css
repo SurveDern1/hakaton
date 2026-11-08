@@ -6,6 +6,9 @@
   inset: 0;
   z-index: 20;
   display: grid;
+  /* Ячейка ровно в экран: без minmax(0, …) строка растёт по тексту окна, height: 100% у .ev
+     считается от неё, и низ окна уходит за экран без прокрутки */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   padding: 24px;
   box-sizing: border-box;
@@ -367,6 +370,11 @@
 #ui > .ev-replies {
   pointer-events: none;
 }
+/* Саму карточку можно убрать касанием, не дожидаясь конца показа */
+#ui > .ev-replies > .ev-reply {
+  pointer-events: auto;
+  cursor: pointer;
+}
 
 /* Всплывающие числа над шкалами HUD */
 .ev-floats {
@@ -468,6 +476,7 @@
   /* Плакат — полоса: дата и подпись идут потоком слева, знак справа; высота по содержимому. */
   .ev-poster {
     width: 100%;
+    flex: none;
     min-height: 132px;
     box-sizing: border-box;
     display: flex;
@@ -514,6 +523,11 @@
   }
   .ev-quote {
     display: none;
+  }
+  /* Во флекс-колонке тело без min-height: 0 растёт по тексту и вылезает за экран: прокрутка
+     не включается, нижние варианты не достать */
+  .ev-body {
+    min-height: 0;
   }
   .ev-report {
     padding: 10px 16px;

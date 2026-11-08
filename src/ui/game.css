@@ -1073,7 +1073,10 @@
   inset: 0;
   z-index: 50;
   display: grid;
-  place-items: center;
+  /* Ячейка не шире и не выше экрана: текст переносится, а не уходит за край; низкий экран — прокрутка */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: safe center;
+  overflow-y: auto;
   padding: 24px;
   background:
     radial-gradient(ellipse at 50% 110%, rgba(126, 155, 158, 0.45), transparent 60%),
@@ -1096,7 +1099,7 @@
 }
 .start-call {
   margin: 0;
-  font-size: 22px;
+  font-size: min(22px, 6.4cqw);
   color: var(--paper);
   animation: radioCall 2.4s ease-in-out 1;
 }
@@ -1115,7 +1118,7 @@
 }
 .start-title {
   margin: 0;
-  font-size: clamp(54px, 13cqw, 112px);
+  font-size: clamp(40px, 13cqw, 112px);
   line-height: 1;
   color: var(--red);
   text-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);

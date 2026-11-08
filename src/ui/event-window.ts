@@ -123,7 +123,11 @@ const LEVEL_WORDS = ['немного', 'заметно', 'сильно'];
 // Длительности интерфейса, мс (не баланс): появление/уход окна, подсветка выбора, реплика.
 const T_CHOSEN = 300;
 const T_LEAVE = 200;
-const T_REPLY = 2600;
+/** Реплика держится, пока её успевают прочитать: основа плюс время на знак, в пределах [мин, макс]. */
+const T_REPLY_MIN = 5000;
+const T_REPLY_MAX = 10000;
+const T_REPLY_BASE = 2500;
+const T_REPLY_PER_CHAR = 45;
 /** Высота строки чисел в карточке реплики, px: запас, чтобы число не всплыло под выросшей карточкой. */
 const CHIP_ROW = 44;
 
@@ -366,7 +370,23 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
             ),
           ),
         );
-    await wait(T_REPLY);
+    // Держим по длине текста; касание карточки, клавиша Enter/Пробел/Esc убирают её раньше
+    const chars = card.textContent?.length ?? 0;
+    const hold = Math.min(T_REPLY_MAX, Math.max(T_REPLY_MIN, T_REPLY_BASE + chars * T_REPLY_PER_CHAR));
+    await new Promise<void>((done) => {
+      const finish = () => {
+        window.clearTimeout(timer);
+        card.removeEventListener('pointerdown', finish);
+        document.removeEventListener('keydown', onKey);
+        done();
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') finish();
+      };
+      const timer = window.setTimeout(finish, hold);
+      card.addEventListener('pointerdown', finish);
+      document.addEventListener('keydown', onKey);
+    });
     card.classList.add('is-leaving');
     await wait(T_LEAVE);
     card.remove();

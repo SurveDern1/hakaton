@@ -19,6 +19,7 @@
     "icons": "node tools/make-icons.js",
     "check:motion": "node tools/check-motion.mjs",
     "check:sound": "node tools/check-sound.mjs",
+    "check:scroll": "node tools/check-scroll.mjs",
     "sounds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/make-sounds.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run check:data && npm run check:design",
     "sim": "node tools/sim.mjs"
