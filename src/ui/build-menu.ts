@@ -16,7 +16,7 @@ import {
 import type { GameLoop } from '../game/loop';
 import type { GameStore } from '../game/store';
 import type { StatusLine } from './feedback';
-import { buildingText, h, plural, sgn, tierName } from './format';
+import { buildingText, deficitText, h, plural, sgn, tierName } from './format';
 
 export interface BuildMenuOptions {
   store: GameStore;
@@ -83,19 +83,19 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
     const why = buildBlocker(s, data, tier, slot, id);
     const btn = h(
       'button',
-      { type: 'button', class: 'bm-opt', 'aria-disabled': why ? 'true' : undefined },
+      { type: 'button', class: 'bm-opt', 'aria-disabled': why ? 'true' : undefined, title: def.kind },
       h('span', { class: 'bm-name' }, def.name),
       h('span', { class: 'num bm-cost' }, `${def.cost ?? 0} мат.`),
-      h('span', { class: 'bm-desc' }, why ?? buildingText(def)),
+      h('span', { class: 'bm-desc' }, why ? deficitText(why) : buildingText(def)),
     );
     btn.addEventListener('click', () => {
       if (why) {
-        status.say(why, 'bad');
+        status.say(why.startsWith('Нужно') ? `${deficitText(why)} Завезут после праздника` : why, 'bad');
         return;
       }
       act(
         (st) => build(st, data, tier, slot, id),
-        () => `Построено: ${def.name} · ${sgn(-(def.cost ?? 0))} мат.`,
+        () => `Построено: ${def.name} · ${sgn(-(def.cost ?? 0))} мат.${def.kind ? ` · ${def.kind}` : ''}`,
       );
     });
     return btn;
@@ -144,6 +144,7 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
           'div',
           { class: 'bm-built' },
           h('span', { class: 'bm-name' }, def?.name ?? id),
+          def?.kind ? h('span', { class: 'bm-kind' }, def.kind) : null,
           h('span', { class: 'bm-desc' }, def ? buildingText(def) : ''),
         ),
       );

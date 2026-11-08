@@ -53,6 +53,12 @@ const MODE_PHRASE: Record<EngineMode, string> = {
   climb: 'набирать высоту',
   save: 'экономить эфир',
 };
+/** Лозунг режима: подсказка на кнопке и строка статуса после переключения. */
+const MODE_SLOGAN: Record<EngineMode, string> = {
+  hold: 'Так держать!',
+  climb: 'Всё выше, и выше, и выше!',
+  save: 'Уходя, гасите свет',
+};
 /** Сколько кадра башни под шапкой остаётся видно над раскрытой панелью телефона, px (вёрстка, не баланс). */
 const MIN_TOWER = 150;
 
@@ -180,7 +186,7 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
       const mode = id as EngineMode;
       run(
         (s) => ({ ok: true, state: setEngineMode(s, mode) }),
-        () => `Двигатель: ${MODE_PHRASE[mode]}`,
+        () => `Двигатель: ${MODE_PHRASE[mode]}. ${MODE_SLOGAN[mode]}`,
       );
     } else if (act === 'decree') {
       const name = b.decrees.list[id]?.name ?? id;
@@ -267,7 +273,7 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
       : s.tiers.length >= b.tower.maxTiers
         ? 'Башня выше не станет'
         : s.res.mat < cost
-          ? `Нужно ${cost} материалов`
+          ? `Дефицит: нужно ${cost} материалов`
           : null;
     tower.innerHTML = `<div class="tower-row">
       <div class="decree-txt"><span class="decree-name">Надстроить ярус</span><span class="decree-fx">${tierWhy ?? `+3 места под здания · встанет под Шпилем через ${b.tower.newTier.nights} ${plural(b.tower.newTier.nights, 'ночь', 'ночи', 'ночей')}`}</span></div>
@@ -306,7 +312,7 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
         const burn = Math.ceil(need * mode.burnFactor);
         const on = s.engineMode === m.id;
         const alt = mode.altitude ? `${sgn(mode.altitude)} м` : `${fmtNum(s.altitude)} м`;
-        return `<button type="button" class="mode${on ? ' is-on' : ''}" data-act="mode" data-id="${m.id}" aria-pressed="${on}">${m.name}<br><span>${alt} · ${burn} эфира</span></button>`;
+        return `<button type="button" class="mode${on ? ' is-on' : ''}" data-act="mode" data-id="${m.id}" aria-pressed="${on}" title="${MODE_SLOGAN[m.id]}">${m.name}<br><span>${alt} · ${burn} эфира</span></button>`;
       }).join('')}</div>`;
 
     warn.innerHTML = warnings.length

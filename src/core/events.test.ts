@@ -217,7 +217,9 @@ describe('концовки', () => {
     expect(by.marta).toContain('Учит детей');
     expect(by.wind).toContain('Ушёл в туман');
     expect(by.lev).toBe('Каждую ночь слушает эфир.');
-    expect(fates).toHaveLength(Object.keys(gameData.endings.fates).length);
+    // Без строки default (Звёздочка) судьба показывается, только если флаг стоит
+    const always = Object.values(gameData.endings.fates).filter((list) => list.some((f) => f.default));
+    expect(fates).toHaveLength(always.length);
   });
 });
 

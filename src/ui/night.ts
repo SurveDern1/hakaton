@@ -27,7 +27,7 @@ export async function playNight(
   const label = h(
     'div',
     { class: 'night-label', role: 'status', 'aria-live': 'polite' },
-    h('span', { class: 'lbl' }, 'Ночь'),
+    h('span', { class: 'lbl' }, 'Отбой'),
     // Неразрывный пробел перед стрелкой: при переносе она остаётся с первой датой
     h('span', { class: 'disp' }, `${fmtDate(dayDate(data, day))} → ${fmtDate(dayDate(data, day + 1))}`),
   );

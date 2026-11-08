@@ -25,7 +25,14 @@ export {
   tierOccupants,
 } from './choice';
 export { gameData } from './data';
-export { characterFates, endingId, type ResolvedEnding, resolveEnding } from './endings';
+export {
+  chairReference,
+  characterFates,
+  earnedAwards,
+  endingId,
+  type ResolvedEnding,
+  resolveEnding,
+} from './endings';
 export { buildMorningQueue, crisisThresholdCrossed, eventText, findEvent, type MorningQueue } from './events';
 export type { Defeat, NightReport } from './night';
 export { forecastNight, forecastWarnings, runNight } from './night';

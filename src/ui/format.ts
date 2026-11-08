@@ -168,3 +168,6 @@ export const ICONS: Record<string, string> = {
 export function icon(name: string, size = 22, extra = ''): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" ${extra}>${ICONS[name] ?? ''}</svg>`;
 }
+
+/** «Нужно 15 материалов» из core показывается как дефицит, в духе времени; остальные причины — как есть. */
+export const deficitText = (why: string) => why.replace(/^Нужно (\d+) материалов$/, 'Дефицит: нужно $1 мат.');

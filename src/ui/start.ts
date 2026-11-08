@@ -23,7 +23,7 @@ export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
   const fresh = h(
     'button',
     { type: 'button', class: `btn${saved ? ' ink' : ''}` },
-    saved ? 'Новая игра' : 'Начать',
+    saved ? 'Новая игра' : 'Поехали!',
   );
   fresh.addEventListener('click', () => leave(opts.onNew), { once: true });
   const buttons: HTMLElement[] = [];

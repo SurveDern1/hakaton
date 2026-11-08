@@ -64,7 +64,7 @@ export function mountHud(root: HTMLElement, opts: HudOptions): HTMLElement {
     const left = days - s.day;
     title.innerHTML = `<span class="lbl">Башня «Седьмое ноября»</span>
       <span class="hud-daynum">День ${s.day} из ${days}</span>
-      <span class="hud-left">${last ? 'Сегодня 7 ноября' : `До 7 ноября ${left} дн.`}</span>`;
+      <span class="hud-left">${last ? 'Красный день календаря' : `До 7 ноября ${left} дн.`}</span>`;
 
     const f = forecastNight(s, data);
     const { homeless } = residentsByTier(s, data.balance);

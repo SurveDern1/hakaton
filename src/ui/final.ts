@@ -1,7 +1,15 @@
 // Экран финала по Final.dc.html: открытка с башней в последнем состоянии, текст концовки
-// (resolveEnding), ключевые решения из state.log, судьбы (characterFates), закрывшиеся пути,
-// «Сыграть ещё раз» и архив кристаллов памяти.
-import { characterFates, type GameData, type GameState, resolveEnding } from '../core';
+// (resolveEnding), ключевые решения из state.log, судьбы (characterFates), характеристика на Председателя
+// (chairReference) и значки (earnedAwards) из endings.json, закрывшиеся пути, «Начать новую пятилетку»
+// и архив кристаллов памяти.
+import {
+  chairReference,
+  characterFates,
+  earnedAwards,
+  type GameData,
+  type GameState,
+  resolveEnding,
+} from '../core';
 import { TowerDom } from '../scenes/tower-dom';
 import { buildTower, towerInputFromState } from '../scenes/tower-model';
 import { dayDate, dispText, fmtDate, h, plural } from './format';
@@ -75,7 +83,7 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
       ? memories.map((m) => h('p', { class: 'serif' }, h('b', {}, `${portraitOf(m.who).name}: `), m.text))
       : [h('p', { class: 'serif' }, 'Кристаллов памяти не нашли.')]),
   );
-  const again = h('button', { type: 'button', class: 'btn fin-again' }, 'Сыграть ещё раз');
+  const again = h('button', { type: 'button', class: 'btn fin-again' }, 'Начать новую пятилетку');
   const crystals = h(
     'button',
     { type: 'button', class: 'btn ink', 'aria-expanded': 'false', 'aria-controls': 'fin-archive' },
@@ -94,6 +102,8 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
   });
 
   const closed = closedPaths(state, data, ending.id);
+  const reference = chairReference(state, data, ending.id);
+  const awards = earnedAwards(state, data);
   const poster = h(
     'figure',
     { class: `fin-poster poster-${ending.poster ?? ending.id}` },
@@ -152,6 +162,27 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
         ),
       ),
     ),
+    reference.length > 0 &&
+      h(
+        'section',
+        { class: 'fin-ref' },
+        h('span', { class: 'lbl' }, 'Характеристика на Председателя Совета башни'),
+        h('p', { class: 'serif' }, reference.join(' ')),
+        h('span', { class: 'fin-stamp', 'aria-hidden': 'true' }, 'Совет башни «Седьмое ноября»'),
+      ),
+    awards.length > 0 &&
+      h(
+        'section',
+        {},
+        h('span', { class: 'lbl' }, 'Значки'),
+        h(
+          'div',
+          { class: 'fin-awards' },
+          ...awards.map((a) =>
+            h('span', { class: 'fin-award', title: a.text }, h('b', {}, a.title), h('small', {}, a.text)),
+          ),
+        ),
+      ),
     closed.length > 0 &&
       h(
         'section',

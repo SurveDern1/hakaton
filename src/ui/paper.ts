@@ -1,6 +1,7 @@
 // Стенгазета по Paper.dc.html: бортовой журнал (state.log) короткими заметками.
 // Главная заметка — первая запись последнего дня, справа — ночь (из последнего отчёта), склад и
-// журнал прошлых дней. Открывается кнопкой «Стенгазета», закрывается Esc или «Закрыть».
+// «Радио Седьмой отвечает» (data/flavor.json, вопрос по номеру дня) и журнал прошлых дней.
+// Открывается кнопкой «Стенгазета», закрывается Esc или «Закрыть».
 import { forecastWarnings, type GameData, type GameState, type NightReport, residentsByTier } from '../core';
 import { dayDate, dispText, fmtDate, fmtNum, h } from './format';
 
@@ -88,6 +89,19 @@ export function mountPaper(root: HTMLElement, data: GameData): Paper {
     } else {
       note('Мгла внизу', `Туман стоит на отметке ${fmtNum(s.mist)} м, днище — на ${fmtNum(s.altitude)} м.`);
     }
+    // «Радио Седьмой отвечает»: вопрос дня по номеру номера газеты, без случайности
+    const radio = data.flavor.radio;
+    const qa = radio.length ? radio[(s.day - 1) % radio.length] : undefined;
+    if (qa)
+      side.append(
+        h(
+          'article',
+          { class: 'pp-note pp-radio' },
+          h('h3', {}, 'Радио Седьмой отвечает'),
+          h('p', { class: 'serif' }, h('b', {}, 'Спрашивают: '), qa.q),
+          h('p', { class: 'serif' }, h('b', {}, 'Отвечаем: '), qa.a),
+        ),
+      );
     if (older.length) {
       side.append(
         h(

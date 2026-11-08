@@ -117,17 +117,38 @@ export interface Fate {
   text: string;
 }
 
+/** Строка характеристики: первая подходящая в своей группе (условия и/или концовка). */
+export interface ReferenceLine {
+  requires?: Requires;
+  /** id концовок, при которых строка подходит. */
+  endings?: string[];
+  text: string;
+}
+
+/** Значок на экране финала: выдаётся, если выполнено `requires`. */
+export interface Award {
+  id: string;
+  title: string;
+  text: string;
+  requires: Requires;
+}
+
 export interface EndingsFile {
   version: number;
   endings: Ending[];
   verdicts: Record<'win' | 'lose', Verdict>;
   harborRefused: string;
   fates: Record<string, Fate[]>;
+  /** «Характеристика на Председателя»: группы строк, из каждой — первая подходящая. */
+  reference: ReferenceLine[][];
+  awards: Award[];
   memories: { id: number; who: string; text: string }[];
 }
 
 export interface BuildingDef {
   name: string;
+  /** Подпись в духе типового проекта: показывается в меню слота и в строке «Построено». */
+  kind?: string;
   fixed?: boolean;
   cost?: number;
   workers?: number;
@@ -206,10 +227,18 @@ export interface Balance {
   preview: { statSteps: number[]; resSteps: number[]; factionPortraitMin: number };
 }
 
+/** Тексты для настроения из data/flavor.json: колонка «Радио Седьмой отвечает» в стенгазете. */
+export interface FlavorFile {
+  version: number;
+  /** Вопрос и ответ на каждый день, по порядку дней; день больше длины списка берёт по кругу. */
+  radio: { q: string; a: string }[];
+}
+
 export interface GameData {
   balance: Balance;
   events: GameEvent[];
   endings: EndingsFile;
+  flavor: FlavorFile;
 }
 
 export interface Tier extends TierDef {

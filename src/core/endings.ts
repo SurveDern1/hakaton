@@ -2,7 +2,7 @@
 // (`harbor` | `seal` | `hold`) или уже готовую концовку, которую поставил ночной расчёт (`fall`, `overthrow`).
 import { eventText } from './events';
 import { checkRequires } from './requires';
-import type { Ending, GameData, GameState } from './types';
+import type { Award, Ending, GameData, GameState } from './types';
 
 export interface ResolvedEnding {
   id: string;
@@ -63,4 +63,21 @@ export function characterFates(state: GameState, data: GameData): { who: string;
     if (fate) out.push({ who, text: fate.text });
   }
   return out;
+}
+
+/** Характеристика на Председателя: из каждой группы `reference` первая строка, чьи условия и концовка подходят. */
+export function chairReference(state: GameState, data: GameData, endingId: string): string[] {
+  const out: string[] = [];
+  for (const group of data.endings.reference) {
+    const line = group.find(
+      (l) => (!l.endings || l.endings.includes(endingId)) && checkRequires(l.requires, state),
+    );
+    if (line) out.push(line.text);
+  }
+  return out;
+}
+
+/** Значки, заработанные за партию, в порядке файла. */
+export function earnedAwards(state: GameState, data: GameData): Award[] {
+  return data.endings.awards.filter((a) => checkRequires(a.requires, state));
 }

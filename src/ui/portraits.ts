@@ -82,6 +82,13 @@ const EMBLEMS = {
     <rect x="70" y="40" width="160" height="230" fill="none" stroke="var(--paper-ink)" stroke-width="8"/>
     <circle cx="150" cy="110" r="34" fill="none" stroke="var(--ochre)" stroke-width="12"/>
     <path d="M150 144 L150 236 M150 200 L178 200 M150 222 L170 222" stroke="var(--ochre)" stroke-width="12"/>${MIST}`,
+  // Эфирная ракета под звездой: собака Звёздочка из питомника Института.
+  rocket: `
+    ${STAR(222, 64, 24)}
+    <path d="M150 40 C182 80 190 150 180 236 L120 236 C110 150 118 80 150 40 Z" fill="var(--paper)" stroke="var(--paper-ink)" stroke-width="6"/>
+    <circle cx="150" cy="128" r="20" fill="var(--ether)" stroke="var(--paper-ink)" stroke-width="5"/>
+    <path d="M120 196 L88 250 L122 236 Z M180 196 L212 250 L178 236 Z" fill="var(--paper-ink)"/>
+    <path d="M130 236 L150 292 L170 236 Z" fill="var(--ochre)"/>${MIST}`,
 } as const;
 
 export const PORTRAITS: Record<string, Portrait> = {
@@ -135,6 +142,13 @@ export const PORTRAITS: Record<string, Portrait> = {
     short: 'Ветер',
     tone: 'ochre',
     emblem: EMBLEMS.wind,
+  },
+  zvezdochka: {
+    kicker: 'Питомник Института',
+    name: 'Звёздочка',
+    short: 'Звёздочка',
+    tone: 'ochre',
+    emblem: EMBLEMS.rocket,
   },
   vershov: {
     kicker: 'Основатель',
