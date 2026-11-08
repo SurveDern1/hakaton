@@ -1,7 +1,9 @@
 /* Кадр «Падение» (scene-fall.ts). Рамка .fx-stage — 2:3, как viewBox башни 100 × 150, и накрывает
    кадр целиком; все слои стоят в её процентах. Движение начинается, когда кадр проявился (.cx-panel.is-in).
-   Время от появления кадра: окна гаснут 1,3–5 с, рывки башни 2,3 / 4,6 / 6,3 с, свет рации — 5,8–7 с,
-   звезда — 7,1 с, туман поднимается до 10,5 с. Анимируются только transform и opacity (и fill звезды). */
+   Время от появления кадра: окна гаснут 1,3–5 с, рывки башни 2,3 / 4,6 с, звезда — 5,4 с, крен 5,95 с,
+   срыв и падение сквозь облака 6,5–8,4 с (ветер, обломки, облачная пыль 6,95 и 7,75 с), свет рации гаснет
+   в облаках к 8 с, удар под облаками — вспышка и кольцо 9,4 с. Камера дрожит на рывках, в падении и на
+   ударе. Анимируются только transform и opacity (и fill звезды). */
 .fx {
   position: relative;
   width: 100%;
@@ -16,6 +18,7 @@
   width: max(100cqw, 66.667cqh);
   height: max(100cqh, 150cqw);
   translate: -50% -50%;
+  transform: scale(1.04);
 }
 .fx-stage > * {
   position: absolute;
@@ -102,7 +105,7 @@
   --y: 55%;
   --c1: #7c979b;
   --c2: #67838a;
-  --rise: -7cqh;
+  --rise: -5cqh;
   --rd: 13s;
   --rt: 0.6s;
   --dd: 38s;
@@ -111,7 +114,7 @@
   --y: 70%;
   --c1: #9cb2b2;
   --c2: #84999c;
-  --rise: -27cqh;
+  --rise: -14cqh;
   --rd: 13.5s;
   --rt: 0.9s;
   --dd: 30s;
@@ -120,7 +123,7 @@
   --y: 80%;
   --c1: #b4c6c3;
   --c2: #97acab;
-  --rise: -22cqh;
+  --rise: -11cqh;
   --rd: 12.5s;
   --rt: 1.1s;
   --dd: 24s;
@@ -129,7 +132,7 @@
   --y: 89%;
   --c1: #cad7d3;
   --c2: #a9bcb9;
-  --rise: -16cqh;
+  --rise: -8cqh;
   --rd: 11.5s;
   --rt: 1.3s;
   --dd: 19s;
@@ -217,6 +220,87 @@
   height: 1.4%;
 }
 
+/* Обломки срыва: отдельный слой, падают медленнее башни */
+.fx-frags {
+  inset: 0;
+}
+.fx-frag {
+  position: absolute;
+  width: calc(2.6% * var(--k));
+  height: calc(1.2% * var(--k));
+  background: #1a3437;
+  box-shadow: inset 0 0.25cqw 0 #3a6e79;
+  opacity: 0;
+}
+/* Ветер мимо падающей башни: светлые полосы летят вверх */
+.fx-streaks {
+  inset: 0;
+  pointer-events: none;
+}
+.fx-streaks i {
+  position: absolute;
+  top: 40%;
+  width: 0.6%;
+  height: calc(20% * var(--k));
+  border-radius: 1cqw;
+  background: linear-gradient(transparent, rgba(226, 238, 236, 0.75) 45%, transparent);
+  opacity: 0;
+}
+/* Облачная пыль: клубы вскипают над пробитой грядой */
+.fx-puff {
+  left: 50%;
+  top: 64%;
+  width: 0;
+  height: 0;
+}
+.fx-puff i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  aspect-ratio: 1.5;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    #d6e1dd 0%,
+    #bccbc8 38%,
+    rgba(160, 182, 181, 0.6) 55%,
+    transparent 70%
+  );
+  opacity: 0;
+}
+/* Удар глубоко под облаками: гряда вспыхивает снизу тёплым светом */
+.fx-flash {
+  left: -10%;
+  right: -10%;
+  top: 40%;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 50% 36% at 50% 52%,
+    rgba(255, 214, 160, 0.95),
+    rgba(246, 138, 80, 0.5) 40%,
+    transparent 78%
+  );
+  opacity: 0;
+}
+/* Кольцо удара расходится по гряде */
+.fx-ring {
+  left: 50%;
+  top: 66%;
+  width: 34cqw;
+  aspect-ratio: 4.5;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 0.5cqw solid rgba(255, 228, 196, 0.75);
+  box-shadow:
+    0 0 2.4cqw rgba(255, 190, 130, 0.55),
+    inset 0 0 2.4cqw rgba(255, 190, 130, 0.45);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
 /* Низ темнее — заголовок читается на светлом тумане; края уходят в тень */
 .fx-shade {
   inset: 0;
@@ -246,24 +330,42 @@
 .cx-panel.is-in .fx-b3 .fx-drift {
   animation-direction: reverse;
 }
+.cx-panel.is-in .fx-stage {
+  animation: fxCam 11s linear forwards;
+}
 .cx-panel.is-in .fx-tower {
-  animation: fxSink 10s 0.2s forwards;
+  animation: fxSink 9s forwards;
+}
+.cx-panel.is-in .fx-frag {
+  animation: fxFrag 2.6s cubic-bezier(0.45, 0, 0.9, 0.55) var(--t) both;
+}
+.cx-panel.is-in .fx-streaks i {
+  animation: fxStreak 0.75s linear var(--t) both;
+}
+.cx-panel.is-in .fx-puff i {
+  animation: fxPuff 2.4s cubic-bezier(0.12, 0.75, 0.3, 1) var(--t) both;
+}
+.cx-panel.is-in .fx-flash {
+  animation: fxFlash 2.6s ease-out 9.35s forwards;
+}
+.cx-panel.is-in .fx-ring {
+  animation: fxRing 1.9s cubic-bezier(0.1, 0.6, 0.3, 1) 9.4s forwards;
 }
 .cx-panel.is-in .fx-win {
   animation: fxWinOff 0.9s linear var(--t) forwards;
 }
 .cx-panel.is-in .fx-win.is-radio,
 .cx-panel.is-in .fx-glow {
-  animation: fxLastLight 7s linear forwards;
+  animation: fxLastLight 8.2s linear forwards;
 }
 .cx-panel.is-in .fx-glow i {
   animation: fxBreath 2.2s ease-in-out infinite;
 }
 .cx-panel.is-in .fx-star {
-  animation: fxStarOff 1.4s ease-in 7.1s forwards;
+  animation: fxStarOff 1.2s ease-in 5.4s forwards;
 }
 .cx-panel.is-in .fx-star-glow {
-  animation: fxFade 1.4s ease-in 7.1s forwards;
+  animation: fxFade 1.2s ease-in 5.4s forwards;
   --to: 0;
 }
 .cx-panel.is-in .fx-waves i {
@@ -312,50 +414,122 @@
     transform: translateX(-50%);
   }
 }
-/* Башня проседает рывками и кренится: каждый рывок — короткий провал и отскок */
+/* Башня проседает рывками и кренится, на 5,95 с — большой крен, на 6,5 с срывается и с ускорением
+   уходит вниз сквозь облака целиком (translateY в % своей высоты = высоты сцены). Время — доли 9 с. */
 @keyframes fxSink {
   0% {
     transform: none;
     animation-timing-function: ease-in-out;
   }
-  19% {
+  23.3% {
     transform: translateY(0.6cqh) rotate(-0.3deg);
     animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
   }
-  22% {
+  25.6% {
     transform: translateY(2cqh) rotate(-1.1deg);
     animation-timing-function: ease-out;
   }
-  25% {
+  28.3% {
     transform: translateY(1.6cqh) rotate(-0.9deg);
     animation-timing-function: ease-in-out;
   }
-  42% {
+  47.8% {
     transform: translateY(2.6cqh) rotate(-1.4deg);
     animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
   }
-  45% {
-    transform: translateY(4cqh) rotate(-2.2deg);
+  51.1% {
+    transform: translateY(4.4cqh) rotate(-2.5deg);
     animation-timing-function: ease-out;
   }
-  48% {
-    transform: translateY(3.6cqh) rotate(-2deg);
+  53.9% {
+    transform: translateY(3.8cqh) rotate(-2.2deg);
     animation-timing-function: ease-in-out;
   }
-  59% {
-    transform: translateY(4.4cqh) rotate(-2.4deg);
+  63.3% {
+    transform: translateY(4.6cqh) rotate(-2.7deg);
     animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
   }
-  62% {
-    transform: translateY(5.7cqh) rotate(-3.2deg);
+  66.1% {
+    transform: translateY(7.6cqh) rotate(-5deg);
     animation-timing-function: ease-out;
   }
-  65% {
-    transform: translateY(5.4cqh) rotate(-3deg);
+  68.9% {
+    transform: translateY(6.6cqh) translateX(0.4cqw) rotate(-4.3deg);
     animation-timing-function: ease-in-out;
   }
+  72.2% {
+    transform: translateY(7cqh) translateX(0.2cqw) rotate(-4.8deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.92, 0.45);
+  }
+  93.3%,
   100% {
-    transform: translateY(8cqh) rotate(-3.9deg);
+    transform: translateY(112%) translateX(-4cqw) rotate(-19deg);
+  }
+}
+/* Камера: толчки на рывках, дрожь в падении, удар снизу. Время — доли 11 с */
+@keyframes fxCam {
+  0%,
+  20.4%,
+  23.6%,
+  41.4%,
+  44.5%,
+  53.6%,
+  57.3%,
+  58.6% {
+    transform: scale(1.04);
+  }
+  21.2% {
+    transform: scale(1.04) translateY(0.5cqh);
+  }
+  42.2% {
+    transform: scale(1.04) translateY(0.8cqh);
+  }
+  54.4% {
+    transform: scale(1.04) translate(-0.4cqw, 1.1cqh);
+  }
+  55.6% {
+    transform: scale(1.04) translate(0.3cqw, -0.3cqh);
+  }
+  60.5% {
+    transform: scale(1.045) translate(0.5cqw, 0.4cqh);
+  }
+  62.4% {
+    transform: scale(1.05) translate(-0.6cqw, -0.3cqh);
+  }
+  64.3% {
+    transform: scale(1.055) translate(0.7cqw, 0.5cqh);
+  }
+  66.2% {
+    transform: scale(1.06) translate(-0.5cqw, -0.5cqh);
+  }
+  68.1% {
+    transform: scale(1.06) translate(0.6cqw, 0.3cqh);
+  }
+  70% {
+    transform: scale(1.055) translate(-0.4cqw, 0.4cqh);
+  }
+  72.5% {
+    transform: scale(1.05) translate(0.3cqw, -0.2cqh);
+  }
+  75.5%,
+  84.8% {
+    transform: scale(1.045);
+  }
+  85.7% {
+    transform: scale(1.045) translateY(1.3cqh);
+  }
+  86.8% {
+    transform: scale(1.045) translate(-0.5cqw, -0.6cqh);
+  }
+  88% {
+    transform: scale(1.045) translate(0.4cqw, 0.4cqh);
+  }
+  89.5% {
+    transform: scale(1.045) translate(-0.2cqw, -0.15cqh);
+  }
+  92%,
+  100% {
+    transform: scale(1.04);
   }
 }
 /* Окно гаснет не сразу: моргает и тухнет */
@@ -445,5 +619,77 @@
   100% {
     opacity: 0;
     transform: translate(-3cqw, 34cqh) rotate(420deg);
+  }
+}
+@keyframes fxFrag {
+  0% {
+    opacity: 0;
+    transform: none;
+  }
+  5% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(var(--dx), 90cqh) rotate(var(--r));
+  }
+}
+@keyframes fxStreak {
+  0% {
+    opacity: 0;
+    transform: translateY(55cqh);
+  }
+  25% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-65cqh);
+  }
+}
+@keyframes fxPuff {
+  0% {
+    opacity: 0;
+    transform: translateY(2cqh) scale(0.25);
+  }
+  12% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.7);
+  }
+}
+@keyframes fxFlash {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  18% {
+    opacity: 0.35;
+  }
+  28% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes fxRing {
+  0% {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
   }
 }
