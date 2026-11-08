@@ -128,10 +128,10 @@
   --cl-c: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 379' preserveAspectRatio='none'%3E%3Cpath d='M124 224L127 194L127 157L133 138L136 110L146 91L169 67L193 59L232 61L266 73L285 86L302 110L317 116L317 84L315 55L334 20L359 33L377 58L396 75L410 66L417 43L426 28L446 11L457 2L491 0L517 14L553 34L571 52L598 80L623 102L636 115L645 127L671 154L676 169L688 197L721 209L751 216L773 227L785 259L766 284L757 281L761 290L788 292L826 292L863 294L903 296L929 296L964 298L980 301L1000 312L988 324L959 336L908 347L841 350L789 348L731 341L710 338L654 328L603 352L591 360L550 370L532 370L461 350L404 378L385 379L325 370L282 354L262 347L246 339L226 326L211 316L192 298L162 297L147 302L125 305L69 314L6 312L0 301L5 279L16 267L26 250L61 227L101 220L116 222Z'/%3E%3C/svg%3E");
   --cl-d: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 425' preserveAspectRatio='none'%3E%3Cpath d='M641 244L662 248L686 250L700 257L717 265L730 278L750 271L789 254L820 258L857 276L854 295L840 309L845 311L873 313L902 312L919 313L937 309L954 311L979 310L1000 314L997 336L980 343L933 351L913 353L871 355L809 352L775 377L738 415L691 425L617 423L544 413L487 399L426 385L363 370L327 371L306 373L280 376L225 379L197 381L166 381L114 386L89 386L69 390L24 385L0 368L21 350L89 327L113 323L102 309L91 299L85 269L98 261L120 254L132 245L164 235L194 237L213 237L223 199L225 180L239 140L254 107L274 76L286 62L309 36L329 15L351 3L390 0L413 0L434 12L451 20L471 32L491 51L508 63L536 93L562 117L589 146L608 164L625 188L639 216L642 230Z'/%3E%3C/svg%3E");
   --cl-puffs: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeGaussianBlur stdDeviation='6'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .97 0 0 0 0 .9 1.5 0 0 0 -.6'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23m)'/%3E%3C/svg%3E"); }
-.tw .cloud { --cl-o: .74; --hi: #E2EEEC; --mid: #BCD5D7; --sd: #93B2B6; --lo: #557A80; --rim: #C9A88E;
+.tw .cloud { --cl-o: .48; --hi: #E2EEEC; --mid: #BCD5D7; --sd: #93B2B6; --lo: #557A80; --rim: #C9A88E;
   --drift: 240px; --bob: -18px; --dur: 20s; --grow: 1.025; }
-.tw .cloud.d1 { --cl-o: .64; --hi: #A9C3C4; --mid: #91AEB0; --sd: #78979A; --lo: #42666C; --rim: #8A8274; --drift: 140px; --bob: -10px; --dur: 28s; --grow: 1.02; }
-.tw .cloud.d0 { --cl-o: .56; --hi: #6F8E91; --mid: #64838A; --sd: #587A80; --lo: #355459; --rim: #5D6660; --drift: 70px; --bob: -5px; --dur: 40s; --grow: 1.015; }
+.tw .cloud.d1 { --cl-o: .4; --hi: #A9C3C4; --mid: #91AEB0; --sd: #78979A; --lo: #42666C; --rim: #8A8274; --drift: 140px; --bob: -10px; --dur: 28s; --grow: 1.02; }
+.tw .cloud.d0 { --cl-o: .32; --hi: #6F8E91; --mid: #64838A; --sd: #587A80; --lo: #355459; --rim: #5D6660; --drift: 70px; --bob: -5px; --dur: 40s; --grow: 1.015; }
 .tw .cl { opacity: var(--cl-o); transform-origin: 50% 100%; -webkit-mask: var(--cl-a) 0 0 / 100% 100% no-repeat; mask: var(--cl-a) 0 0 / 100% 100% no-repeat;
   background: var(--cl-puffs) 0 0 / 360px 360px,
     radial-gradient(60% 75% at 46% 12%, var(--hi), transparent 72%),
@@ -143,7 +143,7 @@
 .tw .cl.flip { transform: scaleX(-1); }
 .tw .cl.w { filter: brightness(1.05) saturate(.85); }
 .tw .cl.d0 { background: radial-gradient(60% 75% at 46% 12%, var(--hi), transparent 72%), linear-gradient(180deg, var(--hi) 0, var(--mid) 42%, var(--sd) 88%); }
-.tw .cl.cl-sh { opacity: calc(var(--cl-o) * .4); background: linear-gradient(180deg, var(--lo) 0 50%, var(--rim) 100%); animation-duration: var(--dur), 6.5s; }
+.tw .cl.cl-sh { opacity: calc(var(--cl-o) * .35); background: linear-gradient(180deg, var(--lo) 0 50%, var(--rim) 100%); animation-duration: var(--dur), 6.5s; }
 .tw .streak { border-radius: 50%; background: radial-gradient(closest-side, rgba(201, 214, 210, .22), rgba(201, 214, 210, .08) 60%, transparent);
   animation: twCloud var(--dur) ease-in-out infinite alternate, twStretch 7s ease-in-out infinite alternate; }
 .tw .mist { animation: twDrift 12s linear infinite, twBreath 7s ease-in-out infinite; }
