@@ -348,6 +348,13 @@
   box-shadow: 0 0 1.4em 0.9em var(--paper);
   border-radius: 2.2em;
 }
+/* Голос в эфире: тёмная плашка с кремовым пунктиром и кремовыми буквами, как рация Льва в макете */
+.cx-note.is-radio {
+  border: 2px dashed var(--paper);
+  background: rgba(31, 77, 91, 0.92);
+  color: var(--paper);
+  box-shadow: 0 6px 18px rgba(10, 24, 26, 0.28);
+}
 .cx-note.is-plain {
   padding: 0.2em 0.4em;
 }

@@ -24,8 +24,11 @@ export interface ComicNote {
   x?: number;
   y?: number;
   w?: number;
-  /** box — кремовая плашка, frame — контур без заливки, cloud — плашка, растворённая в светлом фоне, plain — без плашки. */
-  style?: 'box' | 'frame' | 'cloud' | 'plain';
+  /**
+   * box — кремовая плашка, frame — контур без заливки, cloud — плашка, растворённая в светлом фоне,
+   * plain — без плашки, radio — тёмная плашка с пунктирной рамкой (голос в эфире).
+   */
+  style?: 'box' | 'frame' | 'cloud' | 'plain' | 'radio';
   align?: 'left' | 'center';
   /** Красный текст — для первой, ударной фразы. */
   accent?: boolean;
