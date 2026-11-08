@@ -15,7 +15,15 @@ import './comic.css';
 export interface ComicOptions {
   /** Подпись кнопки на последней странице, вместо comic.finish. */
   finish?: string;
+  /**
+   * Комикс закрыл экран целиком (true, когда слой проявился) и открывает его (false, в начале ухода).
+   * Пока экран закрыт, игру под ним можно не рисовать.
+   */
+  onCovered?: (covered: boolean) => void;
 }
+
+/** Слой комикса проявляется за cxIn (420 мс в comic.css). */
+const COVER_MS = 440;
 
 const TURN_MS = 760;
 const TURN_REDUCED_MS = 220;
@@ -75,6 +83,7 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
     book.append(cur);
     root.append(layer);
     layer.focus({ preventScroll: true });
+    const coverTimer = window.setTimeout(() => opts.onCovered?.(true), reduced ? 0 : COVER_MS);
     preload(1);
 
     let turn: Turn | null = null;
@@ -159,12 +168,15 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
         t.leaf.style.opacity = String(1 - q);
         return;
       }
+      // Только transform и opacity — без CSS-переменных на листе, которые пересчитали бы все его рисунки
+      const gloss = Math.sin(q * Math.PI).toFixed(3);
       t.leaf.style.transform = `rotateY(${(-LEAF_DEG * q).toFixed(2)}deg)`;
-      t.leaf.style.setProperty('--shade', (q * 0.7).toFixed(3));
-      t.leaf.style.setProperty('--gloss', Math.sin(q * Math.PI).toFixed(3));
-      t.leaf.style.setProperty('--gx', `${(100 - q * 120).toFixed(1)}%`);
+      paint(t.leaf, '.cx-shade', (q * 0.7).toFixed(3));
+      paint(t.leaf, '.cx-lift', gloss);
+      // Центр блика идёт от правого края листа (100 %) за левый (−20 %); полоса — 200 % листа
+      paint(t.leaf, '.cx-gloss', gloss, `translateX(${((50 - q * 120) / 2).toFixed(2)}%)`);
       t.under.style.transform = `scale(${(0.93 + 0.07 * q).toFixed(4)})`;
-      t.under.style.setProperty('--cast', ((1 - q) * 0.6).toFixed(3));
+      paint(t.under, '.cx-cast', ((1 - q) * 0.6).toFixed(3));
     }
 
     function animateTo(t: Turn, to: number, ms: number, ease: (x: number) => number): Promise<void> {
@@ -198,7 +210,11 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
         el.classList.remove('is-leaf', 'is-under', 'is-first');
         el.style.removeProperty('transform');
         el.style.removeProperty('opacity');
-        for (const v of ['--shade', '--gloss', '--gx', '--cast']) el.style.removeProperty(v);
+        for (const s of LIGHT) {
+          const o = el.querySelector<HTMLElement>(s);
+          o?.style.removeProperty('opacity');
+          o?.style.removeProperty('transform');
+        }
       }
       turn = null;
       animating = false;
@@ -234,6 +250,8 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
       if (ended) return;
       ended = true;
       window.clearTimeout(revealTimer);
+      window.clearTimeout(coverTimer);
+      opts.onCovered?.(false);
       document.removeEventListener('keydown', onKey);
       layer.classList.add('is-leaving');
       window.setTimeout(
@@ -371,6 +389,16 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
   });
 }
 
+/** Слои света листа: тень под ним, затемнение, блик, тень на нижнем листе. */
+const LIGHT = ['.cx-lift', '.cx-shade', '.cx-gloss', '.cx-cast'];
+
+function paint(page: HTMLElement, sel: string, opacity: string, transform?: string): void {
+  const el = page.querySelector<HTMLElement>(sel);
+  if (!el) return;
+  el.style.opacity = opacity;
+  if (transform) el.style.transform = transform;
+}
+
 function renderPage(page: ComicPage, index: number, total: number): HTMLElement {
   const g = pageGrid(page);
   const grid = h('div', { class: 'cx-grid' });
@@ -386,6 +414,7 @@ function renderPage(page: ComicPage, index: number, total: number): HTMLElement 
   const section = h(
     'section',
     { class: `cx-page${size ? ' is-bleed' : ''}`, 'aria-label': `Страница ${index + 1} из ${total}` },
+    h('div', { class: 'cx-lift' }),
     h(
       'div',
       { class: 'cx-front' },

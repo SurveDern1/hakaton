@@ -158,10 +158,14 @@
     0 18px 50px rgba(0, 0, 0, 0.45),
     0 2px 0 rgba(0, 0, 0, 0.2);
 }
-.cx-page.is-leaf .cx-front {
-  box-shadow:
-    calc(var(--gloss, 0) * 26px) 0 calc(var(--gloss, 0) * 46px) rgba(0, 0, 0, 0.5),
-    0 18px 50px rgba(0, 0, 0, 0.45);
+/* Тень приподнятого листа — отдельный слой под ним: меняется только opacity, без перерисовки */
+.cx-lift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 2px;
+  box-shadow: 26px 0 46px rgba(0, 0, 0, 0.5);
+  opacity: 0;
 }
 .cx-grid {
   display: grid;
@@ -179,32 +183,40 @@
   letter-spacing: 0.1em;
   color: rgba(26, 52, 55, 0.55);
 }
-/* Лист темнеет, уходя от света; по нему бежит блик */
+/* Лист темнеет, уходя от света; по нему бежит блик. Во время поворота viewer.ts каждый кадр
+   меняет только opacity и transform этих слоёв: стили страницы и рисунки под ними не пересчитываются
+   и не перерисовываются — иначе на телефоне лист с SVG-кадрами листается рывками. */
 .cx-shade,
 .cx-gloss,
 .cx-cast {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  opacity: 0;
 }
 .cx-shade {
   background: linear-gradient(to left, rgba(8, 18, 20, 0.95), rgba(8, 18, 20, 0.3));
-  opacity: var(--shade, 0);
 }
+/* Полоса блика вдвое шире листа, едет через него сдвигом (translateX задаёт viewer.ts) */
 .cx-gloss {
-  background: linear-gradient(
-    100deg,
-    transparent calc(var(--gx, 100%) - 24%),
-    rgba(255, 250, 235, 0.32) var(--gx, 100%),
-    transparent calc(var(--gx, 100%) + 24%)
-  );
-  opacity: var(--gloss, 0);
-  mix-blend-mode: screen;
+  right: auto;
+  width: 200%;
+  margin-left: -50%;
+  background: linear-gradient(100deg, transparent 38%, rgba(255, 250, 235, 0.26) 50%, transparent 62%);
 }
 /* Тень поднятого листа на странице под ним */
 .cx-cast {
   background: linear-gradient(to right, rgba(5, 12, 14, 0.95), rgba(5, 12, 14, 0.35) 45%, transparent 90%);
-  opacity: var(--cast, 0);
+}
+.cx-page.is-leaf .cx-lift,
+.cx-page.is-leaf .cx-shade,
+.cx-page.is-leaf .cx-gloss,
+.cx-page.is-under .cx-cast {
+  will-change: opacity, transform;
+}
+/* Пока лист в движении, наезд камеры в его кадрах стоит: слои кадров не пересобираются каждый кадр */
+.cx-page.is-leaf .cx-cam {
+  animation-play-state: paused;
 }
 
 /* Лист во весь размер картинки (page.bleed): пропорция листа — ровно пропорция картинки, лист

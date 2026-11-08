@@ -6,7 +6,7 @@
 // ?tutorial=<шаг> — шаг обучения поверх новой игры (день из when.minDay).
 import Phaser from 'phaser';
 import { initAudio } from './audio';
-import { getComic, outroFor, playComic, preloadComic } from './comics';
+import { type Comic, getComic, outroFor, playComic, preloadComic } from './comics';
 import { createInitialState, forecastNight, gameData, type NightReport } from './core';
 import { GameLoop } from './game/loop';
 import { loadGame } from './game/save';
@@ -190,7 +190,7 @@ async function showEnding() {
   const state = store.state;
   const id = finalEnding(state, data).id;
   const outro = outroFor(id);
-  if (outro) await playComic(ui as HTMLElement, outro);
+  if (outro) await playCovering(outro);
   const kind = data.endings.endings.find((e) => e.id === id)?.verdict;
   if (kind)
     await showVerdict(ui as HTMLElement, kind, data.endings.verdicts[kind], verdictStats(state, kind));
@@ -207,6 +207,14 @@ async function showEnding() {
   }, 520);
 }
 
+/**
+ * Комикс во весь экран. Пока он закрывает игру, башня под ним спит: её анимации и Phaser иначе
+ * отнимают у листания кадры, и на телефоне комикс идёт рывками. Просыпается в начале ухода комикса.
+ */
+function playCovering(comic: Comic): Promise<void> {
+  return playComic(ui as HTMLElement, comic, { onCovered: sceneAsleep });
+}
+
 /** Сцена Phaser и DOM-башня под финалом: стоят и не перерисовываются, к новой партии — оживают. */
 function sceneAsleep(on: boolean) {
   towerScene.hold(on);
@@ -216,7 +224,7 @@ function sceneAsleep(on: boolean) {
 // Новая партия со стартового экрана: сначала пролог-комикс (его можно пропустить)
 async function newGameWithIntro() {
   const intro = getComic('intro');
-  if (intro) await playComic(ui as HTMLElement, intro);
+  if (intro) await playCovering(intro);
   ui?.classList.remove('is-bare');
   void loop.newGame();
 }
@@ -280,7 +288,7 @@ if (params.get('sound') === 'lab') {
   void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict], stats).then(() => start());
 } else if (debugComic) {
   ui.classList.add('is-bare');
-  void playComic(ui, debugComic).then(() => start());
+  void playCovering(debugComic).then(() => start());
 } else if (debugStep) {
   // Утренний шаг — на первом утре (окна событий), дневной — сразу днём нужного дня.
   if (debugStep.phase === 'morning') void loop.newGame();

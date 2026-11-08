@@ -22,6 +22,7 @@
     "check:scroll": "node tools/check-scroll.mjs",
     "check:sleep": "node tools/check-tower-sleep.mjs",
     "perf": "node tools/perf-probe.mjs",
+    "perf:comic": "node tools/comic-probe.mjs",
     "sounds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/make-sounds.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run check:data && npm run check:design",
     "sim": "node tools/sim.mjs"
