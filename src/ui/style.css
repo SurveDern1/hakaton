@@ -58,6 +58,12 @@ body {
   mix-blend-mode: overlay;
   opacity: var(--grain-o);
 }
+/* Телефон (html.perf-lite, src/main.ts): overlay на весь экран заставляет видеокарту каждый кадр
+   смешивать всю картинку под зерном отдельным проходом. Обычное наложение на 0,08 на глаз то же. */
+.perf-lite #app::after {
+  mix-blend-mode: normal;
+  opacity: 0.08;
+}
 
 #game,
 #ui {

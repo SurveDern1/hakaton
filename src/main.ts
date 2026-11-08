@@ -37,6 +37,12 @@ const data = gameData;
 const store = new GameStore(createInitialState(data.balance));
 const params = new URLSearchParams(location.search);
 
+// Облегчённый режим для телефонов (html.perf-lite, стили — scenes/tower.css и ui/style.css):
+// сенсорный экран или ?lite=1; ?lite=0 — полный вид на телефоне.
+const liteParam = params.get('lite');
+const lite = liteParam != null ? liteParam !== '0' : window.matchMedia('(pointer: coarse)').matches;
+document.documentElement.classList.toggle('perf-lite', lite);
+
 // Источник картинки башни: состояние игры или выбранный набор из макета
 const presetParam = params.get('preset');
 const presetListeners = new Set<(input: TowerInput) => void>();

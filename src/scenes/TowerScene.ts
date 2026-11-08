@@ -39,6 +39,13 @@ const ZOOM_MAX = 1.25;
 const TOWER_FOOT = 320;
 /** Время, за которое камера проходит ~63 % пути к новой рамке. */
 const CAMERA_LAG_MS = 140;
+/** Камера ближе к цели, чем на это (px мира / доля масштаба), — встаёт точно в цель. */
+const CAMERA_EPS = 0.05;
+const ZOOM_EPS = 0.0005;
+/** Сколько кадров подряд в покое, прежде чем цикл Phaser засыпает. */
+const IDLE_FRAMES = 3;
+/** Как часто спящая сцена проверяет отступы интерфейса (раскрытая панель и т. п.). */
+const IDLE_POLL_MS = 250;
 
 interface Frame {
   t: number;
@@ -61,6 +68,10 @@ export class TowerScene extends Phaser.Scene {
   tweenMs = TWEEN_MS;
   private pendingSlots: SlotHandler | null = null;
   private mistBelow: number | null | undefined;
+  /** Кадров подряд без движения камеры и твинов; после IDLE_FRAMES цикл Phaser спит. */
+  private idleFrames = 0;
+  private idlePoll = 0;
+  private insetsKey = '';
 
   constructor(
     private source: TowerSource,
@@ -85,11 +96,59 @@ export class TowerScene extends Phaser.Scene {
 
     this.unsubscribe = this.source.subscribe((input) => this.show(input));
     this.scale.on('resize', () => this.fitCamera(true));
-    this.events.once('shutdown', () => this.unsubscribe?.());
+    // Окно меняет размер — Phaser подхватывает его только в своём цикле, поэтому будим
+    const onResize = () => this.wake();
+    window.addEventListener('resize', onResize);
+    this.events.once('shutdown', () => {
+      this.unsubscribe?.();
+      window.removeEventListener('resize', onResize);
+      window.clearInterval(this.idlePoll);
+    });
+  }
+
+  /**
+   * Разбудить цикл Phaser. В покое (камера на месте, твинов нет) он спит: небо и башня не меняются,
+   * а перерисовка canvas и пересчёт камеры каждый кадр на телефоне стоят заметно. Будят новое
+   * состояние, изменение окна и изменение отступов интерфейса (опрос раз в IDLE_POLL_MS).
+   */
+  wake(): void {
+    this.idleFrames = 0;
+    window.clearInterval(this.idlePoll);
+    this.idlePoll = 0;
+    const loop = this.game?.loop;
+    if (!loop || loop.running) return;
+    loop.resetDelta();
+    // Часы твинов (Date.now) засчитали бы сон короче 500 мс как прошедшее время, и переход
+    // перескочил бы к концу: сдвигаем их на длительность сна.
+    const tw = this.tweens as unknown as { prevTime: number; startTime: number };
+    const slept = Date.now() - tw.prevTime;
+    tw.prevTime += slept;
+    tw.startTime += slept;
+    loop.wake();
+  }
+
+  private sleepIfIdle(moving: boolean): void {
+    if (moving || this.tween) {
+      this.idleFrames = 0;
+      return;
+    }
+    if (++this.idleFrames < IDLE_FRAMES) return;
+    this.game.loop.sleep();
+    this.insetsKey = this.readInsetsKey();
+    this.idlePoll = window.setInterval(() => {
+      if (this.readInsetsKey() !== this.insetsKey) this.wake();
+    }, IDLE_POLL_MS);
+  }
+
+  private readInsetsKey(): string {
+    const ins = this.options.insets?.() ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    const { width, height } = this.scale;
+    return [ins.top, ins.right, ins.bottom, ins.left, width, height].map(Math.round).join(',');
   }
 
   /** Новое состояние: первый раз — сразу, дальше — плавный переход от того, что на экране. */
   show(target: TowerInput): void {
+    this.wake();
     const from = this.shown;
     this.tween?.stop();
     this.tween = null;
@@ -125,13 +184,13 @@ export class TowerScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    this.fitCamera(false, delta);
+    this.sleepIfIdle(this.fitCamera(false, delta));
   }
 
-  /** Рамка башни (от звезды до Мглы) по центру свободной части экрана. */
-  private fitCamera(snap: boolean, delta = 16): void {
+  /** Рамка башни (от звезды до Мглы) по центру свободной части экрана. Возвращает: камера ещё едет. */
+  private fitCamera(snap: boolean, delta = 16): boolean {
     const m = this.model;
-    if (!m) return;
+    if (!m) return false;
     const { width, height } = this.scale;
     const ins = this.options.insets?.() ?? { top: 0, right: 0, bottom: 0, left: 0 };
     const pad = 12;
@@ -154,7 +213,10 @@ export class TowerScene extends Phaser.Scene {
     this.reportMist(b.y + visH < m.gapPx - 20);
 
     const c = this.cam;
-    if (snap || this.reduced || !c.ready) {
+    const near =
+      Math.abs(x - c.x) < CAMERA_EPS && Math.abs(y - c.y) < CAMERA_EPS && Math.abs(zoom - c.zoom) < ZOOM_EPS;
+    const moving = c.ready && !near && !snap && !this.reduced;
+    if (!moving) {
       c.x = x;
       c.y = y;
       c.zoom = zoom;
@@ -169,6 +231,7 @@ export class TowerScene extends Phaser.Scene {
     cam.setZoom(c.zoom);
     cam.centerOn(c.x, c.y);
     this.drawSky();
+    return moving;
   }
 
   private reportMist(hidden: boolean): void {

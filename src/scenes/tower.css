@@ -12,3 +12,23 @@
 .tw .film.abandoned {
   background: linear-gradient(180deg, rgba(143, 170, 173, 0.35), rgba(176, 206, 210, 0.6));
 }
+
+/* Облегчённый режим (html.perf-lite — сенсорный экран или ?lite=1, см. src/main.ts).
+   Замер на телефоне 390×844 при плотности 2,75 (tools/perf-probe.mjs): потоки, нарисованные сдвигом
+   фона (background-position), браузер перерисовывает на главном потоке каждый кадр — это ~70 %
+   работы рендерера. На телефоне они стоят на месте, вид кадра тот же. Режимы screen у бликов
+   заставляют видеокарту смешивать слой через отдельный проход — здесь обычное наложение. */
+.perf-lite .tw .prop,
+.perf-lite .tw .pod-coil,
+.perf-lite .tw .jet-flow,
+.perf-lite .tw .jet-spark,
+.perf-lite .tw .motes,
+.perf-lite .tw .trough,
+.perf-lite .tw .ether-flow,
+.perf-lite .tw .core-flow,
+.perf-lite .tw .star.glint {
+  animation-play-state: paused;
+}
+.perf-lite .tw.tw-game .p {
+  mix-blend-mode: normal;
+}
