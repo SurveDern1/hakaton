@@ -18,6 +18,7 @@ import type { GameStore } from '../game/store';
 import { flashHud } from './feedback';
 import { dispText, sgn } from './format';
 import { FACTION_ICONS, portraitOf, svgIcon } from './portraits';
+import { replyArt } from './reply-art';
 import './event-window.css';
 
 /** Полоса отчёта о ночи над первым окном утра. */
@@ -342,15 +343,23 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
     // строкой «Доверие +8» в карточке, чтобы числа не ложились на портрет и текст реплики.
     const deltas = deltasOf(result);
     const who = result.reply ? portraitOf(result.reply.who) : null;
+    // Кадр комикса как в прологе: предмет-знак персонажа (reply-art.ts), облачко реплики с хвостиком к нему
+    // и охристая подпись-итог. Порядок проявления — в event-window.css (evReply*, ra-*).
     const card = el(
       'div',
       { class: `ev-reply${who ? '' : ' no-who'}` },
-      who && svgNode(`<svg viewBox="0 0 300 380">${who.emblem}</svg>`, `ev-reply-face tone-${who.tone}`),
+      who && result.reply && svgNode(replyArt(result.reply.who), `ev-reply-face tone-${who.tone}`),
       el(
         'div',
         { class: 'ev-reply-body' },
-        who && result.reply && el('span', { class: 'ev-reply-who' }, who.name),
-        result.reply && el('p', { class: 'serif ev-reply-text' }, `«${result.reply.text}»`),
+        who &&
+          result.reply &&
+          el(
+            'div',
+            { class: 'ev-reply-bubble' },
+            el('span', { class: 'ev-reply-who' }, who.name),
+            el('p', { class: 'ev-reply-text' }, el('span', {}, `«${result.reply.text}»`)),
+          ),
         el('p', { class: 'ev-reply-log' }, result.log.join(' ')),
       ),
     );
