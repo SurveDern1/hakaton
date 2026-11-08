@@ -31,7 +31,8 @@ export const SETTINGS_KEY = 'sedmaya.audio';
 export const DEFAULT_SETTINGS: AudioSettings = {
   muted: false,
   master: 1,
-  music: 0.6,
+  // с постоянным фоном музыка может быть тише (план звука, Р4)
+  music: 0.5,
   sfx: 0.8,
   ambience: 0.7,
   musicOn: true,

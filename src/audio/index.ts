@@ -7,8 +7,14 @@
 // Выключатель: пункты меню (menuItems: «Звук», «Настройки…»), кнопка в углу на стартовом экране и в финале,
 // клавиша M. Окно «Настройки» — settings-window.ts (openSettings). Файлы звуков — samples.ts
 // (preloadSamples после разблокировки), лаборатория `?sound=lab` — lab.ts.
+// Фон (ambience.ts) живёт с первого жеста: фаза, состояние и открытые окна → soundscape → Ambience.set;
+// start — только ветер, day/morning/night — всё, final — затухание за 3 с, ветер остаётся.
+// Окно события, стенгазета, комикс и итог приглушают фон через engine.duck('amb').
+
+import { gameData } from '../core';
 import type { GameLoop, Phase } from '../game/loop';
 import type { GameStore } from '../game/store';
+import { Ambience, playGust } from './ambience';
 import { AudioEngine, type AudioSettings } from './audio';
 import { stateCues } from './cues';
 import type { Lab } from './lab';
@@ -16,12 +22,15 @@ import { Music } from './music';
 import { preloadSamples } from './samples';
 import { openSettings } from './settings-window';
 import { playSfx, type SfxName } from './sfx';
+import { type AmbUi, soundInputFromState, soundscape } from './soundscape';
 import './audio.css';
 
 export interface SoundControls {
   engine: AudioEngine;
   /** Музыка: `music.current` — какая тема звучит (для отладки из консоли). */
   music: Music;
+  /** Фон башни: `ambience.targets` — текущие цели, `ambience.readout()` — что звучит. */
+  ambience: Ambience;
   play(name: SfxName, delay?: number): void;
   toggle(): void;
   /** Пункты для меню игры: «Звук: вкл/выкл» и «Настройки…»; beforeOpen закрывает меню перед окном. */
@@ -43,6 +52,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   // Файлы звуков грузятся после разблокировки; пока их нет, играет синтезированная замена
   engine.onReady(() => void preloadSamples(engine));
   const play = (name: SfxName, delay = 0) => playSfx(engine, name, delay);
+  const ambience = new Ambience(engine);
   const corner = document.createElement('button');
   corner.type = 'button';
   corner.className = 'snd-toggle';
@@ -52,6 +62,24 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
 
   // ---- Фазы цикла: темы и крупные звуки ----
   let phase: Phase = opts.loop.phase;
+
+  // ---- Фон: цели из состояния, фазы и окон; приглушение под окнами ----
+  let ui: AmbUi = { event: false, paper: false, comic: false, verdict: false };
+  let duckDb = 0;
+  let releaseDuck: (() => void) | null = null;
+  const refreshAmbience = () => {
+    const t = soundscape(soundInputFromState(opts.store.state, gameData.balance), phase, ui);
+    ambience.set(t);
+    if (t.duckDb !== duckDb) {
+      duckDb = t.duckDb;
+      releaseDuck?.();
+      releaseDuck = duckDb < 0 ? engine.duck('amb', duckDb, 0.3, 1.2) : null;
+    }
+  };
+  engine.onReady(() => {
+    ambience.start();
+    refreshAmbience();
+  });
   let pendingTierUp = false;
   opts.loop.onPhase((next) => {
     const prev = phase;
@@ -72,6 +100,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
       play('final');
       music.set('final');
     }
+    refreshAmbience();
     syncCorner();
   });
   // Музыка стартового экрана заиграет сама, как только жест разблокирует звук
@@ -86,6 +115,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   opts.store.subscribe((s) => {
     const prev = last;
     last = s;
+    refreshAmbience();
     if (phase === 'start' || phase === 'final') return;
     for (const cue of stateCues(prev, s)) {
       if (cue === 'tierUp' && phase === 'night') pendingTierUp = true;
@@ -111,7 +141,27 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     // Карточка обучения (src/tutorial/coach.ts): .tut в слое .tut-layer
     else if (el.classList.contains('tut') && el.parentElement?.classList.contains('tut-layer')) play('hint');
   };
+  /** Что открыто поверх башни: окно события или отчёт, стенгазета, комикс, итог или финал. */
+  const readUi = (): AmbUi => {
+    const r = opts.root;
+    return {
+      event: !!r.querySelector('.ev-layer:not(.pp-layer):not(.is-leaving)'),
+      paper: !!r.querySelector('.pp-layer:not(.is-leaving)'),
+      comic: !!r.querySelector('.cx-layer'),
+      verdict: !!r.querySelector('.vd, .fin-layer'),
+    };
+  };
   new MutationObserver((records) => {
+    const next = readUi();
+    if (
+      next.event !== ui.event ||
+      next.paper !== ui.paper ||
+      next.comic !== ui.comic ||
+      next.verdict !== ui.verdict
+    ) {
+      ui = next;
+      refreshAmbience();
+    }
     for (const r of records) {
       if (r.type === 'childList') {
         for (const n of r.addedNodes) if (n instanceof Element) onAdded(n);
@@ -169,7 +219,8 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   engine.onSettings(paint);
   syncCorner();
 
-  const settings = () => openSettings(opts.root, { engine, preview: () => play('plus') });
+  const settings = () =>
+    openSettings(opts.root, { engine, preview: () => play('plus'), previewAmbience: () => playGust(engine) });
 
   function menuItems(beforeOpen?: () => void): HTMLElement[] {
     const item = (text: string) => {
@@ -199,5 +250,5 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     return [sound, open];
   }
 
-  return { engine, music, play, toggle, menuItems, openSettings: settings };
+  return { engine, music, ambience, play, toggle, menuItems, openSettings: settings };
 }

@@ -336,11 +336,19 @@
   margin-top: 6px;
 }
 
+/* Подвал прилипает к низу окна: «Сохранено» и «Готово» видны, даже когда ряды прокручены */
 .st-foot {
+  position: sticky;
+  bottom: -18px;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin: 0 -22px -18px;
+  padding: 10px 22px 18px;
+  background: var(--paper);
+  border-top: 1px solid rgba(26, 52, 55, 0.18);
 }
 .st-saved {
   font-family: var(--f-ui);

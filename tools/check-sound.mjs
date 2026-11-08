@@ -3,7 +3,8 @@
 //   1. игра 3 с без жеста — AudioContext не создан, sedmaya.sound.engine.played пуст;
 //   2. клик мышью через DevTools — контекст запущен (running);
 //   3. клавиша M — общая громкость в 0 за 0,3 с, повтор — обратно;
-//   4. ?sound=lab → sedmaya.sound.lab.measure(): рендер каждого звука, темы и фона на OfflineAudioContext,
+//   4. ?event=d02_raft и день: фон запущен, окно события его приглушает, режим «набор» поднимает тон;
+//   5. ?sound=lab → sedmaya.sound.lab.measure(): рендер каждого звука, темы и сцены фона на OfflineAudioContext,
 //      таблица метрик (src/audio/metrics.ts) и пороги (LIMITS: пик, сумма после ограничителя, щелчок
 //      на краях, хвост тишины); громкость сверяется с базовой линией tools/sound-baseline.json (±1 LU).
 // Код выхода 1 при нарушении. SOUND_WAV=<папка> — заодно WAV каждого звука для прослушивания.
@@ -171,7 +172,35 @@ async function run() {
       step(Math.abs(on - want) < 0.01 && want > 0, `M ещё раз: громкость ${fmt(on, 3)} (нужно ${fmt(want, 3)})`);
     }
 
-    // 4. Лаборатория: рендер и метрики
+    // 4. Фон в игре: окно события приглушает атмосферу, днём слышен двигатель, режим меняет его тон
+    await client.send('Page.navigate', { url: `${base}?event=d02_raft` });
+    await waitFor(() => client.eval('!!document.querySelector(".ev-layer")'), 30000, 'окно события');
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await client.send('Input.dispatchMouseEvent', { type, x: 8, y: 450, button: 'left', clickCount: 1 });
+    await sleep(2000);
+    const amb = await client.eval(`({
+      started: window.sedmaya.sound.ambience.started,
+      wind: window.sedmaya.sound.ambience.readout()?.wind ?? 0,
+      duck: window.sedmaya.sound.engine.ducking('amb'),
+    })`);
+    step(amb.started && amb.wind > 0.01, `фон запущен после жеста, ветер ${fmt(amb.wind, 3)}`);
+    step(
+      amb.duck.count >= 1 && amb.duck.gain < 0.6,
+      `окно события приглушает фон: приглушений ${amb.duck.count}, множитель ${fmt(amb.duck.gain, 2)}`,
+    );
+    await client.eval('window.sedmaya.loop.continueGame({ ...window.sedmaya.store.state, engineMode: "hold" })');
+    await sleep(2500);
+    const hold = await client.eval('window.sedmaya.sound.ambience.readout()');
+    step(hold.engine > 0.01 && Math.abs(hold.f0 - 46) < 2, `днём двигатель: громкость ${fmt(hold.engine, 3)}, тон ${fmt(hold.f0)} Гц`);
+    await client.eval('window.sedmaya.store.dispatch((s) => ({ ...s, engineMode: "climb" }))');
+    await sleep(1500);
+    const climb = await client.eval('window.sedmaya.sound.ambience.readout()');
+    step(
+      climb.f0 > 54 && climb.cutoff > hold.cutoff,
+      `«Набирать высоту»: тон ${fmt(hold.f0)} → ${fmt(climb.f0)} Гц, срез ${fmt(hold.cutoff, 0)} → ${fmt(climb.cutoff, 0)} Гц за 1,5 с`,
+    );
+
+    // 5. Лаборатория: рендер и метрики
     await client.send('Page.navigate', { url: `${base}?sound=lab` });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.lab'), 30000, 'лаборатория ?sound=lab');
     const rows = await client.eval('window.sedmaya.sound.lab.measure()');

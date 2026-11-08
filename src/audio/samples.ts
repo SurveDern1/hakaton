@@ -144,6 +144,8 @@ export interface SampleOpts {
   delay?: number;
   /** Куда играть вместо шины звуков. */
   dest?: AudioNode;
+  /** Звук фона (скрипы башни): слышен по выключателю атмосферы, а не звуков. */
+  amb?: boolean;
 }
 
 /**
@@ -157,7 +159,7 @@ export function playSample(
   manifest = SAMPLES,
 ): 'sample' | 'fallback' | null {
   const ctx = e.ctx;
-  if (!ctx || !e.ready || !e.sfxAudible) return null;
+  if (!ctx || !e.ready || !(opts.amb ? e.ambienceAudible : e.sfxAudible)) return null;
   const def = manifest[name];
   const buf = sampleBuffer(name, manifest);
   if (!buf) {

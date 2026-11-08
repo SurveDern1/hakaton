@@ -1,4 +1,5 @@
-// Окно «Настройки»: «Без звука», общая громкость, музыка и звуки (ползунок + выключатель), мелодия дня.
+// Окно «Настройки»: «Без звука», общая громкость, музыка, атмосфера (ветер, двигатель, Мгла) и звуки
+// (ползунок + выключатель), мелодия дня.
 // Открывается из меню игры и со стартового экрана (initAudio → openSettings). Каждое изменение сразу
 // идёт в engine.update (громкость слышна при перетаскивании, сохраняется в sedmaya.audio) и коротко
 // подтверждается надписью «Сохранено» (role=status). Закрывается крестиком, Esc и «Готово».
@@ -12,6 +13,8 @@ export const MELODY_NAMES: Record<Melody, string> = {
 
 /** Как часто звучит пробный звук при перетаскивании ползунка, мс. */
 const PREVIEW_GAP = 160;
+/** То же для порыва ветра у «Атмосферы», мс. */
+const GUST_GAP = 700;
 /** Сколько держится «Сохранено», мс. */
 const SAVED_MS = 1600;
 const LEAVE_MS = 200;
@@ -35,6 +38,8 @@ export interface SettingsDeps {
   engine: AudioEngine;
   /** Пробный звук эффектов (уже с учётом громкости и выключателей). */
   preview(): void;
+  /** Пробный порыв ветра для ряда «Атмосфера». */
+  previewAmbience?(): void;
 }
 
 /** Открыть окно в host; повторный вызов при открытом окне только переводит в него фокус. */
@@ -70,6 +75,14 @@ export function openSettings(host: HTMLElement, deps: SettingsDeps): void {
     if (now - previewAt < PREVIEW_GAP) return;
     previewAt = now;
     deps.preview();
+  };
+  // Порыв ветра длиннее щелчка: при перетаскивании не чаще раза в 0,7 с, чтобы не сливаться в гул
+  let gustAt = 0;
+  const previewAmb = () => {
+    const now = performance.now();
+    if (now - gustAt < GUST_GAP) return;
+    gustAt = now;
+    deps.previewAmbience?.();
   };
 
   /** Выключатель: checkbox с role=switch, вся строка — подпись (палец попадает в любое место). */
@@ -139,6 +152,21 @@ export function openSettings(host: HTMLElement, deps: SettingsDeps): void {
     () => engine.settings.music,
     (v) => set({ music: v }),
   );
+  const ambOn = toggle(
+    'Атмосфера',
+    () => engine.settings.ambienceOn,
+    (on) => {
+      set({ ambienceOn: on });
+      if (on) deps.previewAmbience?.();
+    },
+    'Ветер, двигатель, Мгла',
+  );
+  const amb = slider(
+    'Громкость атмосферы',
+    () => engine.settings.ambience,
+    (v) => set({ ambience: v }),
+    previewAmb,
+  );
   const sfxOn = toggle(
     'Звуки',
     () => engine.settings.sfxOn,
@@ -172,10 +200,12 @@ export function openSettings(host: HTMLElement, deps: SettingsDeps): void {
   );
 
   const paintAll = () => {
-    for (const c of [mute, master, musicOn, music, sfxOn, sfx]) c.paint();
+    for (const c of [mute, master, musicOn, music, ambOn, amb, sfxOn, sfx]) c.paint();
     const s = engine.settings;
-    for (const c of [master, musicOn, music, sfxOn, sfx]) c.row.classList.toggle('is-off', s.muted);
+    for (const c of [master, musicOn, music, ambOn, amb, sfxOn, sfx])
+      c.row.classList.toggle('is-off', s.muted);
     music.input.disabled = s.muted || !s.musicOn;
+    amb.input.disabled = s.muted || !s.ambienceOn;
     sfx.input.disabled = s.muted || !s.sfxOn;
     master.input.disabled = s.muted;
     for (const x of melodyInputs) {
@@ -214,6 +244,7 @@ export function openSettings(host: HTMLElement, deps: SettingsDeps): void {
       { class: 'st-body' },
       el('div', { class: 'st-group' }, mute.row, master.row),
       el('div', { class: 'st-group' }, musicOn.row, music.row, melody),
+      el('div', { class: 'st-group' }, ambOn.row, amb.row),
       el('div', { class: 'st-group' }, sfxOn.row, sfx.row),
     ),
     el('footer', { class: 'st-foot' }, saved, done),

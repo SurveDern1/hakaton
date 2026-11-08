@@ -274,45 +274,36 @@ const SOUNDS: Record<SfxName, Sound> = {
     bell(e, midiToHz(45), t, 0.1 * soft, out);
     bell(e, midiToHz(45), t + 0.9, 0.07 * soft, out);
   },
-  // Ночь: гул поднимающейся Мглы и порыв ветра
+  // Сумерки: короткий «вздох» — низкий тон уходит вниз под мягкий выдох воздуха. Гул Мглы и ветер
+  // ночью играет фон (ambience.ts), здесь только знак, что день кончился.
   night(e, t, out, soft) {
     tone(e, {
-      type: 'sawtooth',
-      freq: 41,
+      type: 'triangle',
+      freq: 110,
+      to: 82,
       t,
-      dur: 1.6,
-      attack: 0.9,
-      release: 1.4,
-      gain: 0.12 * soft,
-      filter: 140,
+      dur: 0.5,
+      attack: 0.25,
+      release: 0.7,
+      gain: 0.1 * soft,
+      filter: 600,
       dest: out,
-      detune: 9,
-    });
-    tone(e, { freq: 55, t, dur: 1.6, attack: 0.9, release: 1.4, gain: 0.18 * soft, dest: out });
-    noise(e, {
-      t,
-      dur: 1.4,
-      attack: 0.8,
-      release: 1.2,
-      gain: 0.14,
-      dest: out,
-      filter: 'bandpass',
-      freq: 380,
-      to: 900,
-      q: 3,
+      detune: 7,
       send: 0.3,
     });
     noise(e, {
-      t: t + 0.6,
-      dur: 1.0,
-      attack: 0.5,
-      release: 1.0,
-      gain: 0.08,
+      t,
+      dur: 0.45,
+      attack: 0.3,
+      release: 0.6,
+      gain: 0.07,
       dest: out,
       filter: 'bandpass',
-      freq: 1400,
-      to: 600,
-      q: 5,
+      freq: 700,
+      to: 380,
+      q: 1.5,
+      color: 'pink',
+      send: 0.25,
     });
   },
   // Утро: побудка горна, мажорная в отличие от тревожной музыки

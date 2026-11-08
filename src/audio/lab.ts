@@ -1,16 +1,18 @@
-// Звуковая лаборатория `?sound=lab`: все звуки, файлы с заменой, темы и фоны кнопками, ползунки
-// состояния (режим двигателя, эфир, зазор до Мглы, фаза, высота — их слушает фон через lab.onState),
-// приглушение музыки и атмосферы, индикаторы пика и громкости по AnalyserNode на выходе.
+// Звуковая лаборатория `?sound=lab`: все звуки, файлы с заменой, темы и сцены фона кнопками, ползунки
+// состояния (режим двигателя, эфир, зазор до Мглы, фаза, подъём — фон сразу звучит по ним: soundscape →
+// Ambience.pin), приглушение музыки и атмосферы, индикаторы пика и громкости по AnalyserNode на выходе и
+// строка «что звучит» у двигателя (тон, срез, громкости слоёв).
 // Без колонок и без жеста: sedmaya.sound.lab.measure() — рендер каждого звука на
 // AudioEngine.offline и таблица метрик (metrics.ts); lab.wav(id) — WAV в base64, lab.exportWav(id) —
 // скачать. Этим пользуется `npm run check:sound` (tools/check-sound.mjs).
-import { AudioEngine, type DuckBus, type NoiseColor } from './audio';
+import { Ambience, type AmbienceOpts } from './ambience';
+import { AudioEngine, type DuckBus } from './audio';
 import './lab.css';
 import { checkMetrics, encodeWav, measureChannels, type SoundMetrics } from './metrics';
 import { type Music, scheduleTheme, THEMES, type ThemeName } from './music';
 import { playSample, preloadSamples, SAMPLE_NAMES, SAMPLES, type SampleName } from './samples';
 import { playSfx, SFX_NAMES } from './sfx';
-import { noise } from './synth';
+import { type AmbPhase, type AmbTargets, type SoundInput, soundscape } from './soundscape';
 
 type Group = 'sfx' | 'sample' | 'theme' | 'amb';
 
@@ -27,6 +29,10 @@ export interface LabItem {
   prepare?(e: AudioEngine): Promise<unknown>;
   /** Что должен вернуть schedule; иначе в таблице ошибка (файл не загрузился — играла замена). */
   expect?: 'sample';
+  /** Пороги сверх общих (сцены фона): коридор громкости, доля выше 150 Гц, корреляция каналов. */
+  limits?: { lufs?: [number, number]; highMin?: number; corrMax?: number };
+  /** Цели фона: в живой лаборатории кнопка сцены закрепляет их на фоне игры. */
+  targets?: AmbTargets;
 }
 
 export interface LabRow extends SoundMetrics {
@@ -36,7 +42,7 @@ export interface LabRow extends SoundMetrics {
   errors: string[];
 }
 
-/** Состояние для фона: его слушает Ambience (срез 1) через lab.onState. */
+/** Состояние для фона: по нему лаборатория закрепляет цели Ambience (soundscape). */
 export interface LabState {
   mode: 'hold' | 'climb' | 'save';
   /** Запас эфира 0..1. */
@@ -44,37 +50,101 @@ export interface LabState {
   /** Зазор до Мглы, м. */
   mistGap: number;
   phase: 'day' | 'night' | 'morning';
-  /** Высота башни, м. */
+  /** Подъём над стартовой высотой, м (0…80 — доля heightFrac). */
   height: number;
+}
+
+/** Сколько метров подъёма дают heightFrac = 1 (как tierHeight × maxTiers в балансе). */
+const LAB_SPAN = 80;
+
+/** Вход фона из ползунков лаборатории. */
+export function labInput(s: LabState): SoundInput {
+  return {
+    mode: s.mode,
+    ether: s.aether,
+    mistGap: s.mistGap,
+    tierHeight: 10,
+    heightFrac: Math.max(0, Math.min(1, s.height / LAB_SPAN)),
+    tiersInMist: s.mistGap < -5 ? 1 : 0,
+    scars: 0,
+  };
 }
 
 /** Длина рендера короткого звука: самый долгий (финал) плюс хвост зала 2,6 с. */
 const ONESHOT_SECONDS = 9;
 const THEME_SECONDS = 16;
 
-/** Фон-заготовка: шум нужного цвета на шине атмосферы — пока нет настоящего фона (срез 1). */
-function ambNoise(color: NoiseColor): LabItem {
+const AMB_SECONDS = 10;
+
+/** Спокойный день: двигатель держит высоту, эфира хватает, Мгла далеко. */
+const DAY: LabState = { mode: 'hold', aether: 0.7, mistGap: 40, phase: 'day', height: 16 };
+/** Коридор громкости сцены фона целиком, LUFS (уровни плана −30…−24 LUFS с запасом на сцены). */
+const AMB_LUFS: [number, number] = [-34, -22];
+
+type Layers = AmbienceOpts['layers'];
+const ONLY_ENGINE: Layers = { engine: true, wind: false, mist: false, creak: false };
+const ONLY_WIND: Layers = { wind: true, engine: false, mist: false, creak: false };
+
+/** Сцена фона: 10 с рендера Ambience по целям soundscape; layers — только эти слои (замер по отдельности). */
+function ambScene(
+  id: string,
+  s: Partial<Omit<LabState, 'phase'>> & { phase?: AmbPhase },
+  limits: LabItem['limits'],
+  layers?: Layers,
+): LabItem {
+  const targets = soundscape(labInput({ ...DAY, ...s, phase: 'day' }), s.phase ?? DAY.phase);
   return {
-    id: `amb:${color}`,
+    id: `amb:${id}`,
     group: 'amb',
-    kind: 'oneshot',
-    seconds: 6,
+    kind: 'loop',
+    seconds: AMB_SECONDS,
+    limits,
+    targets,
     schedule(e) {
-      const freq = color === 'white' ? 6000 : color === 'pink' ? 4000 : 1200;
-      const t = (e.ctx?.currentTime ?? 0) + 0.01;
-      noise(e, {
-        t,
-        dur: 3,
-        attack: 0.6,
-        release: 0.8,
-        gain: 0.3,
-        dest: e.ambBus,
-        filter: 'lowpass',
-        freq,
-        color,
-      });
+      const a = new Ambience(e, { layers });
+      a.set(targets, true);
+      a.start();
+      a.schedule((e.ctx?.currentTime ?? 0) + AMB_SECONDS);
     },
   };
+}
+
+/** Сцены фона из плана: старт, три режима, мало эфира, Мгла близко, ночь; двигатель и ветер отдельно. */
+function ambItems(): LabItem[] {
+  const full = { lufs: AMB_LUFS };
+  const engine = { highMin: 0.4 };
+  const wind = { corrMax: 0.8 };
+  return [
+    ambScene('start', { phase: 'start' }, full),
+    ambScene('hold', {}, full),
+    ambScene('climb', { mode: 'climb' }, full),
+    ambScene('save', { mode: 'save' }, full),
+    ambScene('lowEther', { aether: 0.15 }, full),
+    ambScene('mistNear', { mistGap: 4 }, full),
+    ambScene('night', { phase: 'night', mistGap: 8 }, full),
+    ambScene('engine@save', { mode: 'save' }, engine, ONLY_ENGINE),
+    ambScene('engine@hold', {}, engine, ONLY_ENGINE),
+    ambScene('engine@climb', { mode: 'climb' }, engine, ONLY_ENGINE),
+    ambScene('engine@lowEther', { aether: 0.15 }, engine, ONLY_ENGINE),
+    ambScene('wind@day', {}, wind, ONLY_WIND),
+    ambScene('wind@night', { phase: 'night' }, wind, ONLY_WIND),
+  ];
+}
+
+/** Нарушения порогов сцены сверх общих. */
+export function checkLimits(m: SoundMetrics, limits: LabItem['limits']): string[] {
+  const errs: string[] = [];
+  if (!limits) return errs;
+  const f = (v: number, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '−∞');
+  if (limits.lufs && !(m.lufs >= limits.lufs[0] && m.lufs <= limits.lufs[1]))
+    errs.push(`громкость ${f(m.lufs)} LUFS вне коридора ${limits.lufs[0]}…${limits.lufs[1]}`);
+  if (limits.highMin !== undefined && m.high < limits.highMin)
+    errs.push(
+      `выше 150 Гц ${Math.round(m.high * 100)} % < ${Math.round(limits.highMin * 100)} %: на телефоне не слышно`,
+    );
+  if (limits.corrMax !== undefined && m.corr >= limits.corrMax)
+    errs.push(`корреляция каналов ${f(m.corr, 2)} ≥ ${limits.corrMax}: стерео схлопнулось`);
+  return errs;
 }
 
 /** Всё, что лаборатория играет и меряет. Срезы фона и событий добавляют сюда свои пункты. */
@@ -106,7 +176,7 @@ export function labItems(): LabItem[] {
         schedule: (e) => scheduleTheme(e, name, THEME_SECONDS),
       }),
     ),
-    ...(['white', 'pink', 'brown'] as NoiseColor[]).map(ambNoise),
+    ...ambItems(),
   ];
 }
 
@@ -171,7 +241,7 @@ export async function renderItem(
 export async function measureItem(item: LabItem): Promise<LabRow> {
   const r = await renderItem(item);
   const m = measureChannels(r.pre, r.post, r.sampleRate);
-  const errors = checkMetrics(m, item.kind);
+  const errors = [...checkMetrics(m, item.kind), ...checkLimits(m, item.limits)];
   if (item.expect && r.played !== item.expect)
     errors.push(`играла замена (${String(r.played)}): файл не загрузился`);
   return { id: item.id, group: item.group, kind: item.kind, ...m, errors };
@@ -200,13 +270,15 @@ export interface Lab {
 export interface LabDeps {
   engine: AudioEngine;
   music: Music;
+  /** Фон игры: лаборатория закрепляет на нём цели своих ползунков и сцен. */
+  ambience?: Ambience;
 }
 
 const fmt = (v: number, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '−∞');
 
 /** Страница лаборатории поверх игры. */
 export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
-  const { engine, music } = deps;
+  const { engine, music, ambience } = deps;
   const items = labItems();
   const byId = new Map(items.map((i) => [i.id, i]));
   const find = (id: string) => {
@@ -214,7 +286,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     if (!it) throw new Error(`Нет звука ${id}; есть: ${[...byId.keys()].join(', ')}`);
     return it;
   };
-  const state: LabState = { mode: 'hold', aether: 0.6, mistGap: 40, phase: 'day', height: 30 };
+  const state: LabState = { ...DAY };
   const stateListeners = new Set<(s: LabState) => void>();
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
@@ -286,6 +358,9 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
       rmsAcc = rmsAcc * 0.94 + (s / buf.length) * 0.06;
       showPeak(peakHold);
       showRms(rmsAcc > 0 ? 10 * Math.log10(rmsAcc) : -Infinity);
+      const r = ambience?.readout();
+      if (r)
+        ambOut.textContent = `Двигатель: тон ${r.f0.toFixed(1)} Гц, срез ${Math.round(r.cutoff)} Гц, громкость ${r.engine.toFixed(2)} · ветер ${r.wind.toFixed(2)} · Мгла ${r.mist.toFixed(2)}`;
       if (root.isConnected) requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -298,12 +373,26 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     ['theme', 'Музыка'],
     ['amb', 'Фоны'],
   ];
+  let pinnedScene: string | null = null;
+  const markScene = () => {
+    for (const b of root.querySelectorAll<HTMLElement>('[data-id^="amb:"]'))
+      b.setAttribute('aria-pressed', String(b.dataset.id === pinnedScene));
+  };
   const playLive = async (item: LabItem) => {
     if (!(await live())) return;
     if (item.group === 'theme') {
       const name = item.id.slice('theme:'.length) as ThemeName;
       music.set(music.current === name ? null : name);
       status.textContent = music.current ? `Музыка: ${music.current}` : 'Музыка остановлена';
+      return;
+    }
+    if (item.group === 'amb' && item.targets && ambience) {
+      // Сцена фона звучит вместо игровой, пока её не сняли повторным нажатием
+      const off = pinnedScene === item.id;
+      pinnedScene = off ? null : item.id;
+      ambience.pin(off ? null : item.targets);
+      markScene();
+      status.textContent = off ? 'Фон: как в игре' : `Фон: ${item.id}`;
       return;
     }
     if (item.group === 'sample') {
@@ -362,8 +451,13 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
   const stSec = el('section', 'lab-group');
   stSec.append(el('h2', 'lab-h', 'Состояние башни (для фона)'));
   const grid = el('div', 'lab-state');
+  const ambOut = el('output', 'lab-amb', 'Фон заиграет после первого нажатия.');
   const emit = () => {
     for (const fn of stateListeners) fn({ ...state });
+    if (!ambience) return;
+    pinnedScene = null;
+    markScene();
+    void live().then(() => ambience.pin(soundscape(labInput(state), state.phase)));
   };
   const select = <K extends 'mode' | 'phase'>(key: K, label: string, opts: [LabState[K], string][]) => {
     const l = el('label', 'lab-field');
@@ -419,8 +513,8 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
   ]);
   range('aether', 'Эфир', 0, 1, 0.05);
   range('mistGap', 'Зазор до Мглы, м', 0, 60, 1);
-  range('height', 'Высота, м', 10, 120, 1);
-  stSec.append(grid);
+  range('height', 'Подъём над стартом, м', 0, LAB_SPAN, 1);
+  stSec.append(grid, ambOut);
   root.append(stSec);
 
   // ---- Метрики ----
