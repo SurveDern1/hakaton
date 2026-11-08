@@ -20,20 +20,30 @@ export interface FinalOptions {
   onRestart(): void;
 }
 
-/** Башня как картинка: модель → разметка .tw, вписанная в рамку w × h. */
-function towerPicture(state: GameState, data: GameData, w: number, hgt: number): HTMLElement {
+/**
+ * Башня как картинка: модель → разметка .tw, вписанная в рамку fit × hgt по центру полосы box × hgt.
+ * Полоса шире открытки и обрезается её краем: без маски поверх анимаций (на телефоне маска
+ * перерисовывает всю картинку каждый кадр).
+ */
+function towerPicture(state: GameState, data: GameData, box: number, fit: number, hgt: number): HTMLElement {
   const model = buildTower(towerInputFromState(state, data.balance));
   const dom = new TowerDom(() => false);
   dom.apply(model, false);
   const b = model.bounds;
-  const z = Math.min(w / b.w, hgt / b.h);
+  const z = Math.min(fit / b.w, hgt / b.h);
   const inner = h('div', { class: 'fin-tower-in' });
-  inner.style.transform = `translate(${w / 2 - (b.x + b.w / 2) * z}px, ${hgt / 2 - (b.y + b.h / 2) * z}px) scale(${z})`;
+  inner.style.transform = `translate(${box / 2 - (b.x + b.w / 2) * z}px, ${hgt / 2 - (b.y + b.h / 2) * z}px) scale(${z})`;
   inner.append(dom.root);
-  const box = h('div', { class: 'fin-tower', 'aria-hidden': 'true' }, inner);
-  box.style.width = `${w}px`;
-  box.style.height = `${hgt}px`;
-  return box;
+  const el = h('div', { class: 'fin-tower', 'aria-hidden': 'true' }, inner);
+  el.style.width = `${box}px`;
+  el.style.height = `${hgt}px`;
+  el.style.marginLeft = `${-box / 2}px`;
+  return el;
+}
+
+/** Самое длинное слово заголовка: по нему кегль подгоняется под ширину открытки (game.css, .fin-title). */
+function longestWord(text: string): number {
+  return Math.max(1, ...text.split(/\s+/).map((w) => [...w].length));
 }
 
 /** Пути, которые закрылись к финалу, с причиной (ТЗ 6.9). */
@@ -114,11 +124,15 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
       { class: 'plaque ink num fin-date' },
       fmtDate(date, { day: 'numeric', month: 'long', year: 'numeric' }).replace(' г.', ''),
     ),
-    towerPicture(state, data, 300, 560),
+    towerPicture(state, data, 560, 300, 560),
     h(
       'figcaption',
       {},
-      h('span', { class: 'disp fin-title', id: 'fin-title' }, dispText(ending.title)),
+      h(
+        'span',
+        { class: 'disp fin-title', id: 'fin-title', style: `--len:${longestWord(ending.title)}` },
+        dispText(ending.title),
+      ),
       h(
         'span',
         { class: 'num fin-sub' },

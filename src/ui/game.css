@@ -841,7 +841,12 @@
   min-height: 760px;
   flex: none;
   overflow: hidden;
-  background: var(--red);
+  container-type: inline-size;
+  /* Приглушённый плакат: тёмно-красное поле, свет из-за башни сверху, края уходят в тень */
+  background:
+    radial-gradient(70% 50% at 50% 34%, rgba(251, 240, 214, 0.16), rgba(251, 240, 214, 0) 70%),
+    radial-gradient(120% 90% at 50% 40%, rgba(26, 52, 55, 0) 55%, rgba(26, 52, 55, 0.45)),
+    linear-gradient(180deg, #8a3034, #6a2428);
   box-shadow: 14px 14px 0 rgba(0, 0, 0, 0.4);
   animation: finPoster 700ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
@@ -854,11 +859,28 @@
 .poster-fall,
 .poster-overthrow,
 .poster-schism {
-  background: var(--red-deep);
+  background:
+    radial-gradient(70% 50% at 50% 34%, rgba(251, 240, 214, 0.1), rgba(251, 240, 214, 0) 70%),
+    radial-gradient(120% 90% at 50% 40%, rgba(10, 22, 26, 0) 50%, rgba(10, 22, 26, 0.55)),
+    linear-gradient(180deg, #5e2226, #3f1a1d);
+}
+/* Зерно печати поверх полей: открытка не выглядит заливкой */
+.fin-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--grain) 0 0 / 160px 160px;
+  mix-blend-mode: overlay;
+  opacity: 0.18;
 }
 /* Гавань — светлая открытка: эфирное небо, красная полоса, охристая линия (Final.dc.html) */
 .poster-harbor {
-  background: var(--ether);
+  background:
+    radial-gradient(70% 50% at 50% 34%, rgba(251, 240, 214, 0.3), rgba(251, 240, 214, 0) 70%),
+    radial-gradient(120% 90% at 50% 40%, rgba(26, 52, 55, 0) 55%, rgba(26, 52, 55, 0.35)),
+    linear-gradient(180deg, #7fb6bd, #4f8790);
 }
 .fin-band {
   position: absolute;
@@ -866,21 +888,22 @@
   width: 1000px;
   transform: rotate(-32deg);
 }
+/* Полосы — тоном, а не сплошной охрой: читаются, но не спорят с башней */
 .fin-band.a {
   top: 120px;
   height: 260px;
-  background: var(--ochre);
+  background: linear-gradient(180deg, rgba(246, 149, 80, 0.34), rgba(246, 149, 80, 0.16));
 }
 .fin-band.b {
   top: 330px;
-  height: 18px;
-  background: var(--paper-ink);
+  height: 14px;
+  background: rgba(26, 52, 55, 0.7);
 }
 .poster-harbor .fin-band.a {
-  background: var(--red);
+  background: linear-gradient(180deg, rgba(201, 60, 65, 0.4), rgba(201, 60, 65, 0.2));
 }
 .poster-harbor .fin-band.b {
-  background: var(--ochre);
+  background: rgba(246, 149, 80, 0.7);
 }
 .fin-date {
   position: absolute;
@@ -888,14 +911,13 @@
   top: 26px;
   z-index: 2;
 }
+/* Полоса шире открытки по центру (final.ts, towerPicture): кран и плоты обрезает край открытки */
 .fin-tower {
   position: absolute;
-  left: 80px;
+  left: 50%;
   top: 64px;
   overflow: hidden;
-  /* Край картинки растворяется в фоне открытки: кран и плоты не обрезаны по линейке */
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  contain: strict;
 }
 .fin-tower-in {
   position: absolute;
@@ -906,7 +928,8 @@
 .fin-tower .tw-sky,
 .fin-tower .tw-mistBack,
 .fin-tower .tw-mistFront,
-.fin-tower .tw-over {
+.fin-tower .tw-over,
+.fin-tower .film {
   display: none;
 }
 .fin-poster figcaption {
@@ -923,8 +946,10 @@
 .fin-title {
   /* Rubik Mono One со своим полем слева: сдвиг ставит букву на линию подписи */
   margin-left: -0.15em;
-  font-size: 46px;
-  line-height: 1;
+  /* Rubik Mono One моноширинный: длинное слово (--len букв из final.ts) уменьшает кегль, а не уходит за край */
+  font-size: min(46px, calc((100cqw - 56px) / (var(--len, 8) * 1.04)));
+  line-height: 1.05;
+  overflow-wrap: anywhere;
   color: var(--paper);
 }
 .fin-sub {
@@ -1619,10 +1644,6 @@
     align-self: center;
     min-height: 640px;
   }
-  .fin-tower {
-    left: 50%;
-    margin-left: -150px;
-  }
   .fin-cols {
     grid-template-columns: 1fr;
   }
@@ -1685,4 +1706,12 @@ body:not([data-phase="day"]) #ui:not(.is-preset) > .mist-below {
   .panel {
     transition: none;
   }
+}
+
+/* Под открыткой финала (main.ts, sceneAsleep): игра не видна и её анимации стоят */
+#game.is-asleep {
+  visibility: hidden;
+}
+#game.is-asleep * {
+  animation-play-state: paused !important;
 }

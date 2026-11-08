@@ -87,7 +87,7 @@ const towerScene = new TowerScene(towerSource, {
   },
 });
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#1a3437',
@@ -188,7 +188,24 @@ async function showEnding() {
   const kind = data.endings.endings.find((e) => e.id === id)?.verdict;
   if (kind)
     await showVerdict(ui as HTMLElement, kind, data.endings.verdicts[kind], verdictStats(state, kind));
-  showFinal(ui as HTMLElement, state, { data, onRestart: () => void loop.newGame() });
+  const final = showFinal(ui as HTMLElement, state, {
+    data,
+    onRestart: () => {
+      sceneAsleep(false);
+      void loop.newGame();
+    },
+  });
+  // Открытка закрывает экран целиком: когда она проявилась, игровая башня под ней не рисуется
+  window.setTimeout(() => {
+    if (final.isConnected) sceneAsleep(true);
+  }, 520);
+}
+
+/** Сцена Phaser и DOM-башня под финалом: стоят и не перерисовываются, к новой партии — оживают. */
+function sceneAsleep(on: boolean) {
+  if (on) game.loop.sleep();
+  else game.loop.wake();
+  document.getElementById('game')?.classList.toggle('is-asleep', on);
 }
 
 // Новая партия со стартового экрана: сначала пролог-комикс (его можно пропустить)
