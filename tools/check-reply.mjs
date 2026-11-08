@@ -171,6 +171,14 @@ async function run() {
         await client.eval(`document.querySelector('.ev-reply').getAnimations({ subtree: true })
           .forEach((a) => a.finish())`);
         await shoot(`${vp.width}x${vp.height}-${sp.who}`);
+        // Крупный план карточки (×2) — чтобы разглядеть печать, зерно и растр
+        if (shots && vp.mobile) {
+          const s = await client.send('Page.captureScreenshot', {
+            format: 'png',
+            clip: { x: g.left, y: g.top, width: g.right - g.left, height: g.bottom - g.top, scale: 2 },
+          });
+          fs.writeFileSync(path.join(shots, `card-${vp.width}-${sp.who}.png`), Buffer.from(s.data, 'base64'));
+        }
       }
     }
   } finally {

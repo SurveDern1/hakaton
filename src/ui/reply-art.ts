@@ -1,5 +1,6 @@
 // Картинки для карточки реплики — предметы-знаки персонажей в манере комикса пролога
-// (public/comics/intro): плоский советский плакат, лучи, тень одной плашкой справа, туман клубами снизу.
+// (public/comics/intro): плоский советский плакат, лучи, тень одной плашкой справа, туман клубами снизу,
+// поверх — ретро-печать (print): рваные края краски, сдвиг прогона, растровые точки к краям.
 // Людей не рисуем — только предмет, по которому персонажа узнают. Зерно бумаги накладывает CSS
 // (.ev-reply-face::after), анимацию — классы .ra-* в event-window.css.
 // Холст 240×300, кадр обрезается под карточку (xMidYMid slice): предмет держим в середине, x 60…180.
@@ -244,10 +245,45 @@ const ART: Record<string, string> = {
     ${puffs(276, C.ink3, C.ink2, 1)}`,
 };
 
+let seq = 0;
+
+/** Ретро-печать поверх рисунка, как на листах пролога:
+ *  - края всех плашек чуть рваные (шум смещает контур, краска легла неровно);
+ *  - у предмета сдвиг второго прогона краски — тёмная тень-«промах» вправо-вниз;
+ *  - растровые точки сгущаются к краям кадра (виньетка типографского растра).
+ *  Зерно и крапины бумаги — в CSS (.ev-reply-face::after). id уникальны: карточек может быть несколько. */
+function print(n: number): string {
+  return `<defs>
+    <filter id="ra-rough-${n}" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="${(n % 7) + 2}" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="ra-press-${n}" x="-6%" y="-6%" width="112%" height="112%">
+      <feOffset in="SourceAlpha" dx="2.4" dy="1.8" result="o"/>
+      <feColorMatrix in="o" type="matrix" values="0 0 0 0 .075  0 0 0 0 .157  0 0 0 0 .169  0 0 0 .42 0" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="ra-dots-${n}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
+      <circle cx="2.5" cy="2.5" r="1.25" fill="${C.deep}"/>
+    </pattern>
+    <radialGradient id="ra-vig-${n}" cx="50%" cy="42%" r="70%">
+      <stop offset=".52" stop-color="#000"/><stop offset="1" stop-color="#fff"/>
+    </radialGradient>
+    <mask id="ra-mask-${n}"><rect width="240" height="300" fill="url(#ra-vig-${n})"/></mask>
+  </defs>`;
+}
+
 /** SVG предмета для карточки реплики; неизвестный ключ — трибуна Совета. */
 export function replyArt(key: string | undefined): string {
-  const body = (key && ART[key]) || ART.council;
-  return `<svg class="ra" viewBox="0 0 240 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
+  const n = ++seq;
+  const body = ((key && ART[key]) || ART.council || '').replace(
+    '<g class="ra-figure">',
+    `<g class="ra-figure" filter="url(#ra-press-${n})">`,
+  );
+  return `<svg class="ra" viewBox="0 0 240 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${print(n)}
+    <g filter="url(#ra-rough-${n})">${body}</g>
+    <rect class="ra-dots" width="240" height="300" fill="url(#ra-dots-${n})" mask="url(#ra-mask-${n})" opacity=".42"/>
+  </svg>`;
 }
 
 export const REPLY_ART_KEYS = Object.keys(ART);
