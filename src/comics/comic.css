@@ -357,6 +357,7 @@
 }
 .cx-note.is-small {
   font-size: calc(clamp(11px, 2.9cqw, 18px) * var(--ns, 1));
+  line-height: 1.18;
 }
 .cx-note.is-accent {
   color: var(--red);
