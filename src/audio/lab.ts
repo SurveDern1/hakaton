@@ -9,13 +9,14 @@ import { Ambience, type AmbienceOpts } from './ambience';
 import { AudioEngine, type DuckBus } from './audio';
 import './lab.css';
 import { playCalendar, playLever, playTierDrop } from './events';
-import { checkMetrics, encodeWav, measureChannels, type SoundMetrics } from './metrics';
+import { checkMetrics, encodeWav, measureChannels, rmsDb, type SoundMetrics } from './metrics';
 import { type Music, marchDrum, scheduleTheme, THEMES, type ThemeName } from './music';
+import { playRadio, playRadioBurst, type RadioOpts, radioScript } from './radio';
 import { playSample, preloadSamples, SAMPLE_NAMES, SAMPLES, type SampleName } from './samples';
 import { playSfx, SFX_NAMES, type SfxName } from './sfx';
 import { type AmbMoment, type AmbPhase, type AmbTargets, type SoundInput, soundscape } from './soundscape';
 
-type Group = 'sfx' | 'event' | 'sample' | 'theme' | 'amb';
+type Group = 'sfx' | 'event' | 'sample' | 'radio' | 'theme' | 'amb';
 
 export interface LabItem {
   id: string;
@@ -216,6 +217,7 @@ export function labItems(): LabItem[] {
       schedule: (e) => playSfx(e, 'build', 0, { pan: -0.8 }),
     },
     ...SAMPLE_NAMES.flatMap(sampleItems),
+    ...radioItems(),
     ...THEMES.map(
       (name): LabItem => ({
         id: `theme:${name}`,
@@ -251,6 +253,39 @@ export function sampleItems(name: SampleName): LabItem[] {
       }),
     ),
   ];
+}
+
+/** Радио (radio.ts): фраза стартового экрана, тихий повтор окна «Сигнал», всплеск у облачка рации. */
+function radioItems(): LabItem[] {
+  const base = { group: 'radio' as const, kind: 'oneshot' as const, seconds: ONESHOT_SECONDS };
+  return [
+    { ...base, id: 'radio:vsem', schedule: (e) => playRadio(e) },
+    { ...base, id: 'radio:signal', schedule: (e) => playRadio(e, { gain: 0.55 }) },
+    { ...base, id: 'radio:burst', seconds: 4, schedule: (e) => playRadioBurst(e) },
+  ];
+}
+
+/** Порог плана: голос (морзянка) громче помех на столько, дБ. */
+export const RADIO_SNR_MIN = 10;
+
+/**
+ * Голос против помех: фраза рендерится дважды — только голос и только помехи, громкость каждого
+ * в окне речи (от первого слова до конца голоса). Разница — запас разборчивости, дБ.
+ */
+export async function radioSnr(): Promise<{ voice: number; noise: number; snr: number }> {
+  const s = radioScript();
+  const stem = async (part: RadioOpts['part']) => {
+    const e = AudioEngine.offline(ONESHOT_SECONDS);
+    playRadio(e, { part });
+    const r = await e.render();
+    // начало фразы — через 0,02 с после нуля контекста (playRadio)
+    const a = Math.round((0.02 + s.tune) * r.sampleRate);
+    const b = Math.round((0.02 + s.voiceEnd) * r.sampleRate);
+    return rmsDb(r.pre.map((c) => c.subarray(a, b)));
+  };
+  const voice = await stem('voice');
+  const noise = await stem('static');
+  return { voice, noise, snr: voice - noise };
 }
 
 /** Разброс громкости фрагментов одного файла, LU: допуск плана — ±2 LU от среднего. */
@@ -314,6 +349,8 @@ export interface Lab {
   wav(id: string): Promise<string>;
   /** Скачать WAV пункта. */
   exportWav(id: string): Promise<void>;
+  /** Голос радио против помех, дБ (порог RADIO_SNR_MIN). */
+  radioSnr(): Promise<{ voice: number; noise: number; snr: number }>;
 }
 
 export interface LabDeps {
@@ -420,6 +457,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     ['sfx', 'Звуки действий'],
     ['event', 'События (файл + синтез)'],
     ['sample', 'Файлы (# — фрагмент; нет файла — замена)'],
+    ['radio', 'Радио'],
     ['theme', 'Музыка'],
     ['amb', 'Фоны'],
   ];
@@ -638,6 +676,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
       for (const [id, err] of fragmentSpread(rows)) rows.find((r) => r.id === id)?.errors.push(err);
       return rows;
     },
+    radioSnr,
     async wav(id) {
       const r = await renderItem(find(id));
       return toBase64(encodeWav(r.post, r.sampleRate));

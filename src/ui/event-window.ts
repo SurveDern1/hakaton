@@ -323,7 +323,13 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         ),
       ),
     );
-    const layer = el('div', { class: 'ev-layer' }, el('div', { class: 'ev-backdrop' }), dialog);
+    const layer = el(
+      'div',
+      // data-event — по нему звук узнаёт окно «Сигнал» дня 6 (радио на фоне, src/audio/index.ts)
+      { class: 'ev-layer', 'data-event': event.id },
+      el('div', { class: 'ev-backdrop' }),
+      dialog,
+    );
     return { layer, dialog, buttons };
   }
 

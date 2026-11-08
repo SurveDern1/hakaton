@@ -9,6 +9,11 @@ export interface StartOptions {
   onContinue(state: GameState): void;
   /** Окно «Настройки» (src/audio/settings-window.ts); без него кнопки нет. */
   onSettings?(): void;
+  /**
+   * Надпись «Всем! Всем! Всем!» ждёт радио: мигает по словам (класс is-on-air от src/audio), а не сама
+   * по таймеру. Без звука не задаётся — надпись мигает как раньше.
+   */
+  radio?: boolean;
 }
 
 export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
@@ -52,7 +57,7 @@ export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
       'div',
       { class: 'start-in' },
       h('span', { class: 'lbl start-radio' }, 'Радио башни · 19 октября 1967'),
-      h('p', { class: 'disp start-call' }, dispText('Всем! Всем! Всем!')),
+      h('p', { class: `disp start-call${opts.radio ? ' is-waiting' : ''}` }, dispText('Всем! Всем! Всем!')),
       h('h1', { class: 'disp start-title', id: 'start-title' }, 'Седьмая'),
       h(
         'p',

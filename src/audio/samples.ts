@@ -16,6 +16,8 @@ export interface SampleDef {
   gain: number;
   /** Синтезированная замена, пока файла нет. */
   fallback: SfxName;
+  /** Голос радио: начала слов «Всем!» в секундах файла — по ним мигает надпись (radio.ts). */
+  words?: number[];
 }
 
 /** Файлы срезов 2 и 6 плана звука; пока `file` не вписан, звучит замена. */
@@ -50,7 +52,8 @@ export const SAMPLES: Record<SampleName, SampleDef> = {
     fallback: 'paper',
   },
   lever: { file: 'sounds/lever.mp3', gain: 0.6, fallback: 'lever' },
-  // Срез 6: голос «Всем! Всем! Всем!» (radio-vsem.mp3) — пока замена
+  // Срез 6: голос «Всем! Всем! Всем!» (radio-vsem.mp3) с отметками слов `words` — пока морзянка
+  // radio.ts; без `file` и `words` радио играет её, а не замену из sfx.ts
   radioVoice: { gain: 0.8, fallback: 'eventOpen' },
 };
 

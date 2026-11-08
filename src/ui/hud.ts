@@ -9,6 +9,8 @@ export interface HudOptions {
   data: GameData;
   onPaper(): void;
   onMenu(): void;
+  /** Кнопки перед меню (кнопка звука из src/audio, план звука Р6). */
+  actions?: HTMLElement[];
 }
 
 const MODE_WORDS = { hold: 'держим', climb: 'набираем', save: 'экономим' } as const;
@@ -43,7 +45,7 @@ export function mountHud(root: HTMLElement, opts: HudOptions): HTMLElement {
   menu.innerHTML = icon('menu', 20);
   paper.addEventListener('click', opts.onPaper);
   menu.addEventListener('click', opts.onMenu);
-  bar.append(leaf, title, tiles, h('div', { class: 'hud-actions' }, paper, menu));
+  bar.append(leaf, title, tiles, h('div', { class: 'hud-actions' }, paper, ...(opts.actions ?? []), menu));
   root.append(bar);
 
   let lastDay = 0;

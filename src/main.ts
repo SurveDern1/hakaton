@@ -1,6 +1,7 @@
 // Точка входа: состояние из core → GameStore → сцена Phaser (башня) и DOM-панели (#ui).
 // Порядок игры: стартовый экран → GameLoop (src/game/loop.ts): утро (отчёт и окна событий) →
 // день (панель, меню стройки по клику на слот) → «Завершить день» → ночь (night.ts) → утро … → финал.
+// Без параметров — заставка «Включить радио» (src/ui/radio-splash.ts), если звук не выключен.
 // Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу;
 // ?tutorial=<шаг> — шаг обучения поверх новой игры (день из when.minDay).
 import Phaser from 'phaser';
@@ -24,6 +25,7 @@ import { mountHud } from './ui/hud';
 import { playNight } from './ui/night';
 import { mountPanel } from './ui/panel';
 import { mountPaper } from './ui/paper';
+import { showRadioSplash } from './ui/radio-splash';
 import { mistNote, morningReport, showReportCard } from './ui/report';
 import { showStart } from './ui/start';
 import { showVerdict } from './ui/verdict';
@@ -152,6 +154,7 @@ gameMenu.addEventListener('keydown', (e) => {
 const hud = mountHud(ui, {
   store,
   data,
+  actions: [sound.hudButton()],
   onPaper: () => paper.open(store.state, loop.lastReport, forecastNight(store.state, data)),
   onMenu: () => toggleMenu(),
 });
@@ -195,13 +198,26 @@ async function newGameWithIntro() {
   void loop.newGame();
 }
 
-function start() {
+// Открытие по ссылке: заставка «Включить радио» (если звук не выключен), затем стартовый экран
+async function openGame() {
+  ui?.classList.add('is-bare');
+  if (sound.engine.settings.muted || sound.engine.ready) return start(false);
+  sound.holdStartMusic();
+  const how = await showRadioSplash(ui as HTMLElement, {
+    onRadio: () => sound.engine.resume(),
+    onSilent: () => sound.engine.update({ muted: true }),
+  });
+  start(how === 'radio');
+}
+
+function start(radio = false) {
   ui?.classList.add('is-bare');
   // Пока игрок на стартовом экране, картинки пролога успевают загрузиться
   const intro = getComic('intro');
   if (intro) preloadComic(intro);
-  showStart(ui as HTMLElement, {
+  const layer = showStart(ui as HTMLElement, {
     data,
+    radio,
     saved: loadGame(),
     onSettings: () => sound.openSettings(),
     onNew: () => void newGameWithIntro(),
@@ -211,6 +227,8 @@ function start() {
       status.say(`Продолжаем: день ${state.day}`, 'info');
     },
   });
+  const call = layer.querySelector<HTMLElement>('.start-call');
+  if (radio && call) sound.radioIntro(call);
 }
 
 // Проверка комикса: ?comic=intro, ?comic=outro_harbor — после него стартовый экран.
@@ -233,10 +251,10 @@ if (params.get('sound') === 'lab') {
   ui.classList.add('is-bare', 'is-preset');
 } else if (debugVerdict === 'win' || debugVerdict === 'lose') {
   ui.classList.add('is-bare');
-  void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict]).then(start);
+  void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict]).then(() => start());
 } else if (debugComic) {
   ui.classList.add('is-bare');
-  void playComic(ui, debugComic).then(start);
+  void playComic(ui, debugComic).then(() => start());
 } else if (debugStep) {
   // Утренний шаг — на первом утре (окна событий), дневной — сразу днём нужного дня.
   if (debugStep.phase === 'morning') void loop.newGame();
@@ -249,7 +267,7 @@ if (params.get('sound') === 'lab') {
   store.dispatch((s) => ({ ...s, day: day || s.day, flags: [...s.flags, ...flags] }));
   void events.showMorning(eventIds);
 } else {
-  start();
+  void openGame();
 }
 
 // Для отладки из консоли браузера: window.sedmaya.store.state, window.sedmaya.loop.endDay(),

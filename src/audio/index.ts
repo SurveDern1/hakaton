@@ -14,16 +14,23 @@
 // сброс яруса — playTierDrop в такт падению; листок календаря — в кадр с классом is-turn у .hud-leaf
 // (причина calendar/calendarRed из stateCues ждёт его, без HUD — через CAL_WAIT); подъём Мглы — первое
 // изменение состояния ночью (commit() в src/ui/night.ts) даёт фону rising на T_RISE; финал — тон по verdict.
+// Радио (radio.ts): заставка «Включить радио» (src/ui/radio-splash.ts) → holdStartMusic + radioIntro —
+// ветер, через 0,6 с «Всем! Всем! Всем!», надпись .start-call мигает по словам (is-on-air), мелодия дня —
+// тихо через 2 с после фразы (план звука, Р5). Окно «Сигнал» (data-event="d06_signal") — радио тише и по
+// кругу, музыка −10 дБ. Облачко рации в комиксе (.cx-bubble.kind-radio) — всплеск помех, когда проявляется.
+// Кнопка звука в шапке — hudButton() (Р6).
 
 import { gameData } from '../core';
 import type { GameLoop, Phase } from '../game/loop';
 import type { GameStore } from '../game/store';
+import { icon } from '../ui/format';
 import { Ambience, playGust } from './ambience';
 import { AudioEngine, type AudioSettings } from './audio';
 import { type Cue, stateCues } from './cues';
 import { playCalendar, playLever, playTierDrop } from './events';
 import type { Lab } from './lab';
 import { Music } from './music';
+import { playRadio, playRadioBurst, type RadioHandle } from './radio';
 import { preloadSamples } from './samples';
 import { openSettings } from './settings-window';
 import { playSfx, type SfxName } from './sfx';
@@ -45,6 +52,15 @@ export interface SoundControls {
   openSettings(): void;
   /** Звуковая лаборатория — только на `?sound=lab` (main.ts подключает lab.ts). */
   lab?: Lab;
+  /** Заставка «Включить радио» показана: мелодия стартового экрана ждёт конца фразы радио. */
+  holdStartMusic(): void;
+  /**
+   * Радио на стартовом экране после заставки: ветер уже идёт, через 0,6 с «Всем! Всем! Всем!», `call`
+   * получает is-on-air на каждое слово. Звука нет — снимает is-waiting, надпись мигает сама (CSS).
+   */
+  radioIntro(call: HTMLElement): void;
+  /** Кнопка звука для шапки игры: динамик / перечёркнутый, aria-pressed. */
+  hudButton(): HTMLElement;
 }
 
 /** Пауза между всплывающими числами, с: пачка чисел звучит как короткая россыпь, а не аккорд. */
@@ -54,6 +70,18 @@ const FLOAT_MAX = 5;
 const MIST_RISE_MS = 1300;
 /** Сколько ждать класса is-turn у листка, прежде чем сыграть отрыв без него, мс. */
 const CAL_WAIT = 700;
+/** Радио после появления стартового экрана, с: сначала слышен ветер. */
+const INTRO_DELAY = 0.6;
+/** Мелодия дня после фразы, мс, и насколько тише обычного, дБ (Р5). */
+const INTRO_MUSIC_MS = 2000;
+const INTRO_MUSIC_DB = -8;
+/** Окно «Сигнал»: радио тише, музыка −10 дБ, фраза повторяется не чаще раза в 8 с. */
+const SIGNAL_EVENT = 'd06_signal';
+const SIGNAL_GAIN = 0.55;
+const SIGNAL_MUSIC_DB = -10;
+const SIGNAL_PERIOD = 8;
+/** Звук ещё не разблокирован жестом или выключен: проверить снова через, мс. */
+const RADIO_RETRY_MS = 1000;
 
 export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: GameLoop }): SoundControls {
   const engine = new AudioEngine();
@@ -94,12 +122,20 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   let pendingTierUp = false;
   let risen = false;
   let riseTimer = 0;
+  // Заставка: мелодия стартового экрана ждёт фразы радио, потом звучит тише (introQuiet)
+  let introHold = false;
+  let introQuiet: (() => void) | null = null;
   opts.loop.onPhase((next) => {
     const prev = phase;
     phase = next;
     risen = false;
     window.clearTimeout(riseTimer);
     moment = next === 'final' ? { verdict: endingVerdict(opts.store.state, gameData) } : {};
+    if (next !== 'start') {
+      introHold = false;
+      introQuiet?.();
+      introQuiet = null;
+    }
     if (next === 'night') {
       play('night');
       music.set('night');
@@ -123,6 +159,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   if (!music.current) music.set(engine.settings.melody);
   // Новая мелодия в настройках — сразу, если сейчас её время (день или стартовый экран)
   engine.onSettings((s) => {
+    if (introHold) return;
     if ((phase === 'day' || phase === 'start') && music.current !== s.melody) music.set(s.melody);
   });
 
@@ -204,6 +241,7 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     };
   };
   new MutationObserver((records) => {
+    syncSignal(!!opts.root.querySelector(`.ev-layer[data-event="${SIGNAL_EVENT}"]:not(.is-leaving)`));
     const next = readUi();
     if (
       next.event !== ui.event ||
@@ -223,6 +261,9 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
         else if (t.classList.contains('ev-layer') && t.classList.contains('is-chosen') && !stamped.has(t)) {
           stamped.add(t);
           play('choice');
+        } else if (t.classList.contains('cx-panel') && t.classList.contains('is-in') && !stamped.has(t)) {
+          stamped.add(t);
+          radioBubbles(t);
         }
       }
     }
@@ -231,13 +272,98 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   // Лист комикса (src/comics/viewer.ts)
   opts.root.addEventListener('comic:turn', () => play('page'));
 
+  // ---- Радио ----
+  /** Облачко рации проявляется с задержкой --d (viewer.ts) — помехи в тот же миг. Назад листают без звука. */
+  function radioBubbles(panel: Element) {
+    if (panel.classList.contains('is-instant')) return;
+    const reduced = !!panel.closest('.cx-layer.is-reduced');
+    for (const b of panel.querySelectorAll<HTMLElement>('.cx-bubble.kind-radio')) {
+      const d = reduced ? 0 : Number.parseFloat(b.style.getPropertyValue('--d')) || 0;
+      playRadioBurst(engine, d / 1000);
+    }
+  }
+
+  /** Окно «Сигнал» открыто: фраза по кругу тихо, музыка отходит. */
+  let signal: { stop(): void } | null = null;
+  function syncSignal(open: boolean) {
+    if (open && !signal) signal = signalLoop();
+    else if (!open && signal) {
+      signal.stop();
+      signal = null;
+    }
+  }
+  function signalLoop(): { stop(): void } {
+    let alive = true;
+    let cur: RadioHandle | null = null;
+    let timer = 0;
+    const duckOff = engine.duck('music', SIGNAL_MUSIC_DB, 0.4, 1.2);
+    const next = () => {
+      if (!alive) return;
+      cur = playRadio(engine, { gain: SIGNAL_GAIN, delay: 0.3 });
+      const wait = cur ? Math.max(SIGNAL_PERIOD, cur.script.length + 1) * 1000 : RADIO_RETRY_MS;
+      timer = window.setTimeout(next, wait);
+    };
+    next();
+    return {
+      stop() {
+        alive = false;
+        window.clearTimeout(timer);
+        cur?.stop();
+        duckOff();
+      },
+    };
+  }
+
+  const holdStartMusic = () => {
+    introHold = true;
+    music.set(null);
+  };
+  const releaseStartMusic = () => {
+    if (!introHold) return;
+    introHold = false;
+    if (phase !== 'start') return;
+    introQuiet = engine.duck('music', INTRO_MUSIC_DB, 0.05, 3);
+    music.set(engine.settings.melody);
+  };
+  function radioIntro(call: HTMLElement) {
+    let begun = false;
+    const fallback = () => {
+      if (begun) return;
+      begun = true;
+      call.classList.remove('is-waiting');
+      releaseStartMusic();
+    };
+    // Без Web Audio или если жест так и не запустил звук — надпись мигает сама
+    const guard = window.setTimeout(fallback, 1500);
+    engine.onReady(() =>
+      window.setTimeout(() => {
+        if (begun) return;
+        window.clearTimeout(guard);
+        const radio = phase === 'start' ? playRadio(engine, { duck: true }) : null;
+        if (!radio) return fallback();
+        begun = true;
+        radio.onWord((i) => {
+          call.classList.remove('is-on-air');
+          void call.offsetWidth;
+          call.classList.add('is-on-air');
+          call.dataset.word = String(i + 1);
+        });
+        void radio.done.then(() => {
+          call.classList.remove('is-waiting');
+          call.classList.add('is-heard');
+          window.setTimeout(releaseStartMusic, INTRO_MUSIC_MS);
+        });
+      }, INTRO_DELAY * 1000),
+    );
+  }
+
   // ---- Клики по кнопкам ----
   document.addEventListener(
     'click',
     (ev) => {
       const target =
         ev.target instanceof Element ? ev.target.closest('button, [role="tab"], [role="menuitem"]') : null;
-      if (!target || target.closest('.snd-toggle')) return;
+      if (!target || target.closest('.snd-toggle, .snd-hud')) return;
       if (target.getAttribute('aria-disabled') === 'true') return play('denied');
       // У этих звук свой: выбор — печать по is-chosen, стройка и декрет — по состоянию
       if (target.matches('[data-choice], .bm-opt, [data-act="decree"]')) return;
@@ -303,5 +429,33 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     return [sound, open];
   }
 
-  return { engine, music, ambience, play, toggle, menuItems, openSettings: settings };
+  function hudButton(): HTMLElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ibtn snd-hud';
+    b.addEventListener('click', () => toggle());
+    const draw = (s: AudioSettings) => {
+      b.innerHTML = icon(s.muted ? 'soundOff' : 'sound', 20);
+      b.setAttribute('aria-pressed', String(!s.muted));
+      b.setAttribute('aria-label', s.muted ? 'Включить звук' : 'Выключить звук');
+      b.title = s.muted ? 'Звук выключен (M)' : 'Звук включён (M)';
+      b.dataset.muted = String(s.muted);
+    };
+    draw(engine.settings);
+    engine.onSettings(draw);
+    return b;
+  }
+
+  return {
+    engine,
+    music,
+    ambience,
+    play,
+    toggle,
+    menuItems,
+    openSettings: settings,
+    holdStartMusic,
+    radioIntro,
+    hudButton,
+  };
 }

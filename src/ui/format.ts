@@ -163,6 +163,10 @@ export const ICONS: Record<string, string> = {
   mist: '<path d="M3 9c3-2 6 2 9 0s6-2 9 0M3 14c3-2 6 2 9 0s6-2 9 0M3 19c3-2 6 2 9 0s6-2 9 0"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  // Кнопка звука в шапке (src/audio/index.ts → hudButton): динамик и динамик перечёркнутый
+  sound:
+    '<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  soundOff: '<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
 };
 
 export function icon(name: string, size = 22, extra = ''): string {

@@ -1116,6 +1116,106 @@
     opacity: 1;
   }
 }
+/* Надпись ждёт радио (src/audio/index.ts → radioIntro): тускло, пока идёт настройка; каждое
+   «Всем!» — вспышка по классу is-on-air (перезапускается на каждое слово); после фразы — ровно. */
+.start-call.is-waiting {
+  opacity: 0.25;
+  animation: none;
+}
+.start-call.is-waiting.is-on-air {
+  animation: radioWord 560ms ease-out both;
+}
+.start-call.is-heard {
+  opacity: 1;
+  animation: none;
+  transition: opacity 300ms ease-out;
+}
+@keyframes radioWord {
+  0% {
+    opacity: 0.25;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- Заставка «Включить радио» (src/ui/radio-splash.ts) ----------
+   Тот же слой, что у стартового экрана, только темнее; появление и уход 220–240 мс. */
+.start.rs {
+  background:
+    radial-gradient(ellipse at 50% 110%, rgba(126, 155, 158, 0.25), transparent 60%),
+    linear-gradient(180deg, rgba(13, 28, 30, 0.98), rgba(26, 52, 55, 0.94));
+  animation-duration: 220ms;
+}
+.start.rs.is-leaving {
+  animation-duration: 240ms;
+}
+.rs-in {
+  gap: 14px;
+  max-width: 420px;
+}
+.rs-title {
+  margin: 0;
+  font-size: clamp(26px, 7cqw, 40px);
+  line-height: 1.1;
+  color: var(--paper);
+}
+.rs-text {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.btn.rs-on {
+  min-height: 64px;
+  padding-inline: 28px;
+  font-size: 20px;
+  gap: 12px;
+}
+/* Шкала приёмника: кружок с волнами эфира, «дышит», пока ждёт нажатия */
+.rs-dial {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 0 rgba(251, 240, 214, 0.55);
+  animation: rsDial 1.8s ease-out infinite;
+}
+@keyframes rsDial {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 240, 214, 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 12px rgba(251, 240, 214, 0);
+  }
+}
+.rs-silent {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 500 15px / 1 var(--f-ui);
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.rs-silent:hover,
+.rs-silent:focus-visible {
+  color: var(--paper);
+  outline: none;
+}
+.rs-silent:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--paper);
+}
+
 .start-title {
   margin: 0;
   font-size: clamp(40px, 13cqw, 112px);
@@ -1211,8 +1311,17 @@
   .report-card,
   .fin-poster,
   .fin-side,
-  .start-call {
+  .start-call,
+  .start-call.is-waiting.is-on-air,
+  .rs-dial {
     animation: none;
+  }
+  /* Без движения слово радио не вспыхивает, а сразу горит ровно */
+  .start-call.is-waiting.is-on-air {
+    opacity: 1;
+  }
+  .start-call.is-heard {
+    transition: none;
   }
   .night-veil,
   .night-label,

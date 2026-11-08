@@ -47,6 +47,17 @@
   color: var(--paper-ink);
   outline: none;
 }
+/* Кнопка звука в шапке (index.ts → hudButton, план звука Р6): в рамке шире 440 px. Уже — заголовок дня
+   уходит на две строки, поэтому на телефоне звук остаётся в меню игры и на клавише M. */
+.snd-hud[data-muted="true"] {
+  color: var(--muted);
+}
+@container app (max-width: 440px) {
+  .hud-actions .snd-hud {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .snd-toggle,
   .snd-toggle::after {
@@ -384,8 +395,8 @@
   }
 }
 
-/* Окна поверх экрана (событие, стенгазета, настройки) — кнопка уходит, чтобы не лечь на их текст */
-#app:has(.ev-layer, .st-layer) > .snd-toggle {
+/* Окна поверх экрана (событие, стенгазета, настройки, заставка радио) — кнопка уходит, чтобы не лечь на их текст */
+#app:has(.ev-layer, .st-layer, .rs) > .snd-toggle {
   opacity: 0;
   visibility: hidden;
   transition:

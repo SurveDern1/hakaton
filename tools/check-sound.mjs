@@ -1,12 +1,16 @@
 // Проверка звука без колонок: npm run check:sound (нужен Chrome или Edge; путь можно задать в CHROME).
 // Поднимает dev-сервер Vite и headless Chrome с политикой автозапуска «только после жеста»:
-//   1. игра 3 с без жеста — AudioContext не создан, sedmaya.sound.engine.played пуст;
-//   2. клик мышью через DevTools — контекст запущен (running);
+//   1. игра 3 с без жеста — заставка «Включить радио», AudioContext не создан, played пуст;
+//   2. клик мышью по «Включить радио» — контекст запущен (running), заставка уходит плавно (сэмплы
+//      прозрачности), ветер, радио, на «Всем! Всем! Всем!» три вспышки по классу is-on-air (сэмплы
+//      прозрачности надписи), после фразы — мелодия дня;
 //   3. клавиша M — общая громкость в 0 за 0,3 с, повтор — обратно;
 //   4. ?event=d02_raft и день: фон запущен, окно события его приглушает, режим «набор» поднимает тон;
+//      ?event=d06_signal — радио в окне «Сигнал», музыка −10 дБ; ?comic=outro_harbor — помехи у облачка рации;
 //   5. ?sound=lab → sedmaya.sound.lab.measure(): рендер каждого звука, темы и сцены фона на OfflineAudioContext,
 //      таблица метрик (src/audio/metrics.ts) и пороги (LIMITS: пик, сумма после ограничителя, щелчок
-//      на краях, хвост тишины); громкость сверяется с базовой линией tools/sound-baseline.json (±1 LU).
+//      на краях, хвост тишины); громкость сверяется с базовой линией tools/sound-baseline.json (±1 LU);
+//      радио — голос громче помех на 10 дБ (lab.radioSnr).
 // Код выхода 1 при нарушении. SOUND_WAV=<папка> — заодно WAV каждого звука для прослушивания.
 // --update-baseline — записать текущие громкости как базовую линию (после намеренной правки звука).
 import { spawn } from 'node:child_process';
@@ -24,6 +28,28 @@ const LU_TOLERANCE = 1;
 const SILENT_MS = 3000;
 /** «Без звука» должен сработать за это время, мс. */
 const MUTE_MS = 300;
+/** Голос радио громче помех, дБ (план звука, срез 3). */
+const RADIO_SNR_MIN = 10;
+
+/** Вспышки надписи по сэмплам прозрачности: подъём выше 0,9 после спада ниже 0,6. */
+export function countFlashes(samples) {
+  let n = 0;
+  let low = true;
+  for (const [, o] of samples) {
+    if (low && o >= 0.9) {
+      n += 1;
+      low = false;
+    } else if (!low && o <= 0.6) low = true;
+  }
+  return n;
+}
+
+/** Промежуточные значения перехода: сколько сэмплов строго между концами. */
+export function midSamples(samples, from, to) {
+  const lo = Math.min(from, to) + 0.05;
+  const hi = Math.max(from, to) - 0.05;
+  return samples.filter(([, v]) => v > lo && v < hi).length;
+}
 
 const fmt = (v, d = 1) => (typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : '−∞');
 
@@ -132,7 +158,7 @@ async function run() {
       })();`,
     });
 
-    // 1. Без жеста — тишина
+    // 1. Без жеста — заставка «Включить радио» и тишина
     await client.send('Page.navigate', { url: base });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.engine'), 30000, 'игра загрузилась');
     await sleep(SILENT_MS);
@@ -140,21 +166,84 @@ async function run() {
       ctx: window.sedmaya.sound.engine.ctx === null,
       made: window.__audioContexts,
       played: window.sedmaya.sound.engine.played.length,
+      splash: !!document.querySelector('.rs .rs-on'),
+      focused: document.activeElement?.classList.contains('rs-on') ?? false,
     })`);
+    step(silent.splash && silent.focused, 'заставка «Включить радио» на экране, фокус на кнопке');
     step(
       silent.ctx && silent.made === 0 && silent.played === 0,
       `без жеста ${SILENT_MS / 1000} с: контекстов ${silent.made}, сыграно звуков ${silent.played}`,
     );
 
-    // 2. Клик мышью (вне кнопок: по полю слева от рамки игры) — контекст запущен
+    // 2. «Включить радио» — контекст запущен, заставка уходит, ветер и радио, надпись мигает по словам.
+    // Сэмплы пишет сама страница по кадрам: прозрачность заставки и надписи, моменты слов.
+    await client.eval(`(() => {
+      const rec = (window.__radio = { splash: [], call: [], words: [] });
+      const t0 = performance.now();
+      const tick = () => {
+        const t = Math.round(performance.now() - t0);
+        const rs = document.querySelector('.rs');
+        if (rs) rec.splash.push([t, +getComputedStyle(rs).opacity]);
+        const call = document.querySelector('.start-call');
+        if (call) rec.call.push([t, +getComputedStyle(call).opacity]);
+        if (t < 16000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      new MutationObserver(() => {
+        const call = document.querySelector('.start-call.is-on-air');
+        if (call && rec.words.at(-1)?.[1] !== call.dataset.word)
+          rec.words.push([Math.round(performance.now() - t0), call.dataset.word]);
+      }).observe(document.getElementById('ui'), { subtree: true, attributes: true, attributeFilter: ['class', 'data-word'] });
+    })()`);
+    const btn = await client.eval(`(() => {
+      const r = document.querySelector('.rs-on').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    })()`);
     for (const type of ['mousePressed', 'mouseReleased'])
-      await client.send('Input.dispatchMouseEvent', { type, x: 8, y: 450, button: 'left', clickCount: 1 });
+      await client.send('Input.dispatchMouseEvent', { type, x: btn.x, y: btn.y, button: 'left', clickCount: 1 });
     const running = await waitFor(
       () => client.eval('window.sedmaya.sound.engine.ctx?.state === "running"'),
       5000,
       'контекст после клика',
     ).catch(() => false);
-    step(running, 'после клика AudioContext запущен (running)');
+    step(running, 'после «Включить радио» AudioContext запущен (running)');
+    if (running) {
+      await sleep(1500);
+      const wind = await client.eval('window.sedmaya.sound.ambience.readout()?.wind ?? 0');
+      step(wind > 0.01, `на стартовом экране ветер: ${fmt(wind, 3)}`);
+      await waitFor(() => client.eval('!!document.querySelector(".start-call.is-heard")'), 12000, 'фраза радио').catch(
+        () => false,
+      );
+      const r = await client.eval(`({
+        rec: window.__radio,
+        played: window.sedmaya.sound.engine.played.map(([n]) => n),
+      })`);
+      step(r.played.includes('radio'), `радио прозвучало (played: ${r.played.join(', ')})`);
+      const leave = r.rec.splash.filter(([, o]) => o < 0.999);
+      step(
+        midSamples(r.rec.splash, 0, 1) >= 2,
+        `заставка уходит плавно: ${leave.length} кадров, ${leave.map(([t, o]) => `${t}:${o.toFixed(2)}`).join(' ')}`,
+      );
+      const words = r.rec.words.map(([t, w]) => `${w}@${t}`).join(' ');
+      step(r.rec.words.length === 3, `«Всем! Всем! Всем!»: слов по классу ${r.rec.words.length} (${words})`);
+      // окно слов: от первого до конца последнего (после фразы надпись плавно загорается ровно — это не вспышка)
+      const first = r.rec.words[0]?.[0] ?? 0;
+      const last = r.rec.words.at(-1)?.[0] ?? first;
+      const after = r.rec.call.filter(([t]) => t >= first - 200 && t <= last + 1200);
+      const flashes = countFlashes(after);
+      const sample = after
+        .filter((_, i) => i % 6 === 0)
+        .map(([t, o]) => `${t}:${o.toFixed(2)}`)
+        .slice(0, 40)
+        .join(' ');
+      step(flashes === 3, `вспышек надписи по прозрачности ${flashes} (нужно 3); сэмплы ${sample}`);
+      const music = await waitFor(
+        () => client.eval('window.sedmaya.sound.music.current'),
+        4000,
+        'мелодия после фразы',
+      ).catch(() => null);
+      step(!!music, `после фразы — мелодия дня (${music ?? 'нет'})`);
+    }
 
     // 3. M — «Без звука» за 0,3 с и обратно
     const pressM = async () => {
@@ -226,6 +315,34 @@ async function run() {
       `сброс яруса: удар через ${fmt(lag * 1000, 0)} мс после конца падения (${fallMs} мс), нужно 0…600`,
     );
 
+    // Радио в окне «Сигнал» дня 6: тихо по кругу, музыка −10 дБ
+    await client.send('Page.navigate', { url: `${base}?event=d06_signal` });
+    await waitFor(() => client.eval('!!document.querySelector(".ev-layer[data-event=d06_signal]")'), 30000, 'окно «Сигнал»');
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await client.send('Input.dispatchMouseEvent', { type, x: 8, y: 450, button: 'left', clickCount: 1 });
+    await sleep(2500);
+    const sig = await client.eval(`({
+      played: window.sedmaya.sound.engine.played.map(([n]) => n),
+      duck: window.sedmaya.sound.engine.ducking('music'),
+    })`);
+    step(sig.played.includes('radio'), `окно «Сигнал»: радио звучит (${sig.played.join(', ')})`);
+    step(
+      sig.duck.gain <= 10 ** (-10 / 20) + 0.01,
+      `окно «Сигнал»: музыка приглушена, множитель ${fmt(sig.duck.gain, 2)} (≤ −10 дБ)`,
+    );
+
+    // Комикс: облачко рации — всплеск помех
+    await client.send('Page.navigate', { url: `${base}?comic=outro_harbor` });
+    await waitFor(() => client.eval('!!document.querySelector(".cx-layer")'), 30000, 'комикс');
+    for (const type of ['mousePressed', 'mouseReleased'])
+      await client.send('Input.dispatchMouseEvent', { type, x: 8, y: 450, button: 'left', clickCount: 1 });
+    const burst = await waitFor(
+      () => client.eval('window.sedmaya.sound.engine.played.some(([n]) => n === "radioBurst")'),
+      8000,
+      'помехи у облачка рации',
+    ).catch(() => false);
+    step(burst, 'комикс: у облачка рации — помехи (radioBurst)');
+
     // 5. Лаборатория: рендер и метрики
     await client.send('Page.navigate', { url: `${base}?sound=lab` });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.lab'), 30000, 'лаборатория ?sound=lab');
@@ -234,6 +351,11 @@ async function run() {
     console.log(`\nМетрики по рендеру (${rows.length} звуков; пик — сумма шин, огр. — после ограничителя):`);
     console.log(table(rows, baseline));
     for (const r of rows) for (const e of r.errors) step(false, `${r.id}: ${e}`);
+    const snr = await client.eval('window.sedmaya.sound.lab.radioSnr()');
+    step(
+      snr.snr >= RADIO_SNR_MIN,
+      `радио: голос ${fmt(snr.voice)} дБ, помехи ${fmt(snr.noise)} дБ — запас ${fmt(snr.snr)} дБ (нужно ≥ ${RADIO_SNR_MIN})`,
+    );
     if (update) {
       const next = Object.fromEntries(rows.map((r) => [r.id, Number(r.lufs.toFixed(2))]));
       fs.writeFileSync(BASELINE, `${JSON.stringify(next, null, 2)}\n`);
