@@ -69,8 +69,12 @@ describe('модель башни совпадает с renderTower макета
       const topM = s.altitude + 10 * n + 22;
       const botY = Math.round((topM - s.altitude) * 12.5 * 10) / 10;
       const mY = Math.round((topM - s.mist) * 12.5 * 10) / 10;
-      const skip = new Set(['mist', 'underglow', 'glow', 'cloud', 'man']);
-      const refBoxes: Box[] = [...ref.tower, ...ref.front]
+      const skip = new Set(['mist', 'underglow', 'glow', 'man']);
+      const refBoxes: Box[] = [
+        ...ref.tower,
+        ...ref.front,
+        ...ref.back.filter((p) => stable(p.c).startsWith('cloud')),
+      ]
         .filter((p) => !skip.has(stable(p.c).split(' ')[0] ?? ''))
         .map((p) => ({
           c: stable(p.c),
@@ -91,16 +95,22 @@ describe('модель башни совпадает с renderTower макета
           })),
       );
       expect(ours.length).toBe(refBoxes.length);
-      const a = sortBoxes(ours);
-      const b = sortBoxes(refBoxes);
-      a.forEach((p, i) => {
-        const q = b[i] as Box;
-        expect(p.c).toBe(q.c);
-        expect(Math.abs(p.x - q.x)).toBeLessThan(0.25);
-        expect(Math.abs(p.y - q.y)).toBeLessThan(0.25);
-        expect(Math.abs(p.w - q.w)).toBeLessThan(0.25);
-        expect(Math.abs(p.h - q.h)).toBeLessThan(0.25);
+      // Каждой детали — своя пара в макете с тем же классом и рамкой (±0,25 px). Не по порядку
+      // сортировки: у деталей с почти равным y (облака, прижатые к Мгле) порядок зависит от округления.
+      const near = (p: Box, q: Box) =>
+        p.c === q.c &&
+        Math.abs(p.x - q.x) < 0.25 &&
+        Math.abs(p.y - q.y) < 0.25 &&
+        Math.abs(p.w - q.w) < 0.25 &&
+        Math.abs(p.h - q.h) < 0.25;
+      const rest = sortBoxes(refBoxes);
+      const unmatched = sortBoxes(ours).filter((p) => {
+        const i = rest.findIndex((q) => near(p, q));
+        if (i < 0) return true;
+        rest.splice(i, 1);
+        return false;
       });
+      expect(unmatched).toEqual([]);
       // Жители: то же число, что и в макете
       const refMen = [...ref.tower, ...ref.front].filter((p) => stable(p.c).startsWith('man')).length;
       expect(byClass(model, 'man').length).toBe(refMen);

@@ -133,6 +133,57 @@ export interface Slot {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const r1 = (v: number) => Math.round(v * 10) / 10;
+
+// Облака неба (из Tower.dc.html): шапки [центр, радиус, сдвиг вверх] в долях ширины облака;
+// облака [x 0..1, y 0..1 высоты неба, ширина в U, слой глубины 0..2]
+type Puff = readonly [number, number, number];
+const CLOUD_SHAPES: readonly (readonly Puff[])[] = [
+  [
+    [0.36, 0.13, -0.2],
+    [0.6, 0.15, -0.24],
+    [0.08, 0.08, 0.02],
+    [0.2, 0.14, 0],
+    [0.38, 0.2, -0.05],
+    [0.58, 0.23, -0.07],
+    [0.76, 0.16, -0.01],
+    [0.89, 0.11, 0.01],
+    [0.97, 0.06, 0.02],
+  ],
+  [
+    [0.5, 0.14, -0.2],
+    [0.7, 0.17, -0.25],
+    [0.05, 0.06, 0.02],
+    [0.15, 0.11, 0.01],
+    [0.3, 0.17, -0.02],
+    [0.5, 0.15, -0.04],
+    [0.68, 0.22, -0.08],
+    [0.85, 0.14, 0],
+    [0.95, 0.08, 0.02],
+  ],
+  [
+    [0.42, 0.18, -0.28],
+    [0.1, 0.1, 0.01],
+    [0.25, 0.16, -0.02],
+    [0.45, 0.26, -0.1],
+    [0.7, 0.18, -0.02],
+    [0.86, 0.11, 0.01],
+    [0.95, 0.06, 0.02],
+  ],
+];
+const CLOUD_STREAKS: readonly (readonly [number, number, number])[] = [
+  [0.15, 0.17, 200],
+  [0.58, 0.36, 170],
+];
+const CLOUDS: readonly (readonly [number, number, number, number])[] = [
+  [0.3, 0.06, 58, 0],
+  [0.84, 0.15, 50, 0],
+  [0.01, 0.25, 46, 0],
+  [0.5, 0.31, 42, 0],
+  [0.6, 0.02, 98, 1],
+  [0.06, 0.12, 88, 1],
+  [0.7, 0.23, 132, 2],
+  [-0.07, 0.35, 120, 2],
+];
 const op = (v: number) => `opacity:${v.toFixed(2)};`;
 
 export function hash01(i: number): number {
@@ -623,18 +674,41 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
   const topY = ym(A + 10 * n);
   const rootW = tw(0);
 
-  // Небо: облака и тёплый свет над Мглой
+  // Небо: облака из клубов (как в Tower.dc.html). Три слоя по глубине: d0 дальний — мельче, бледнее,
+  // медленнее; d2 ближний — крупнее и быстрее. Облако — шапки [центр, радиус, сдвиг вверх] в долях
+  // ширины; тень отсчитывается от общей линии низа (--b), низ шапки — дуга чуть ниже (--b2).
   open('sky', 'sky');
   const skyH = (A + 10 * n + 22) * K;
   const skyTop = -(10 * n + 22) * K;
-  for (const [i, c] of [
-    [0.05, 0.08, 96],
-    [0.6, 0.04, 124],
-    [0.74, 0.27, 82],
-    [0.1, 0.4, 70],
-  ].entries()) {
-    const cw = (c[2] ?? 0) * U;
-    px(`cloud cl${i % 2}`, (c[0] ?? 0) * 900 - 450, skyTop + (c[1] ?? 0) * skyH, cw, cw * 0.28);
+  const skyLow = ym(M) - 150 * U;
+  for (const [i, c] of CLOUD_STREAKS.entries()) {
+    const cw = c[2] * U;
+    const y = Math.min(skyTop + c[1] * skyH, skyLow - 20);
+    px('cloud streak d0', c[0] * 900 - 450, y, cw, cw * 0.05, `animation-delay:-${40 + i * 55}s,-${i * 7}s;`);
+  }
+  for (const [i, c] of CLOUDS.entries()) {
+    const cw = c[2] * U;
+    const x0 = c[0] * 900 - 450;
+    const base = Math.min(skyTop + c[1] * skyH + 0.42 * cw, skyLow);
+    const shape = CLOUD_SHAPES[i % 3] ?? [];
+    const flip = i % 2 === 1;
+    const drift = (i * 13) % 40;
+    for (const [j, q] of shape.entries()) {
+      const cx = x0 + (flip ? 1 - q[0] : q[0]) * cw;
+      const r = q[1] * cw;
+      const cy = base - 0.55 * r + q[2] * cw;
+      const b = base - cy + r;
+      const b2 = Math.min(b + (0.1 + ((i + j * 3) % 4) * 0.07) * r, 2 * r);
+      px(
+        `cloud d${c[3]} puff`,
+        cx - r,
+        cy - r,
+        2 * r,
+        2 * r,
+        `animation-delay:-${drift}s,-${(i * 5 + j * 3) % 5}s;--bil:${(3 + (j % 3) * 0.9).toFixed(1)}s;` +
+          `--sh:${r1(0.2 * cw)}px;--b:${r1(b)}px;--b2:${r1(b2)}px;`,
+      );
+    }
   }
 
   open('mist-back', 'mistBack');
