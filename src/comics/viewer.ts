@@ -9,7 +9,7 @@
 import { h } from '../ui/format';
 import { type Comic, type ComicPage, type ComicPanel, pageGrid } from './data';
 import { ComicNav } from './nav';
-import { placeholderArt } from './placeholder';
+import { LIVE_SCENES, placeholderArt } from './placeholder';
 import './comic.css';
 
 export interface ComicOptions {
@@ -101,6 +101,7 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
     function settleNow(): void {
       settleUntil = 0;
       cur.classList.add('is-settled');
+      hurryScene(cur);
     }
     function revealNext(): void {
       const i = nav.shown;
@@ -389,6 +390,20 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
   });
 }
 
+/**
+ * Касание, пока страница дописывается: уже запущенные переходы текстов (смена transition-delay
+ * их не трогает) и одноразовые движения живой сцены (.fx-once, scene-*.ts) доигрывают в 7 раз
+ * быстрее, без скачка в конец. Наезд камеры и бесконечный дрейф тумана идут как шли.
+ */
+function hurryScene(page: HTMLElement): void {
+  if (typeof page.getAnimations !== 'function') return;
+  for (const a of page.getAnimations({ subtree: true })) {
+    const target = (a.effect as KeyframeEffect | null)?.target;
+    const transition = typeof CSSTransition !== 'undefined' && a instanceof CSSTransition;
+    if (transition || target?.classList.contains('fx-once')) a.updatePlaybackRate(7);
+  }
+}
+
 /** Слои света листа: тень под ним, затемнение, блик, тень на нижнем листе. */
 const LIGHT = ['.cx-lift', '.cx-shade', '.cx-gloss', '.cx-cast'];
 
@@ -471,7 +486,8 @@ function renderPanel(p: ComicPanel): HTMLElement {
   const cam = h('div', { class: 'cx-cam' }, art);
   if (p.origin) cam.style.transformOrigin = p.origin;
   const el = h('figure', { class: 'cx-panel', 'data-move': p.move ?? 'in' }, cam);
-  if (!p.image) el.append(h('span', { class: 'cx-stub', 'aria-hidden': 'true' }, 'эскиз'));
+  if (!p.image && !LIVE_SCENES.includes(p.art?.scene ?? ''))
+    el.append(h('span', { class: 'cx-stub', 'aria-hidden': 'true' }, 'эскиз'));
   let d = 0;
   const beat = (node: HTMLElement, step: number) => {
     node.style.setProperty('--d', `${d}ms`);
@@ -526,7 +542,10 @@ function renderPanel(p: ComicPanel): HTMLElement {
       group.append(note);
     }
   }
-  if (p.title) beat(h('span', { class: 'cx-title disp' }, p.title), 0);
+  if (p.title) {
+    d = Math.max(d, p.titleAt ?? 0);
+    beat(h('span', { class: 'cx-title disp' }, p.title), 0);
+  }
   // Когда кадр «дописан»: касание до этого срока сначала показывает всё сразу, а не листает
   el.dataset.settle = String(d + 500);
   return el;

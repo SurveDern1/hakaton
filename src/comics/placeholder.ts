@@ -1,5 +1,7 @@
 // Заглушки кадров, пока художник не нарисовал картинки: плакатные сцены в палитре игры на SVG.
 // Сцена и тон задаются в data/comics.json полем art: { scene, tone }. Неизвестная сцена — пустое небо.
+// Живые сцены (LIVE_SCENES) — готовые анимированные кадры, без пометки «эскиз».
+import { fallScene } from './scene-fall';
 
 const C = {
   ink: 'var(--ink)',
@@ -194,11 +196,17 @@ const SCENES: Record<string, (fg: string) => string> = {
 
 export const PLACEHOLDER_SCENES = Object.keys(SCENES);
 
+/** Готовые живые сцены: рисуются вместо заглушки той же сцены. */
+const LIVE: Record<string, () => string> = { fall: fallScene };
+export const LIVE_SCENES = Object.keys(LIVE);
+
 /** Номер градиента: у каждой заглушки свой id внутри документа. */
 let serial = 0;
 
 /** SVG-заглушка кадра. */
 export function placeholderArt(scene: string, tone = 'night'): string {
+  const live = LIVE[scene];
+  if (live) return live();
   const [a, b] = TONES[tone] ?? (TONES.night as [string, string]);
   serial += 1;
   const id = `cxg-${serial}`;

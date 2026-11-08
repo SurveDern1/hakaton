@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gameData } from '../core';
 import { checkComics, comicsFile, getComic, outroFor, pageGrid } from './data';
 import { ComicNav } from './nav';
-import { PLACEHOLDER_SCENES } from './placeholder';
+import { LIVE_SCENES, PLACEHOLDER_SCENES, placeholderArt } from './placeholder';
 
 describe('data/comics.json', () => {
   it('сходится: сетки, кадры, пролог и эпилог для каждой концовки', () => {
@@ -14,6 +14,18 @@ describe('data/comics.json', () => {
     for (const c of comicsFile.comics)
       for (const p of c.pages)
         for (const panel of p.panels) if (panel.art) expect(PLACEHOLDER_SCENES).toContain(panel.art.scene);
+  });
+
+  it('живая сцена «Падение» вместо заглушки: башня, рубка, туман', () => {
+    expect(LIVE_SCENES).toContain('fall');
+    const html = placeholderArt('fall', 'mist');
+    expect(html).toContain('fx-fall');
+    expect(html).toContain('is-radio');
+    expect(html.match(/class="fx-band /g)?.length).toBe(5);
+    // id градиентов не повторяются между двумя копиями сцены
+    const ids = (s: string) => [...s.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    const again = placeholderArt('fall', 'mist');
+    expect(ids(html).filter((id) => ids(again).includes(id))).toEqual([]);
   });
 
   it('эпилог по концовке, иначе общий', () => {

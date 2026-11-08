@@ -61,6 +61,8 @@ export interface ComicPanel {
   sfx?: string;
   /** Крупная надпись внизу кадра — для заглавных кадров. */
   title?: string;
+  /** Через сколько миллисекунд после появления кадра показать title — когда отыграет живая сцена. */
+  titleAt?: number;
   /** Медленный наезд камеры по кадру. */
   move?: 'in' | 'out' | 'left' | 'right' | 'up' | 'down' | 'none';
   /** object-position картинки, например `50% 20%`. */
