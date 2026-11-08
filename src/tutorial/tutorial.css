@@ -1,0 +1,42 @@
+/* Слой обучения поверх экрана: вид карточки и рамки — классы .tut* из design/project/sedmaya.css
+   (макет Tutorial.dc.html), здесь только то, что нужно живому экрану. */
+
+/* Выше окна события (20) и статуса (25), ниже финала (40). Слой клики пропускает: под карточкой всё
+   нажимается, pointer-events — только у самой карточки и у приветствия. */
+#ui > .tut-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+.tut-layer > .tut {
+  pointer-events: auto;
+  z-index: 1;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.tut-layer > .tut-ring {
+  z-index: 0;
+}
+.tut-layer > .tut-ring[hidden] {
+  display: none;
+}
+/* Приветствие модальное: затемнение ловит клики. */
+.tut-layer > .tut-veil {
+  pointer-events: auto;
+}
+
+/* Кнопки на живом экране — не меньше 44 px для пальца (в макете 36 px). */
+.tut-layer .tut .btn,
+.tut-layer .tut-skip {
+  min-height: 44px;
+}
+.tut-layer .tut-skip {
+  padding: 0 4px;
+}
+.tut-layer .tut-foot {
+  min-height: 44px;
+}
+.tut-layer .tut-welcome {
+  width: min(340px, calc(100% - 32px));
+}

@@ -13,6 +13,7 @@ import { TowerScene, type TowerSource } from './scenes/TowerScene';
 import type { TowerInput } from './scenes/tower-model';
 import { towerInputFromState } from './scenes/tower-model';
 import { isPresetName, type PresetName, TOWER_PRESETS } from './scenes/tower-presets';
+import { mountCoach } from './tutorial/coach';
 import { mountBuildMenu } from './ui/build-menu';
 import { fmtSigned, mountEventWindow } from './ui/event-window';
 import { flashHud, mountStatus } from './ui/feedback';
@@ -238,6 +239,9 @@ Object.assign(window, {
       return c ? playComic(ui, c) : Promise.resolve();
     },
     sound,
+    // Карточка обучения до подключения к игре: sedmaya.coach.show({ title, text }, '.panel-end'),
+    // sedmaya.coach.confirm(), sedmaya.coach.samples (срез 3 заменит на sedmaya.tutorial).
+    coach: mountCoach(ui),
     tower: {
       scene: towerScene,
       presets: Object.keys(TOWER_PRESETS),
