@@ -173,7 +173,7 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
     awards.length > 0 &&
       h(
         'section',
-        {},
+        { class: 'fin-sep' },
         h('span', { class: 'lbl' }, 'Значки'),
         h(
           'div',
@@ -186,7 +186,7 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
     closed.length > 0 &&
       h(
         'section',
-        {},
+        { class: 'fin-sep' },
         h('span', { class: 'lbl' }, 'Пути, которые закрылись'),
         h('div', { class: 'fin-closed' }, ...closed.map((c) => h('span', {}, c))),
       ),
