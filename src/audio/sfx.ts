@@ -20,6 +20,7 @@ export type SfxName =
   | 'plus'
   | 'minus'
   | 'paper'
+  | 'hint'
   | 'page'
   | 'final'
   | 'decree';
@@ -398,6 +399,22 @@ const SOUNDS: Record<SfxName, Sound> = {
       freq: 700,
       q: 0.7,
     });
+  },
+  // Подсказка обучения: короткий шелест карточки и тихий колокольчик — тише стенгазеты
+  hint(e, t, out, soft) {
+    noise(e, {
+      t,
+      dur: 0.08,
+      attack: 0.02,
+      release: 0.1,
+      gain: 0.08,
+      dest: out,
+      filter: 'bandpass',
+      freq: 2200,
+      to: 3400,
+      q: 0.8,
+    });
+    bell(e, midiToHz(84), t + 0.06, 0.035 * soft, out, 0.4);
   },
   paper(e, t, out) {
     noise(e, {
