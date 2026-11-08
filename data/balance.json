@@ -90,7 +90,7 @@
       "sky": { "ally": { "solidarity": 1 }, "enemy": { "sabotageChance": 0.2, "sabotageEther": -8 } }
     }
   },
-  "events": { "maxWindowsPerMorning": 2, "poolRepeatGapDays": 3 },
+  "events": { "maxWindowsPerMorning": 2, "firstDayWindows": 1, "poolRepeatGapDays": 3 },
   "endings": { "harborSolidarity": 50, "fortressOrder": 60, "sealTrust": 50 },
   "preview": { "statSteps": [1, 5, 15], "resSteps": [1, 10, 20], "factionPortraitMin": 5 }
 }

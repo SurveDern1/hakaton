@@ -221,7 +221,8 @@ export interface Balance {
     eventAt: number;
     passive: Record<FactionKey, Record<'ally' | 'enemy', Record<string, number | boolean>>>;
   };
-  events: { maxWindowsPerMorning: number; poolRepeatGapDays: number };
+  /** firstDayWindows — лимит окон в день 1 (сюжетное событие показывается всегда). */
+  events: { maxWindowsPerMorning: number; firstDayWindows: number; poolRepeatGapDays: number };
   /** Пороги финала (ТЗ 6.9); раскол — по `thresholds.solidarityCrisis`. */
   endings: { harborSolidarity: number; fortressOrder: number; sealTrust: number };
   preview: { statSteps: number[]; resSteps: number[]; factionPortraitMin: number };

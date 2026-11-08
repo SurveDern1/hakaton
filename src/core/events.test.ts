@@ -10,12 +10,26 @@ const fresh = (seed: number | string = 'events') => createInitialState(gameData.
 const atDay = (day: number, patch: Partial<GameState> = {}): GameState => ({ ...fresh(), day, ...patch });
 
 describe('очередь утра', () => {
-  it('день 1: сюжетное событие первым, затем одно из пула', () => {
-    const { queue, state } = buildMorningQueue(fresh(), gameData);
-    expect(queue[0]).toBe('d01_first_morning');
-    expect(queue).toHaveLength(gameData.balance.events.maxWindowsPerMorning);
-    expect(findEvent(gameData, queue[1] ?? '').pool).toBe('common');
-    expect(state.rng).not.toBe(fresh().rng);
+  it('день 1: только сюжетное событие, пул не тянется и генератор не сдвигается', () => {
+    expect(gameData.balance.events.firstDayWindows).toBe(1);
+    for (const seed of ['events', 1, 2, 3, 'tutorial']) {
+      const { queue, state } = buildMorningQueue(fresh(seed), gameData);
+      expect(queue).toEqual(['d01_first_morning']);
+      expect(state.rng).toEqual(fresh(seed).rng);
+    }
+  });
+
+  it('дни 2 и 3: сюжетное событие и одно из пула, как раньше', () => {
+    for (const [day, story] of [
+      [2, 'd02_raft'],
+      [3, 'd03_shifts'],
+    ] as const) {
+      const { queue, state } = buildMorningQueue(atDay(day), gameData);
+      expect(queue[0]).toBe(story);
+      expect(queue).toHaveLength(gameData.balance.events.maxWindowsPerMorning);
+      expect(findEvent(gameData, queue[1] ?? '').pool).toBe('common');
+      expect(state.rng).not.toEqual(atDay(day).rng);
+    }
   });
 
   it('отложенное событие на сегодня встаёт после сюжетного и снимается из scheduled', () => {

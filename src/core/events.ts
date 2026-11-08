@@ -35,9 +35,11 @@ export function crisisThresholdCrossed(state: GameState, data: GameData): boolea
  * Собирает очередь утра для `state.day`. Отложенные события на сегодня снимаются из `state.scheduled`;
  * те, что не влезли в лимит окон, переносятся на завтра (сюжетное событие всегда показывается).
  * Случайное событие выбирается через `state.rng`, поэтому один сид даёт одну и ту же игру.
+ * В день 1 лимит — `firstDayWindows`: первое утро только сюжетное, без события из пула.
  */
 export function buildMorningQueue(state: GameState, data: GameData): MorningQueue {
-  const { maxWindowsPerMorning: maxWindows, poolRepeatGapDays: gap } = data.balance.events;
+  const { maxWindowsPerMorning, firstDayWindows, poolRepeatGapDays: gap } = data.balance.events;
+  const maxWindows = state.day === 1 ? firstDayWindows : maxWindowsPerMorning;
   const next: GameState = { ...state, scheduled: [] };
   const queue: string[] = [];
   const carry: string[] = [];
