@@ -396,7 +396,7 @@ function renderPage(page: ComicPage, index: number, total: number): HTMLElement 
     ),
     h('div', { class: 'cx-cast' }),
   );
-  // Лист во весь размер картинки: его пропорция близка к картинке, лишнее книги остаётся фоном
+  // Лист во весь размер картинки: его пропорция — пропорция картинки, лишнее книги остаётся фоном
   if (size) section.style.setProperty('--r', ratio(size));
   return section;
 }
