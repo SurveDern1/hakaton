@@ -1,0 +1,108 @@
+/* Итог: «Вы выжили!» / «Вы умерли…» (verdict.ts). Размеры от рамки #app (cqw/cqh):
+   макет 1125 × 2011, заголовок 200 pt ≈ 17,8 % ширины, отступ слева ≈ 8,3 %. */
+.vd {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  overflow: hidden;
+  background: var(--ink);
+  cursor: pointer;
+  animation: evFade 400ms ease-out both;
+}
+.vd.is-leaving {
+  animation: evFadeOut 320ms ease-in both;
+}
+.vd-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: vdArt 6s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+.vd-lose .vd-art {
+  object-position: 50% 70%;
+}
+.vd-win .vd-art {
+  object-position: 50% 45%;
+  animation-name: vdArtUp;
+}
+@keyframes vdArt {
+  from {
+    transform: scale(1.08);
+  }
+}
+@keyframes vdArtUp {
+  from {
+    transform: scale(1.06) translateY(3%);
+  }
+}
+.vd-words {
+  position: absolute;
+  left: 8.3cqw;
+  right: 8.3cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6cqh;
+}
+.vd-at-top .vd-words {
+  top: 7cqh;
+}
+.vd-at-bottom .vd-words {
+  bottom: 12cqh;
+}
+.vd-title {
+  margin: 0;
+  font-family: var(--f-ui);
+  font-weight: 500;
+  /* Oswald шире Bebas Neue из макета (у Bebas нет кириллицы в Google Fonts): 15 % ширины —
+     «Вы выжили!» и «Вы умерли…» помещаются в строку с полями макета */
+  font-size: 15cqw;
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  animation: vdIn 700ms 350ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.vd-text {
+  margin: 0;
+  max-width: 34ch;
+  font-family: var(--f-ui);
+  font-weight: 500;
+  font-size: clamp(15px, 4.4cqw, 22px);
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  animation: vdIn 600ms 900ms ease-out both;
+}
+.vd-lose .vd-title,
+.vd-lose .vd-text {
+  color: var(--red);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+}
+/* Цвет надписи с макета: тёплее, чем --ochre */
+.vd-win .vd-title,
+.vd-win .vd-text {
+  color: #f3a136;
+}
+@keyframes vdIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+.vd-next {
+  position: absolute;
+  right: 6cqw;
+  bottom: max(4cqh, env(safe-area-inset-bottom));
+  animation: vdIn 500ms 1600ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vd-art,
+  .vd-title,
+  .vd-text,
+  .vd-next {
+    animation: evFade 1ms both;
+  }
+}

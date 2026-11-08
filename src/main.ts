@@ -24,6 +24,7 @@ import { mountPanel } from './ui/panel';
 import { mountPaper } from './ui/paper';
 import { mistNote, morningReport, showReportCard } from './ui/report';
 import { showStart } from './ui/start';
+import { showVerdict } from './ui/verdict';
 import './scenes/tower.css';
 import './ui/style.css';
 import './ui/game.css';
@@ -160,11 +161,15 @@ loop.onPhase((phase) => {
   if (phase === 'final') void showEnding();
 });
 
-// Финал: эпилог-комикс концовки (data/comics.json, outro_<id> или общий outro), затем итоги
+// Финал: эпилог-комикс концовки (data/comics.json, outro_<id> или общий outro), экран итога
+// «Вы выжили!» / «Вы умерли…» (verdict концовки в data/endings.json), затем итоги
 async function showEnding() {
   const state = store.state;
-  const outro = outroFor(finalEnding(state, data).id);
+  const id = finalEnding(state, data).id;
+  const outro = outroFor(id);
   if (outro) await playComic(ui as HTMLElement, outro);
+  const kind = data.endings.endings.find((e) => e.id === id)?.verdict;
+  if (kind) await showVerdict(ui as HTMLElement, kind, data.endings.verdicts[kind]);
   showFinal(ui as HTMLElement, state, { data, onRestart: () => void loop.newGame() });
 }
 
@@ -196,11 +201,16 @@ function start() {
 
 // Проверка комикса: ?comic=intro, ?comic=outro_harbor — после него стартовый экран.
 const debugComic = getComic(params.get('comic') ?? '');
+// Проверка экрана итога: ?verdict=win или ?verdict=lose — после него стартовый экран.
+const debugVerdict = params.get('verdict');
 // Проверка окна без цикла: ?event=d02_raft или ?event=d01_first_morning,d02_raft (до двух окон);
 // день — из события (или &day=17), &flags=a,b — с флагами.
 const eventIds = params.get('event')?.split(',').filter(Boolean) ?? [];
 if (presetInput) {
   ui.classList.add('is-bare', 'is-preset');
+} else if (debugVerdict === 'win' || debugVerdict === 'lose') {
+  ui.classList.add('is-bare');
+  void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict]).then(start);
 } else if (debugComic) {
   ui.classList.add('is-bare');
   void playComic(ui, debugComic).then(start);

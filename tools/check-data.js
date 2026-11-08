@@ -79,6 +79,15 @@ for (const x of endings.endings.flatMap((e) => e.extraText || [])) {
   for (const f of x.requires.flags || []) if (!setFlags.has(f)) errors.push(`концовка: флаг ${f} нигде не ставится`);
 }
 
+// Экраны итога: у каждой концовки verdict win|lose, картинки лежат в public/
+for (const e of endings.endings) {
+  if (!['win', 'lose'].includes(e.verdict)) errors.push(`концовка ${e.id}: verdict не win и не lose`);
+}
+for (const [k, v] of Object.entries(endings.verdicts || {})) {
+  if (!fs.existsSync(path.join(__dirname, '..', 'public', v.image))) errors.push(`итог ${k}: нет файла public/${v.image}`);
+}
+if (!endings.verdicts?.win || !endings.verdicts?.lose) errors.push('endings.json: нужны verdicts.win и verdicts.lose');
+
 // Комиксы: картинки кадров лежат в public/ (сетки и эпилоги проверяет src/comics/comics.test.ts)
 const comics = load('comics.json');
 for (const c of comics.comics) {

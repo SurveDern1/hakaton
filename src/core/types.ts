@@ -94,8 +94,21 @@ export interface Ending {
   id: string;
   title: string;
   poster?: string;
+  /** Какой экран итога показать перед финалом: выжили или погибли (`EndingsFile.verdicts`). */
+  verdict?: 'win' | 'lose';
   text: string;
   extraText?: { requires?: Requires; text: string }[];
+}
+
+/** Экран итога «Вы выжили!» / «Вы умерли…»: картинка из public/ и живой текст поверх. */
+export interface Verdict {
+  title: string;
+  text: string;
+  /** Путь в public/ без ведущего «/». */
+  image: string;
+  /** Где стоит надпись: сверху или снизу картинки. */
+  at: 'top' | 'bottom';
+  alt: string;
 }
 
 export interface Fate {
@@ -107,6 +120,7 @@ export interface Fate {
 export interface EndingsFile {
   version: number;
   endings: Ending[];
+  verdicts: Record<'win' | 'lose', Verdict>;
   harborRefused: string;
   fates: Record<string, Fate[]>;
   memories: { id: number; who: string; text: string }[];
