@@ -98,7 +98,14 @@ for (const c of comics.comics) {
   }
 }
 
+// Обучение: та же проверка, что в src/tutorial/tutorial.test.ts. schema.ts без импортов во время
+// выполнения, поэтому Node подключает его сам, снимая типы.
+const { checkTutorial } = require('../src/tutorial/schema.ts');
+const tutorial = load('tutorial.json');
+for (const e of checkTutorial(tutorial, balance)) errors.push(`обучение: ${e}`);
+
 const unused = [...setFlags].filter((f) => !readFlags.has(f) && !JSON.stringify(endings).includes(`"${f}"`));
+console.log(`шагов обучения: ${tutorial.steps.length}`);
 console.log(`событий: ${events.length}, флагов ставится: ${setFlags.size}, читается: ${readFlags.size}`);
 if (unused.length) console.log(`флаги без чтения (для эпилога и будущих событий): ${unused.join(', ')}`);
 if (errors.length) {
