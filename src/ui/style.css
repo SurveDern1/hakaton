@@ -47,6 +47,18 @@ body {
   }
 }
 
+/* Зерно печати поверх всей игры — то же, что у макетов (.sd::after в sedmaya.css) */
+#app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: var(--grain) 0 0 / 160px 160px;
+  mix-blend-mode: overlay;
+  opacity: var(--grain-o);
+}
+
 #game,
 #ui {
   position: absolute;

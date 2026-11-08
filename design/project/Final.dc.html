@@ -15,17 +15,17 @@
 <div class="sd" style="width: 1440px; height: 900px; box-sizing: border-box; padding: 48px 64px; display: flex; gap: 64px; background: var(--ink);">
 
   <!-- Открытка-плакат -->
-  <figure style="position: relative; margin: 0; width: 540px; height: 804px; flex: none; overflow: hidden; background: var(--red); box-shadow: 14px 14px 0 rgba(0,0,0,.4);">
-    <div style="position: absolute; left: -200px; top: 120px; width: 1000px; height: 260px; background: var(--ochre); transform: rotate(-32deg);"></div>
-    <div style="position: absolute; left: -200px; top: 330px; width: 1000px; height: 18px; background: var(--paper-ink); transform: rotate(-32deg);"></div>
+  <figure style="position: relative; margin: 0; width: 540px; height: 804px; flex: none; overflow: hidden; background: var(--ether); box-shadow: 14px 14px 0 rgba(0,0,0,.4);">
+    <div style="position: absolute; left: -200px; top: 120px; width: 1000px; height: 260px; background: var(--red); transform: rotate(-32deg);"></div>
+    <div style="position: absolute; left: -200px; top: 330px; width: 1000px; height: 18px; background: var(--ochre); transform: rotate(-32deg);"></div>
     <div style="position: absolute; left: 32px; top: 30px; display: flex; flex-direction: column; gap: 8px; z-index: 2;">
       <span class="plaque ink num">7 ноября 1967</span>
     </div>
-    <div style="position: absolute; left: 117px; top: 70px;">
+    <div style="position: absolute; left: 117px; top: 70px; -webkit-mask-image: linear-gradient(90deg, transparent, #000000 14%, #000000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000000 14%, #000000 86%, transparent);">
       <dc-import name="Tower" preset="harbor" width="900" scale="0.32" sky="{{no}}" hint-size="288px,632px"></dc-import>
     </div>
     <figcaption style="position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 32px 28px; background: var(--paper-ink); display: flex; flex-direction: column; gap: 8px;">
-      <span class="disp" style="font-size: 54px; line-height: 1; color: var(--paper);">Гавань</span>
+      <span class="disp" style="margin-left: -.15em; font-size: 54px; line-height: 1; color: var(--paper);">Гавань</span>
       <span class="num" style="font-size: 18px; color: var(--paper); letter-spacing: .04em;">Седьмое ноября. 20 дней. 41 выживший.</span>
       <span class="serif" style="font-size: 17px; font-style: italic; color: var(--ochre);">Вас запомнят как милосердного.</span>
     </figcaption>
@@ -34,9 +34,9 @@
   <!-- Итог прохождения -->
   <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 22px;">
     <span class="plaque" style="align-self: flex-start;">Концовка · 1 из 6</span>
-    <p class="serif" style="margin: 0; max-width: 46ch; font-size: 23px; line-height: 1.5; font-style: italic;">Мосты Гавани скрипят, принимая Седьмую. На причале женщина в лётной куртке кричит имя Льва. Внизу туман всё ещё поднимается, но теперь у него четыре башни против одной.</p>
+    <p class="serif" style="margin: 0; max-width: 54ch; font-size: 17px; line-height: 1.6;">Мосты Гавани скрипят, принимая Седьмую. На причале женщина в лётной куртке кричит имя Льва. Внизу туман всё ещё поднимается, но теперь у него четыре башни против одной.</p>
 
-    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
+    <div style="margin-top: 18px; padding-top: 24px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
       <section style="display: flex; flex-direction: column; gap: 10px;">
         <span class="lbl">Ключевые решения</span>
         <div style="display: grid; grid-template-columns: 54px 1fr; gap: 10px 12px; font-size: 15px; line-height: 1.35;">
@@ -58,7 +58,7 @@
       </section>
     </div>
 
-    <section style="display: flex; flex-direction: column; gap: 10px;">
+    <section style="margin-top: 10px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px;">
       <span class="lbl">Пути, которые закрылись</span>
       <div style="display: flex; flex-wrap: wrap; gap: 8px;">
         <span style="padding: 6px 12px; border: 1px dashed var(--line); color: var(--muted); font-size: 14px; text-decoration: line-through;">Жертва · ключ не нашли в день 17</span>
