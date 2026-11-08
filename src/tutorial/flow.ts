@@ -17,10 +17,13 @@ export function stepCount(steps: readonly TutorialStep[], id: string): string | 
 }
 
 /**
- * У шага-действия кнопки «Понятно» нет: карточку закрывает само действие. Исключение — выбор ответа
- * в окне события: окно держит Tab внутри себя, поэтому кнопка есть, а выбор тоже закрывает шаг.
+ * Кнопка «Понятно» есть у шагов для чтения и у тех, где действие — выбор игрока, а не обязанность:
+ * выбор ответа (окно события держит Tab внутри себя), стройка и режим двигателя (можно не строить и
+ * оставить режим — тогда шаг не должен держать сценарий дня до вечера). Действие закрывает шаг с
+ * «Получилось». Без кнопки — переход по вкладке и конец дня: их делают все.
  */
-export const hasOk = (step: TutorialStep) => step.done === 'ok' || step.done === 'choice';
+const OK_DONE: readonly TutorialStep['done'][] = ['ok', 'choice', 'built', 'mode'];
+export const hasOk = (step: TutorialStep) => OK_DONE.includes(step.done);
 
 export interface StepCard {
   title?: string;

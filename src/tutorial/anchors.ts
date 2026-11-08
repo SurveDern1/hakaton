@@ -44,6 +44,16 @@ export const ANCHOR_SELECTORS: Record<TutorialAnchor, readonly string[]> = {
   end_warn: ['.panel-warn'],
 };
 
+/**
+ * Что карточка обходит, кроме своей цели: лист меню стройки и табличка «Мгла ниже на N м» (src/main.ts).
+ * Строка статуса стоит над карточкой (tutorial.css), а реплика персонажа — повод подождать с новой
+ * карточкой (index.ts, REPLY_SELECTOR): от коротких плашек карточка не прыгает.
+ */
+export const AVOID_SELECTORS: readonly string[] = ['.bmenu:not([hidden])', '#ui > .mist-below.is-on'];
+
+/** Реплика персонажа после ответа (src/ui/event-window.ts): пока она видна, новая карточка ждёт. */
+export const REPLY_SELECTOR = '.ev-reply:not(.is-leaving)';
+
 /** Селекторы якоря с подстановкой: `{mistTier}` → номер яруса; нет яруса — селектор отбрасывается. */
 export function anchorSelectors(name: string, vars: { mistTier?: number | null } = {}): string[] {
   const list = ANCHOR_SELECTORS[name as TutorialAnchor];

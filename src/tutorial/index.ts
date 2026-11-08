@@ -15,7 +15,7 @@
 import { type GameData, isTierInMist } from '../core';
 import type { GameLoop } from '../game/loop';
 import type { GameStore } from '../game/store';
-import { findAnchor, queryAnchor } from './anchors';
+import { AVOID_SELECTORS, findAnchor, queryAnchor, REPLY_SELECTOR } from './anchors';
 import { type Coach, type CoachSample, mountCoach } from './coach';
 import { flowSteps, stepCard, viewKey, WELCOME_ID } from './flow';
 import { buildMemo } from './memo';
@@ -85,7 +85,12 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
   const steps = flowSteps(file.steps);
   const welcomeStep = file.steps.find((s) => s.id === WELCOME_ID) ?? null;
   const frame = opts.frame ?? document.getElementById('app') ?? document.body;
-  const coach = mountCoach(root, { frame, voice: file.speaker.name, labels: file.labels });
+  const coach = mountCoach(root, {
+    frame,
+    voice: file.speaker.name,
+    labels: file.labels,
+    avoid: [...AVOID_SELECTORS],
+  });
   const memoWindow: MemoWindow = mountMemoWindow(root, file.speaker.name);
 
   let persist = true;
@@ -119,7 +124,8 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
       eventOpen: !!q('.ev-layer:not(.is-leaving):not(.report-layer)'),
       reportShown: !!q('.ev-layer:not(.is-leaving) .ev-report, .report-layer .report-list'),
       memoryHint: !!q('.ev-layer:not(.is-chosen) .hint.memory'),
-      lockedChoice: !!q('.ev-layer:not(.is-chosen) .ev-choice.is-locked'),
+      // Замок с причиной у обоих: is-locked — нужны прошлые решения, is-off — не хватает ресурсов.
+      lockedChoice: !!q('.ev-layer:not(.is-chosen) .ev-choice.is-off'),
     };
   }
 
@@ -221,6 +227,11 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
     clearPending();
     const timer = window.setTimeout(() => {
       pending = null;
+      // Реплика персонажа внизу ещё видна — карточка подождёт, чтобы не лечь на неё и не прыгать.
+      if (root.querySelector(REPLY_SELECTOR)) {
+        schedule();
+        return;
+      }
       const now = progress.on ? currentStep(steps, progress, context()) : null;
       if (now && viewKey(now.step, now.view) === key && !welcoming && !confirming)
         display(now.step, now.view);

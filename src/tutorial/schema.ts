@@ -148,8 +148,11 @@ export interface TutorialFile {
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const PLACEHOLDER = /\{([^{}]*)\}/g;
-/** Длина текста карточки: около трёх строк на 390 px. */
-export const MAX_TEXT = 160;
+/**
+ * Длина текста карточки: не больше трёх строк на телефоне 390 px (карточка 340 px). Замер на живом
+ * экране: 110 знаков — три строки, 125 — уже четыре.
+ */
+export const MAX_TEXT = 115;
 const REQUIRES_KEYS = [
   'flags',
   'notFlags',

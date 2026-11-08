@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../core';
 import { applyChoice, build, createInitialState, gameData, runNight, setEngineMode } from '../core';
 import { PORTRAITS } from '../ui/portraits';
+import { flowSteps, hasOk } from './flow';
 import {
   buildContext,
   currentStep,
@@ -117,7 +118,7 @@ describe('сценарий первых дней', () => {
       p = markDone(p, id);
     };
 
-    // Утро 1: приветствие до окна, затем стрелки и ⧗ в окне события.
+    // Утро 1: приветствие до окна, затем стрелки и ⧗ одной карточкой в окне события.
     expectStep(p, ctx(s, 'morning'), 'welcome', 'center');
     ok('welcome');
     expect(shown(p, ctx(s, 'morning'))).toBeNull();
@@ -125,9 +126,7 @@ describe('сценарий первых дней', () => {
     expectStep(p, ev, 'event_arrows', 'event_arrows');
     s = applyChoice(s, data, 'd01_first_morning', 0).state;
     act('event_arrows', ev, ctx(s, 'morning', { eventOpen: true, memoryHint: true }));
-    const ev2 = ctx(s, 'morning', { eventOpen: true, memoryHint: true });
-    expectStep(p, ev2, 'event_memory', 'event_memory');
-    ok('event_memory');
+    expect(shown(p, ctx(s, 'morning', { eventOpen: true, memoryHint: true }))).toBeNull();
 
     // День 1, телефон.
     const phone = { layout: 'phone' as const };
@@ -143,12 +142,11 @@ describe('сценарий первых дней', () => {
     s = built.state;
     act('build', open, ctx(s, 'day', phone));
 
+    // Двигатель на телефоне: сперва «откройте вкладку Ночь», на ней — режимы.
     const statsTab = ctx(s, 'day', { ...phone, tab: 'stats' });
-    expectStep(p, statsTab, 'night_tab', 'tab_night');
+    expectStep(p, statsTab, 'engine', 'tab_night');
     const nightTab = ctx(s, 'day', { ...phone, tab: 'night' });
-    act('night_tab', statsTab, nightTab);
     expectStep(p, nightTab, 'engine', 'engine_modes');
-    expect(shown(p, statsTab)?.view.target).toBe('tab_night');
     s = setEngineMode(s, 'climb');
     act('engine', nightTab, ctx(s, 'day', { ...phone, tab: 'night' }));
     const evening = ctx(s, 'day', { ...phone, tab: 'night' });
@@ -178,29 +176,54 @@ describe('сценарий первых дней', () => {
     ok('factions');
     expectStep(p, wide, 'decrees', 'decrees');
     ok('decrees');
+    // Не больше пяти карточек сценария за день (без приветствия).
+    const perDay = new Map<number, number>();
+    for (const st of flowSteps(steps).filter((x) => x.chain === 'first')) {
+      const d = st.when?.minDay ?? 1;
+      perDay.set(d, (perDay.get(d) ?? 0) + 1);
+    }
+    for (const n of perDay.values()) expect(n).toBeLessThanOrEqual(5);
     expect(firstChainIds(steps).every((id) => p.done.includes(id))).toBe(true);
   });
 
   it('пропущенный шаг дня не всплывает в другой день', () => {
     const s = { ...createInitialState(b, 'skip'), day: 2 };
-    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'event_memory', 'night_report'] };
+    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'night_report'] };
     expect(shown(p, ctx(s, 'day'))?.step.id).toBe('mist');
   });
 
   it('продолжение посреди дня 1 показывает незаконченный шаг', () => {
     const s = createInitialState(b, 'resume');
-    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'event_memory', 'hud_resources'] };
+    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'hud_resources'] };
     const raw = JSON.stringify(p);
     expect(shown(parseProgress(raw), ctx(s, 'day'))?.step.id).toBe('build');
   });
 
-  it('на широкой раскладке шага про вкладку «Ночь» нет, двигатель — сразу', () => {
+  it('на широкой раскладке вкладок нет: двигатель сразу у режимов', () => {
     const s = createInitialState(b, 'wide');
-    const p = {
-      ...resetProgress(),
-      done: ['welcome', 'event_arrows', 'event_memory', 'hud_resources', 'build'],
-    };
-    expect(shown(p, ctx(s, 'day', { layout: 'wide' }))?.step.id).toBe('engine');
+    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'hud_resources', 'build'] };
+    expect(shown(p, ctx(s, 'day', { layout: 'wide' }))?.view.target).toBe('engine_modes');
+  });
+
+  it('вкладка открыта не по порядку — шаг про неё, а не «откройте другую»', () => {
+    const s = { ...createInitialState(b, 'tabs'), day: 3 };
+    const p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'night_report'] };
+    const phone = { layout: 'phone' as const };
+    expectStep(p, ctx(s, 'day', phone), 'stats', 'tab_stats');
+    expectStep(p, ctx(s, 'day', { ...phone, tab: 'decrees' }), 'decrees', 'decrees');
+    expectStep(p, ctx(s, 'day', { ...phone, tab: 'stats' }), 'stats', 'stats');
+  });
+
+  it('без стройки и смены режима день 1 не застревает: у шагов есть «Понятно»', () => {
+    const s = createInitialState(b, 'lazy');
+    let p = { ...resetProgress(), done: ['welcome', 'event_arrows', 'hud_resources'] };
+    const day = ctx(s, 'day', { layout: 'wide' });
+    for (const id of ['build', 'engine']) {
+      expect(shown(p, day)?.step.id).toBe(id);
+      expect(hasOk(step(id))).toBe(true);
+      p = markDone(p, id);
+    }
+    expect(shown(p, day)?.step.id).toBe('end_day');
   });
 
   it('выключено — ни одного шага', () => {
@@ -268,9 +291,6 @@ describe('подсказки по случаю', () => {
     expect(isDone(step('hud_resources'), day, ctx(s, 'night'))).toBe(false);
     expect(isDone(step('end_day'), day, ctx(s, 'day', { menuOpen: true }))).toBe(false);
     expect(isDone(step('engine'), day, ctx(setEngineMode(s, 'hold'), 'day'))).toBe(false);
-    expect(isDone(step('night_tab'), ctx(s, 'day', { tab: 'night' }), ctx(s, 'day', { tab: 'night' }))).toBe(
-      false,
-    );
   });
 });
 

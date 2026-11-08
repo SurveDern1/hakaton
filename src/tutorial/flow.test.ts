@@ -42,8 +42,9 @@ describe('карточка шага', () => {
     expect(stepCount(steps, 'alarm')).toBeUndefined();
   });
 
-  it('шаг-действие без «Понятно», выбор ответа и чтение — с ней', () => {
-    expect(hasOk(step('build'))).toBe(false);
+  it('«Понятно» у чтения и у необязательного действия, у вкладки и конца дня — нет', () => {
+    expect(hasOk(step('build'))).toBe(true);
+    expect(hasOk(step('engine'))).toBe(true);
     expect(hasOk(step('end_day'))).toBe(false);
     expect(hasOk(step('event_arrows'))).toBe(true);
     expect(hasOk(step('hud_resources'))).toBe(true);
@@ -57,7 +58,7 @@ describe('карточка шага', () => {
     expect(card.text).not.toMatch(/[{}]/);
     expect(card.text).toContain(String(gameData.balance.engine.modes.climb.altitude));
     expect(card.voice).toBe(tutorialFile.speaker.name);
-    expect(card.ok).toBe(false);
+    expect(card.ok).toBe(tutorialFile.labels.ok);
     expect(viewKey(s, view)).toBe('engine#0');
   });
 

@@ -199,6 +199,8 @@ export function mountCoach(root: HTMLElement, opts: CoachOptions = {}): Coach {
     for (const sel of avoidSel)
       for (const a of document.querySelectorAll(sel)) {
         if (a === targetEl || a.contains(targetEl) || card.contains(a)) continue;
+        // Табличку «Мгла ниже» прячут прозрачностью (лист стройки, раскрытая панель) — её не обходим.
+        if (Number(getComputedStyle(a).opacity) < 0.05) continue;
         avoid.push(relRect(a.getBoundingClientRect(), frameRect));
       }
     const key = JSON.stringify(avoid);

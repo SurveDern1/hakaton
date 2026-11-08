@@ -152,11 +152,19 @@ export function currentStep(
 ): { step: TutorialStep; view: TutorialView } | null {
   if (!progress.on || (ctx.phase !== 'morning' && ctx.phase !== 'day')) return null;
   const done = new Set(progress.done);
+  const first: { step: TutorialStep; view: TutorialView }[] = [];
   for (const step of steps) {
     if (step.chain !== 'first' || done.has(step.id) || !eligible(step, ctx)) continue;
     const view = pickView(step, ctx);
-    if (view) return { step, view };
+    if (view) first.push({ step, view });
   }
+  // Игрок открыл вкладку не по порядку: вместо «Откройте вкладку X» — шаг про открытую вкладку.
+  const head = first[0];
+  if (head?.view.target.startsWith('tab_') && ctx.ui.tab) {
+    const here = first.find((c) => c.view.ui === `tab:${ctx.ui.tab}`);
+    if (here) return here;
+  }
+  if (head) return head;
   if (ctx.phaseTip) {
     const step = steps.find((s) => s.id === ctx.phaseTip);
     if (!step || done.has(step.id) || step.phase !== ctx.phase) return null;
