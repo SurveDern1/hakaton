@@ -8,13 +8,14 @@
 import { Ambience, type AmbienceOpts } from './ambience';
 import { AudioEngine, type DuckBus } from './audio';
 import './lab.css';
+import { playCalendar, playLever, playTierDrop } from './events';
 import { checkMetrics, encodeWav, measureChannels, type SoundMetrics } from './metrics';
-import { type Music, scheduleTheme, THEMES, type ThemeName } from './music';
+import { type Music, marchDrum, scheduleTheme, THEMES, type ThemeName } from './music';
 import { playSample, preloadSamples, SAMPLE_NAMES, SAMPLES, type SampleName } from './samples';
-import { playSfx, SFX_NAMES } from './sfx';
-import { type AmbPhase, type AmbTargets, type SoundInput, soundscape } from './soundscape';
+import { playSfx, SFX_NAMES, type SfxName } from './sfx';
+import { type AmbMoment, type AmbPhase, type AmbTargets, type SoundInput, soundscape } from './soundscape';
 
-type Group = 'sfx' | 'sample' | 'theme' | 'amb';
+type Group = 'sfx' | 'event' | 'sample' | 'theme' | 'amb';
 
 export interface LabItem {
   id: string;
@@ -91,8 +92,14 @@ function ambScene(
   s: Partial<Omit<LabState, 'phase'>> & { phase?: AmbPhase },
   limits: LabItem['limits'],
   layers?: Layers,
+  moment?: AmbMoment,
 ): LabItem {
-  const targets = soundscape(labInput({ ...DAY, ...s, phase: 'day' }), s.phase ?? DAY.phase);
+  const targets = soundscape(
+    labInput({ ...DAY, ...s, phase: 'day' }),
+    s.phase ?? DAY.phase,
+    undefined,
+    moment,
+  );
   return {
     id: `amb:${id}`,
     group: 'amb',
@@ -122,12 +129,52 @@ function ambItems(): LabItem[] {
     ambScene('lowEther', { aether: 0.15 }, full),
     ambScene('mistNear', { mistGap: 4 }, full),
     ambScene('night', { phase: 'night', mistGap: 8 }, full),
+    // Срез 4: подъём Мглы ночью и тон финала (двигатель и Мгла молчат, ветер остаётся)
+    ambScene('nightRise', { phase: 'night', mistGap: 30 }, full, undefined, { rising: true }),
+    ambScene('final@win', { phase: 'final' }, { lufs: FINAL_LUFS }, undefined, { verdict: 'win' }),
+    ambScene('final@lose', { phase: 'final' }, { lufs: FINAL_LUFS }, undefined, { verdict: 'lose' }),
     ambScene('engine@save', { mode: 'save' }, engine, ONLY_ENGINE),
     ambScene('engine@hold', {}, engine, ONLY_ENGINE),
     ambScene('engine@climb', { mode: 'climb' }, engine, ONLY_ENGINE),
     ambScene('engine@lowEther', { aether: 0.15 }, engine, ONLY_ENGINE),
     ambScene('wind@day', {}, wind, ONLY_WIND),
     ambScene('wind@night', { phase: 'night' }, wind, ONLY_WIND),
+  ];
+}
+
+/** Финал тише дневного фона: остаётся один ветер. */
+const FINAL_LUFS: [number, number] = [-42, -26];
+
+/** Удары, которые должны быть слышны на динамике телефона: доля энергии выше 150 Гц. */
+export const HIT_HIGH_MIN = 0.3;
+const HITS: SfxName[] = ['choice', 'final', 'tierDrop', 'lever'];
+
+/** Звуки событий целиком (файл + синтез): сброс яруса, листок календаря, рычаг; барабан марша отдельно. */
+function eventItems(): LabItem[] {
+  const ev = (id: string, schedule: LabItem['schedule'], limits?: LabItem['limits']): LabItem => ({
+    id: `event:${id}`,
+    group: 'event',
+    kind: 'oneshot',
+    seconds: ONESHOT_SECONDS,
+    prepare: (e) => preloadSamples(e),
+    schedule,
+    limits,
+  });
+  const hit = { highMin: HIT_HIGH_MIN };
+  return [
+    ev('tierDrop', (e) => playTierDrop(e, 2), hit),
+    ev('calendar', (e) => playCalendar(e)),
+    ev('calendarRed', (e) => playCalendar(e, true)),
+    ev('lever@up', (e) => playLever(e, 1), hit),
+    ev('lever@down', (e) => playLever(e, -1), hit),
+    ev(
+      'marchDrum',
+      (e) => {
+        const ctx = e.ctx;
+        if (ctx) marchDrum(e, ctx.currentTime + 0.01, e.musicBus);
+      },
+      hit,
+    ),
   ];
 }
 
@@ -157,8 +204,10 @@ export function labItems(): LabItem[] {
         kind: 'oneshot',
         seconds: ONESHOT_SECONDS,
         schedule: (e) => playSfx(e, name),
+        ...(HITS.includes(name) ? { limits: { highMin: HIT_HIGH_MIN } } : {}),
       }),
     ),
+    ...eventItems(),
     {
       id: 'sfx:build@left',
       group: 'sfx',
@@ -369,6 +418,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
   // ---- Кнопки звуков ----
   const GROUPS: [Group, string][] = [
     ['sfx', 'Звуки действий'],
+    ['event', 'События (файл + синтез)'],
     ['sample', 'Файлы (# — фрагмент; нет файла — замена)'],
     ['theme', 'Музыка'],
     ['amb', 'Фоны'],

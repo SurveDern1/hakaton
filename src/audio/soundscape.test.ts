@@ -3,6 +3,7 @@ import { createInitialState, gameData } from '../core';
 import { saturation } from './ambience';
 import {
   type AmbUi,
+  endingVerdict,
   MIST_NIGHT,
   mistNearness,
   NO_UI,
@@ -135,5 +136,43 @@ describe('saturation', () => {
     expect(c[100]).toBeCloseTo(1, 6);
     expect(c[50]).toBeCloseTo(0, 6);
     for (let i = 1; i < c.length; i++) expect(c[i] as number).toBeGreaterThan(c[i - 1] as number);
+  });
+});
+
+describe('soundscape: события сцены', () => {
+  it('подъём Мглы ночью — шорох громче и ярче даже вдали, днём подъёма нет', () => {
+    const far = at({ mistGap: 60 });
+    const night = soundscape(far, 'night').mist;
+    const rise = soundscape(far, 'night', NO_UI, { rising: true }).mist;
+    expect(night.gain).toBe(0);
+    expect(rise.gain).toBeGreaterThan(0.3);
+    expect(rise.open).toBeGreaterThan(night.open);
+    expect(rise.whisper).toBeGreaterThan(0);
+    const near = at({ mistGap: 3 });
+    expect(soundscape(near, 'night', NO_UI, { rising: true }).mist.gain).toBeGreaterThan(
+      soundscape(near, 'night').mist.gain,
+    );
+    expect(soundscape(far, 'day', NO_UI, { rising: true }).mist).toEqual(soundscape(far, 'day').mist);
+  });
+
+  it('финал: двигатель и Мгла молчат, ветер остаётся; погибли — тише и глуше, выжили — мягче', () => {
+    const win = soundscape(DAY, 'final', NO_UI, { verdict: 'win' });
+    const lose = soundscape(DAY, 'final', NO_UI, { verdict: 'lose' });
+    const plain = soundscape(DAY, 'final');
+    for (const t of [win, lose, plain]) {
+      expect(t.engine.gain).toBe(0);
+      expect(t.mist.gain).toBe(0);
+      expect(t.wind.gain).toBeGreaterThan(0);
+      expect(t.fade).toBeGreaterThanOrEqual(1);
+    }
+    expect(lose.wind.gain).toBeLessThan(win.wind.gain);
+    expect(lose.wind.center).toBeLessThan(win.wind.center);
+    expect(win.wind.gust).toBeLessThan(plain.wind.gust);
+  });
+
+  it('итог концовки берётся из endings.json', () => {
+    const s = createInitialState(gameData.balance, 1);
+    const v = endingVerdict({ ...s, day: gameData.balance.calendar.days, ending: 'hold' }, gameData);
+    expect(['win', 'lose']).toContain(v);
   });
 });

@@ -9,7 +9,7 @@
 // final — гимн-марш в до-миноре: медные аккорды, литавры, в конце петли мажорный аккорд.
 // Смена темы — кроссфейд CROSSFADE секунд; под всеми темами тихий ламповый шум и потрескивание.
 import { type AudioEngine, makeRandom, midiToHz, ramp } from './audio';
-import { bell, noise, organ, tone } from './synth';
+import { bell, noise, organ, thump, tone } from './synth';
 
 export type ThemeName = 'waltz' | 'march' | 'wind' | 'night' | 'final';
 
@@ -151,7 +151,7 @@ function makeThemes(): Record<ThemeName, Theme> {
         if (b.beat === 0 || b.beat === 2) {
           // «раз» и «три»: бас (на «три» — квинта) и большой барабан
           organ(e, midiToHz(chord.bass + (b.beat === 2 ? 7 : 0)), t, spb * 0.8, 0.07, out, 0.2);
-          tone(e, { freq: 62, to: 45, t, dur: 0.02, release: 0.25, gain: 0.16, dest: out });
+          marchDrum(e, t, out);
         } else {
           for (const n of chord.notes)
             tone(e, {
@@ -494,3 +494,9 @@ export function scheduleTheme(e: AudioEngine, name: ThemeName, seconds: number, 
 }
 
 export const THEMES: ThemeName[] = ['waltz', 'march', 'wind', 'night', 'final'];
+
+/** Большой барабан марша: низ 62→45 Гц для наушников и тело 170 Гц со щелчком — слышно на телефоне. */
+export function marchDrum(e: AudioEngine, t: number, out: AudioNode): void {
+  tone(e, { freq: 62, to: 45, t, dur: 0.02, release: 0.22, gain: 0.08, dest: out });
+  thump(e, t, out, 0.13, 180, 0.2);
+}

@@ -10,19 +10,25 @@
 // Фон (ambience.ts) живёт с первого жеста: фаза, состояние и открытые окна → soundscape → Ambience.set;
 // start — только ветер, day/morning/night — всё, final — затухание за 3 с, ветер остаётся.
 // Окно события, стенгазета, комикс и итог приглушают фон через engine.duck('amb').
+// События (срез 4 плана звука, events.ts): рычаг двигателя и стройка со стороны слота — по stateCues;
+// сброс яруса — playTierDrop в такт падению; листок календаря — в кадр с классом is-turn у .hud-leaf
+// (причина calendar/calendarRed из stateCues ждёт его, без HUD — через CAL_WAIT); подъём Мглы — первое
+// изменение состояния ночью (commit() в src/ui/night.ts) даёт фону rising на T_RISE; финал — тон по verdict.
 
 import { gameData } from '../core';
 import type { GameLoop, Phase } from '../game/loop';
 import type { GameStore } from '../game/store';
 import { Ambience, playGust } from './ambience';
 import { AudioEngine, type AudioSettings } from './audio';
-import { stateCues } from './cues';
+import { type Cue, stateCues } from './cues';
+import { playCalendar, playLever, playTierDrop } from './events';
 import type { Lab } from './lab';
 import { Music } from './music';
 import { preloadSamples } from './samples';
 import { openSettings } from './settings-window';
 import { playSfx, type SfxName } from './sfx';
-import { type AmbUi, soundInputFromState, soundscape } from './soundscape';
+import { type AmbMoment, type AmbUi, endingVerdict, soundInputFromState, soundscape } from './soundscape';
+import { vary } from './synth';
 import './audio.css';
 
 export interface SoundControls {
@@ -44,6 +50,10 @@ export interface SoundControls {
 /** Пауза между всплывающими числами, с: пачка чисел звучит как короткая россыпь, а не аккорд. */
 const FLOAT_GAP = 0.07;
 const FLOAT_MAX = 5;
+/** Подъём Мглы ночью, мс: как T_RISE в src/ui/night.ts (переход сцены на commit()). */
+const MIST_RISE_MS = 1300;
+/** Сколько ждать класса is-turn у листка, прежде чем сыграть отрыв без него, мс. */
+const CAL_WAIT = 700;
 
 export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: GameLoop }): SoundControls {
   const engine = new AudioEngine();
@@ -65,10 +75,11 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
 
   // ---- Фон: цели из состояния, фазы и окон; приглушение под окнами ----
   let ui: AmbUi = { event: false, paper: false, comic: false, verdict: false };
+  let moment: AmbMoment = {};
   let duckDb = 0;
   let releaseDuck: (() => void) | null = null;
   const refreshAmbience = () => {
-    const t = soundscape(soundInputFromState(opts.store.state, gameData.balance), phase, ui);
+    const t = soundscape(soundInputFromState(opts.store.state, gameData.balance), phase, ui, moment);
     ambience.set(t);
     if (t.duckDb !== duckDb) {
       duckDb = t.duckDb;
@@ -81,9 +92,14 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     refreshAmbience();
   });
   let pendingTierUp = false;
+  let risen = false;
+  let riseTimer = 0;
   opts.loop.onPhase((next) => {
     const prev = phase;
     phase = next;
+    risen = false;
+    window.clearTimeout(riseTimer);
+    moment = next === 'final' ? { verdict: endingVerdict(opts.store.state, gameData) } : {};
     if (next === 'night') {
       play('night');
       music.set('night');
@@ -111,16 +127,52 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   });
 
   // ---- Действия дня по разнице состояний ----
+  /** Листок календаря ждёт кадра с анимацией (is-turn): red — красный день. */
+  let pendingLeaf: { red: boolean; timer: number } | null = null;
+  const playLeaf = () => {
+    if (!pendingLeaf) return;
+    window.clearTimeout(pendingLeaf.timer);
+    playCalendar(engine, pendingLeaf.red);
+    pendingLeaf = null;
+  };
+  const onCue = (cue: Cue) => {
+    switch (cue.name) {
+      case 'tierUp':
+        if (phase === 'night') pendingTierUp = true;
+        else play('tierUp');
+        return;
+      case 'tierDrop':
+        return playTierDrop(engine, cue.tier);
+      case 'calendar':
+      case 'calendarRed':
+        if (pendingLeaf) window.clearTimeout(pendingLeaf.timer);
+        pendingLeaf = { red: cue.name === 'calendarRed', timer: window.setTimeout(playLeaf, CAL_WAIT) };
+        return;
+      case 'lever':
+        return playLever(engine, cue.dir);
+      case 'build':
+      case 'demolish':
+        return playSfx(engine, cue.name, 0, { pan: cue.pan, gain: vary(engine.rnd, 10) });
+      default:
+        play(cue.name);
+    }
+  };
   let last = opts.store.state;
   opts.store.subscribe((s) => {
     const prev = last;
     last = s;
+    // Первое изменение ночью — commit() анимации ночи: Мгла поднимается за T_RISE
+    if (phase === 'night' && prev !== s && !risen) {
+      risen = true;
+      moment = { rising: true };
+      riseTimer = window.setTimeout(() => {
+        moment = {};
+        refreshAmbience();
+      }, MIST_RISE_MS);
+    }
     refreshAmbience();
     if (phase === 'start' || phase === 'final') return;
-    for (const cue of stateCues(prev, s)) {
-      if (cue === 'tierUp' && phase === 'night') pendingTierUp = true;
-      else play(cue);
-    }
+    for (const cue of stateCues(prev, s, gameData.balance.calendar.days)) onCue(cue);
   });
 
   // ---- Слой интерфейса: окна, числа, стенгазета ----
@@ -167,7 +219,8 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
         for (const n of r.addedNodes) if (n instanceof Element) onAdded(n);
       } else if (r.target instanceof Element) {
         const t = r.target;
-        if (t.classList.contains('ev-layer') && t.classList.contains('is-chosen') && !stamped.has(t)) {
+        if (t.classList.contains('hud-leaf') && t.classList.contains('is-turn')) playLeaf();
+        else if (t.classList.contains('ev-layer') && t.classList.contains('is-chosen') && !stamped.has(t)) {
           stamped.add(t);
           play('choice');
         }

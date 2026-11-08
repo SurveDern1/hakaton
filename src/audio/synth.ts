@@ -195,3 +195,48 @@ export function bell(e: AudioEngine, freq: number, t: number, gain: number, dest
     tone(e, { freq: freq * mul, t, dur: 0.01, attack: 0.004, release: len, gain: gain * amp, dest, send });
   }
 }
+
+/**
+ * Удар, слышный на телефоне: щелчок атаки и тело `body` Гц (150–400 Гц), низ под ним — для наушников.
+ * `long` — длина тела, с.
+ */
+export function thump(
+  e: AudioEngine,
+  t: number,
+  out: AudioNode,
+  gain: number,
+  body: number,
+  long = 0.16,
+): void {
+  noise(e, {
+    t,
+    dur: 0.004,
+    release: 0.02,
+    gain: gain * 0.7,
+    dest: out,
+    filter: 'bandpass',
+    freq: 3000,
+    q: 1.2,
+  });
+  tone(e, {
+    type: 'triangle',
+    freq: body * 1.4,
+    to: body,
+    t,
+    dur: 0.012,
+    release: long,
+    gain,
+    dest: out,
+    send: 0.2,
+  });
+  noise(e, {
+    t,
+    dur: 0.02,
+    release: long * 0.8,
+    gain: gain * 0.5,
+    dest: out,
+    filter: 'bandpass',
+    freq: body * 1.2,
+    q: 1.5,
+  });
+}

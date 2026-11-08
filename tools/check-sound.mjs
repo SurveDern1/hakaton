@@ -200,6 +200,32 @@ async function run() {
       `«Набирать высоту»: тон ${fmt(hold.f0)} → ${fmt(climb.f0)} Гц, срез ${fmt(hold.cutoff, 0)} → ${fmt(climb.cutoff, 0)} Гц за 1,5 с`,
     );
 
+    // 4б. События в игре (срез 4): рычаг, листок календаря в кадр с is-turn, сброс яруса в такт падению
+    const played = () => client.eval('window.sedmaya.sound.engine.played.map(([n, t]) => [n, t])');
+    const lever = (await played()).some(([n]) => n === 'sample:lever' || n === 'lever');
+    step(lever, 'смена режима двигателя — рычаг (lever)');
+    await client.eval('window.sedmaya.store.dispatch((s) => ({ ...s, day: s.day + 1 }))');
+    // меньше CAL_WAIT (700 мс в index.ts): звук должен прийти по is-turn, а не по запасному таймеру
+    await sleep(350);
+    const leaf = await client.eval(`({
+      turn: !!document.querySelector('.hud-leaf.is-turn'),
+      played: window.sedmaya.sound.engine.played.some(([n]) => n === 'sample:paperTear' || n === 'paper'),
+    })`);
+    step(leaf.turn && leaf.played, `новый день — листок отрывается со звуком (is-turn ${leaf.turn})`);
+    await client.eval(
+      'window.sedmaya.store.dispatch((s) => ({ ...s, tiers: s.tiers.slice(0, Math.max(1, s.tiers.length - 1)) }))',
+    );
+    await sleep(300);
+    const drop = await played();
+    const start = drop.findLast(([n]) => n === 'tierDrop')?.[1];
+    const thud = drop.findLast(([n]) => n === 'tierDrop:thud')?.[1];
+    const fallMs = 1100; // FALL_MS в src/scenes/tower-dom.ts (тест audio.test.ts сверяет с DROP.fall)
+    const lag = start != null && thud != null ? thud - start - fallMs / 1000 : NaN;
+    step(
+      lag >= 0 && lag <= 0.6,
+      `сброс яруса: удар через ${fmt(lag * 1000, 0)} мс после конца падения (${fallMs} мс), нужно 0…600`,
+    );
+
     // 5. Лаборатория: рендер и метрики
     await client.send('Page.navigate', { url: `${base}?sound=lab` });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.lab'), 30000, 'лаборатория ?sound=lab');

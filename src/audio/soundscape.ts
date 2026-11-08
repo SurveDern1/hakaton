@@ -3,7 +3,14 @@
 // Порядок: index.ts (или лаборатория) → soundInputFromState(state, balance) → soundscape(вход, фаза, ui)
 // → Ambience.set(цели) (ambience.ts), где узлы плавно идут к целям.
 // Из баланса берутся только игровые величины (высота, ярус, Мгла); частоты и громкости звука — здесь.
-import { type Balance, type EngineMode, type GameState, isTierInMist } from '../core';
+import {
+  type Balance,
+  type EngineMode,
+  endingId,
+  type GameData,
+  type GameState,
+  isTierInMist,
+} from '../core';
 import { etherLevel } from '../scenes/tower-model';
 
 /** Фаза игрового цикла (как Phase в src/game/loop.ts). */
@@ -22,6 +29,14 @@ export interface AmbUi {
 }
 
 export const NO_UI: AmbUi = { event: false, paper: false, comic: false, verdict: false };
+
+/** События сцены поверх фазы: подъём Мглы ночью, тон концовки в финале. */
+export interface AmbMoment {
+  /** Мгла поднимается (ночь, от commit() до конца T_RISE): шорох и шёпот нарастают. */
+  rising?: boolean;
+  /** Итог партии (verdict концовки): `win` — ветер мягче, `lose` — тише и глуше. */
+  verdict?: 'win' | 'lose';
+}
 
 /** Игровые величины, от которых зависит фон. Лаборатория задаёт их ползунками. */
 export interface SoundInput {
@@ -108,6 +123,8 @@ export const STUTTER_BELOW = 0.5;
 export const MIST_RANGE_TIERS = 2;
 /** Ночью Мгла громче во столько раз. */
 export const MIST_NIGHT = 1.5;
+/** Пока Мгла поднимается, она ещё громче и ближе: хотя бы такая близость. */
+export const MIST_RISE_NEAR = 0.6;
 /** Средний интервал скрипов спокойной башни, с. */
 const CREAK_BASE = 30;
 const CREAK_MIN = 5;
@@ -131,6 +148,12 @@ export function soundInputFromState(state: GameState, balance: Balance): SoundIn
   };
 }
 
+/** Итог партии для тона финала: verdict концовки (как экран итога в main.ts); путь не выбран — «держаться». */
+export function endingVerdict(state: GameState, data: GameData): 'win' | 'lose' | undefined {
+  const id = (endingId(state, data) ?? endingId({ ...state, ending: 'hold' }, data))?.id;
+  return data.endings.endings.find((e) => e.id === id)?.verdict;
+}
+
 /** Близость Мглы 0..1: 0 — дальше MIST_RANGE_TIERS ярусов, 1 — у самого низа башни или ярус в Мгле. */
 export function mistNearness(input: SoundInput): number {
   if (input.tiersInMist > 0) return 1;
@@ -139,7 +162,12 @@ export function mistNearness(input: SoundInput): number {
 }
 
 /** Цели фона для состояния, фазы и открытых окон. */
-export function soundscape(input: SoundInput, phase: AmbPhase, ui: AmbUi = NO_UI): AmbTargets {
+export function soundscape(
+  input: SoundInput,
+  phase: AmbPhase,
+  ui: AmbUi = NO_UI,
+  moment: AmbMoment = {},
+): AmbTargets {
   const night = phase === 'night';
   const ether = clamp(Number.isFinite(input.ether) ? input.ether : 1, 0, 1);
   const h = clamp(input.heightFrac, 0, 1);
@@ -159,10 +187,13 @@ export function soundscape(input: SoundInput, phase: AmbPhase, ui: AmbUi = NO_UI
     wind.far = 0.4;
     wind.whistleEvery = 18;
   } else if (phase === 'final') {
-    wind.gain = 0.4;
-    wind.gust = 0.35;
-    wind.center = 380;
-    wind.far = 0.35;
+    // Тон концовки: выжили — ветер мягкий и ровный, погибли — тише, глуше и дальше
+    const lose = moment.verdict === 'lose';
+    const win = moment.verdict === 'win';
+    wind.gain = lose ? 0.28 : 0.4;
+    wind.gust = win ? 0.25 : lose ? 0.3 : 0.35;
+    wind.center = win ? 340 : lose ? 250 : 380;
+    wind.far = lose ? 0.5 : 0.35;
     wind.whistleEvery = Infinity;
   }
 
@@ -177,11 +208,13 @@ export function soundscape(input: SoundInput, phase: AmbPhase, ui: AmbUi = NO_UI
   };
 
   // Мгла: тишина вдали, ближе — громче и ярче, ночью в полную силу
-  const near = mistNearness(input);
+  // Подъём Мглы ночью: шорох нарастает, даже если она ещё не близко, шёпот в полную силу
+  const rising = night && !!moment.rising;
+  const near = rising ? Math.max(MIST_RISE_NEAR, mistNearness(input)) : mistNearness(input);
   const mist: MistTargets = {
-    gain: Math.min(1, 0.55 * near * (night ? MIST_NIGHT : 1)),
+    gain: Math.min(1, 0.55 * near * (night ? MIST_NIGHT : 1) * (rising ? 1.25 : 1)),
     open: 700 + 4300 * near,
-    whisper: near > 0 ? (night ? 0.9 : 0.45) * near : 0,
+    whisper: near > 0 ? (rising ? 1 : night ? 0.9 : 0.45) * near : 0,
     crackle: near * (night ? 1.6 : 0.8),
   };
 

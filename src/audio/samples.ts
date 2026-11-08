@@ -49,7 +49,7 @@ export const SAMPLES: Record<SampleName, SampleDef> = {
     gain: 1,
     fallback: 'paper',
   },
-  lever: { file: 'sounds/lever.mp3', gain: 0.6, fallback: 'click' },
+  lever: { file: 'sounds/lever.mp3', gain: 0.6, fallback: 'lever' },
   // Срез 6: голос «Всем! Всем! Всем!» (radio-vsem.mp3) — пока замена
   radioVoice: { gain: 0.8, fallback: 'eventOpen' },
 };

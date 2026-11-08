@@ -74,7 +74,7 @@ describe('замена, когда файла нет', () => {
     expect(playSample(e, 'lever', {}, manifest as typeof SAMPLES)).toBe('fallback');
     expect(await loadSample(e.ctx as AudioContext, 'sounds/none.mp3')).toBeNull();
     expect(playSample(e, 'lever', {}, manifest as typeof SAMPLES)).toBe('fallback');
-    expect(sfxCalls).toEqual(['click', 'click']);
+    expect(sfxCalls).toEqual(['lever', 'lever']);
   });
 });
 

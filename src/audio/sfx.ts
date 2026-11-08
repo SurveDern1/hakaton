@@ -1,7 +1,7 @@
 // Звуки действий. Всё синтезируется на лету; громкости — доли шины звуков (0..1), здесь, а не в балансе.
 // При prefers-reduced-motion громкие удары (обвал, падение яруса, финал) звучат мягче, но не пропадают.
 import { type AudioEngine, midiToHz } from './audio';
-import { bell, noise, organ, panTo, tone } from './synth';
+import { bell, noise, organ, panTo, thump, tone } from './synth';
 
 export type SfxName =
   | 'click'
@@ -23,7 +23,16 @@ export type SfxName =
   | 'hint'
   | 'page'
   | 'final'
-  | 'decree';
+  | 'decree'
+  | 'lever'
+  | 'calendarRed';
+
+/**
+ * Сброс яруса по времени, с от начала падения (FALL_MS = 1100 мс в src/scenes/tower-dom.ts; тест
+ * сверяет): стон металла — сразу, обрыв тросов, свист падения до конца падения, облегчённый скрип и
+ * взвыв двигателя, глухой удар далеко в Мгле — чуть позже конца падения (звук идёт снизу).
+ */
+export const DROP = { fall: 1.1, snap: 0.25, whistle: 0.3, relief: 1.3, thud: 1.6 } as const;
 
 const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -108,7 +117,8 @@ const SOUNDS: Record<SfxName, Sound> = {
   },
   // Выбор: удар печати по бумаге
   choice(e, t, out, soft) {
-    tone(e, { freq: 140, to: 55, t, dur: 0.03, release: 0.18, gain: 0.5 * soft, dest: out });
+    tone(e, { freq: 140, to: 55, t, dur: 0.03, release: 0.18, gain: 0.4 * soft, dest: out });
+    thump(e, t, out, 0.42 * soft, 280);
     noise(e, {
       t,
       dur: 0.02,
@@ -230,24 +240,58 @@ const SOUNDS: Record<SfxName, Sound> = {
     });
     bell(e, midiToHz(69), t + 0.48, 0.05 * soft, out);
   },
-  // Сброс яруса: свист падения и глухой удар далеко внизу
+  // Сброс яруса (синтез, по DROP): обрыв двух тросов, свист падения уходит вниз и глохнет, взвыв
+  // двигателя и глухой удар через Мглу — тело 120–300 Гц слышно на телефоне, низ — в наушниках.
+  // Стон металла и облегчённый скрип из файлов добавляет events.ts (playTierDrop).
   tierDrop(e, t, out, soft) {
+    for (const [dt, f] of [
+      [DROP.snap, 1650],
+      [DROP.snap + 0.07, 1320],
+    ] as const) {
+      noise(e, {
+        t: t + dt,
+        dur: 0.006,
+        release: 0.04,
+        gain: 0.3 * soft,
+        dest: out,
+        filter: 'highpass',
+        freq: 2200,
+      });
+      for (const [mul, amp] of [
+        [1, 1],
+        [2.3, 0.45],
+      ] as const)
+        tone(e, {
+          freq: f * mul,
+          to: f * mul * 0.94,
+          t: t + dt,
+          dur: 0.005,
+          release: 0.35,
+          gain: 0.05 * amp * soft,
+          dest: out,
+          send: 0.35,
+        });
+    }
+    const w = t + DROP.whistle;
+    const len = DROP.fall - DROP.whistle;
     tone(e, {
       freq: 1100,
-      to: 140,
-      t,
-      dur: 1.1,
-      attack: 0.05,
-      release: 0.15,
+      to: 180,
+      t: w,
+      dur: len,
+      attack: 0.06,
+      release: 0.12,
       gain: 0.07 * soft,
+      filter: 4000,
+      filterTo: 600,
       dest: out,
       vibrato: [30, 7],
     });
     noise(e, {
-      t,
-      dur: 1.1,
-      attack: 0.3,
-      release: 0.1,
+      t: w,
+      dur: len,
+      attack: 0.2,
+      release: 0.12,
       gain: 0.08 * soft,
       dest: out,
       filter: 'bandpass',
@@ -255,17 +299,33 @@ const SOUNDS: Record<SfxName, Sound> = {
       to: 400,
       q: 2,
     });
-    const hit = t + 1.25;
-    tone(e, { freq: 70, to: 32, t: hit, dur: 0.05, release: 1.2, gain: 0.55 * soft, dest: out, send: 0.4 });
+    // Двигатель на миг взвывает, когда башня стала легче
+    tone(e, {
+      type: 'sawtooth',
+      freq: 55,
+      to: 92,
+      t: t + DROP.relief,
+      dur: 0.35,
+      attack: 0.08,
+      release: 0.5,
+      gain: 0.05 * soft,
+      filter: 700,
+      filterTo: 1400,
+      dest: out,
+      detune: 9,
+    });
+    const hit = t + DROP.thud;
+    tone(e, { freq: 70, to: 32, t: hit, dur: 0.05, release: 1.2, gain: 0.4 * soft, dest: out, send: 0.4 });
+    thump(e, hit, out, 0.5 * soft, 220, 0.5);
     noise(e, {
       t: hit,
       dur: 0.15,
       release: 1.1,
-      gain: 0.35 * soft,
+      gain: 0.3 * soft,
       dest: out,
       filter: 'lowpass',
-      freq: 600,
-      to: 120,
+      freq: 900,
+      to: 150,
       send: 0.5,
     });
   },
@@ -454,7 +514,8 @@ const SOUNDS: Record<SfxName, Sound> = {
   // Финал: удар колокола и долгий органный аккорд
   final(e, t, out, soft) {
     bell(e, midiToHz(43), t, 0.14 * soft, out, 0.8);
-    tone(e, { freq: 49, to: 40, t, dur: 0.05, release: 1.6, gain: 0.35 * soft, dest: out, send: 0.5 });
+    tone(e, { freq: 49, to: 40, t, dur: 0.05, release: 1.6, gain: 0.25 * soft, dest: out, send: 0.5 });
+    thump(e, t, out, 0.22 * soft, 196, 0.6);
     for (const m of [48, 55, 60, 63, 67]) organ(e, midiToHz(m), t + 0.3, 2.2, 0.04, out, 0.7);
   },
   // Декрет: удар штампа потяжелее и подпись пером
@@ -472,6 +533,51 @@ const SOUNDS: Record<SfxName, Sound> = {
       to: 3000,
       q: 2,
     });
+  },
+  // Рычаг двигателя (замена файла lever.mp3): храповик и тяжёлый металлический «клац»
+  lever(e, t, out, soft) {
+    for (let i = 0; i < 3; i++)
+      noise(e, {
+        t: t + i * 0.035,
+        dur: 0.004,
+        release: 0.02,
+        gain: 0.2,
+        dest: out,
+        filter: 'bandpass',
+        freq: 2800 + i * 250,
+        q: 4,
+      });
+    const at = t + 0.13;
+    thump(e, at, out, 0.28 * soft, 320);
+    for (const [mul, amp] of [
+      [1, 1],
+      [2.7, 0.4],
+    ] as const)
+      tone(e, { freq: 610 * mul, t: at, dur: 0.005, release: 0.22, gain: 0.04 * amp, dest: out, send: 0.2 });
+  },
+  // Красный день 7 ноября: после отрыва листка — короткий отзвук медных и колокол
+  calendarRed(e, t, out, soft) {
+    const notes: [number, number, number][] = [
+      [67, 0, 0.14],
+      [72, 0.16, 0.55],
+    ];
+    for (const [m, dt, d] of notes)
+      for (const detune of [-6, 6])
+        tone(e, {
+          type: 'sawtooth',
+          freq: midiToHz(m),
+          t: t + dt,
+          dur: d,
+          attack: 0.03,
+          release: 0.35,
+          gain: 0.045 * soft,
+          filter: 1000,
+          filterTo: 2600,
+          detune,
+          dest: out,
+          send: 0.4,
+        });
+    bell(e, midiToHz(84), t + 0.18, 0.05 * soft, out, 0.6);
   },
 };
 
