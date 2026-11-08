@@ -513,8 +513,14 @@ function renderPanel(p: ComicPanel): HTMLElement {
       if (n.accent) cls.push('is-accent');
       if (n.align === 'center') cls.push('is-center');
       if (n.small) cls.push('is-small');
-      const note = h('p', { class: cls.join(' ') }, h('span', {}, n.text));
+      if (n.tail !== undefined) cls.push('has-tail');
+      const note = h(
+        'p',
+        { class: cls.join(' ') },
+        h('span', {}, n.who ? h('b', { class: 'cx-note-who' }, n.who) : null, n.text),
+      );
       note.style.setProperty('--d', `${d}ms`);
+      if (n.tail !== undefined) note.style.setProperty('--tail', `${n.tail}%`);
       if (n.scale) note.style.setProperty('--ns', String(n.scale));
       d += noteStep(n.text);
       group.append(note);

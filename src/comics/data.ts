@@ -26,9 +26,14 @@ export interface ComicNote {
   w?: number;
   /**
    * box — кремовая плашка, frame — контур без заливки, cloud — плашка, растворённая в светлом фоне,
-   * plain — без плашки, radio — тёмная плашка с пунктирной рамкой (голос в эфире).
+   * plain — без плашки, radio — тёмная плашка с пунктирной рамкой (голос в эфире),
+   * title — крупный заголовок листа без плашки, с тенью.
    */
-  style?: 'box' | 'frame' | 'cloud' | 'plain' | 'radio';
+  style?: 'box' | 'frame' | 'cloud' | 'plain' | 'radio' | 'title';
+  /** Кто говорит: красная строка над репликой («Марта:»). */
+  who?: string;
+  /** Хвостик облачка снизу: где он стоит, в процентах ширины плашки. */
+  tail?: number;
   align?: 'left' | 'center';
   /** Красный текст — для первой, ударной фразы. */
   accent?: boolean;
@@ -187,7 +192,7 @@ export function checkComics(src: ComicsFile, endingIds: string[]): string[] {
         panel.notes?.forEach((n, j) => {
           const where = `${at}, кадр ${k + 1}, текст ${j + 1}`;
           if (j === 0 && n.y === undefined) errors.push(`${where}: у первого текста нет y`);
-          for (const v of [n.x, n.y, n.w])
+          for (const v of [n.x, n.y, n.w, n.tail])
             if (v !== undefined && (v < 0 || v > 100)) errors.push(`${where}: координата вне 0–100`);
           if (!n.text.trim()) errors.push(`${where}: пустой текст`);
         });

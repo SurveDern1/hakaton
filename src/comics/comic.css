@@ -367,6 +367,41 @@
   color: var(--paper);
   box-shadow: 0 6px 18px rgba(10, 24, 26, 0.28);
 }
+/* Реплика персонажа: имя красной строкой, хвостик облачка снизу на месте из макета (--tail) */
+.cx-note-who {
+  display: block;
+  font-weight: 700;
+  color: var(--red);
+}
+.cx-note.has-tail {
+  position: relative;
+}
+.cx-note.has-tail::after {
+  content: "";
+  position: absolute;
+  top: calc(100% - 1px);
+  left: var(--tail, 30%);
+  width: 1.5em;
+  height: 1.3em;
+  translate: -50% 0;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+/* Заголовок листа: узкие крупные буквы цвета бумаги с тёмной тенью, как в макете */
+.cx-note.is-title {
+  padding: 0;
+  font-family: var(--f-ui);
+  font-size: calc(clamp(14px, 6cqw, 64px) * var(--ns, 1));
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--paper);
+  text-align: center;
+  text-shadow: 0.07em 0.07em 0 #1d2b2c;
+}
+.cx-note.is-title > span {
+  white-space: nowrap;
+}
 .cx-note.is-plain {
   padding: 0.2em 0.4em;
 }
