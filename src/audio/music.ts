@@ -378,7 +378,7 @@ class ThemePlayer {
     private theme: Theme,
     seed: number,
   ) {
-    const ctx = e.ctx as AudioContext;
+    const ctx = e.ctx as BaseAudioContext;
     this.rnd = makeRandom(seed);
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
@@ -388,7 +388,7 @@ class ThemePlayer {
   }
 
   fadeOut(): void {
-    const ctx = this.e.ctx as AudioContext;
+    const ctx = this.e.ctx as BaseAudioContext;
     ramp(this.gain.gain, 0, ctx.currentTime, CROSSFADE);
     this.stopped = true;
     window.setTimeout(() => this.gain.disconnect(), (CROSSFADE + 3) * 1000);
@@ -503,3 +503,14 @@ export class Music {
     src.start();
   }
 }
+
+/**
+ * Тема без колонок (лаборатория, `npm run check:sound`): все ноты на `seconds` ставятся сразу, как это
+ * делал бы планировщик по часам. Вход — `AudioEngine.offline(...)`.
+ */
+export function scheduleTheme(e: AudioEngine, name: ThemeName, seconds: number, seed = 7919): void {
+  const player = new ThemePlayer(e, name, makeThemes()[name], seed);
+  for (let t = 0; t < seconds; t += LOOKAHEAD / 2) player.schedule(t);
+}
+
+export const THEMES: ThemeName[] = ['waltz', 'march', 'wind', 'night', 'final'];

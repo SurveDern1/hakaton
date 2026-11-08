@@ -19,7 +19,7 @@ const VIEWPORTS = [
   { name: 'компьютер 1440×900', width: 1440, height: 900, mobile: false },
 ];
 
-function findChrome() {
+export function findChrome() {
   const list = [
     process.env.CHROME,
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -35,9 +35,9 @@ function findChrome() {
   return found;
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function waitFor(fn, ms, what) {
+export async function waitFor(fn, ms, what) {
   const end = Date.now() + ms;
   for (;;) {
     const v = await fn();
@@ -48,7 +48,7 @@ async function waitFor(fn, ms, what) {
 }
 
 /** Минимальный клиент DevTools-протокола поверх встроенного WebSocket (Node 22+). */
-function cdp(wsUrl) {
+export function cdp(wsUrl) {
   const ws = new WebSocket(wsUrl);
   let id = 0;
   const wait = new Map();

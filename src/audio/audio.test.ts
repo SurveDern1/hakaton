@@ -24,6 +24,13 @@ describe('настройки звука', () => {
       musicOn: false,
     });
   });
+  it('старая запись без атмосферы — атмосфера включена на 0,7; громкость обрезается', () => {
+    expect(parseSettings('{"music":0.3,"sfx":0.5}')).toMatchObject({ ambience: 0.7, ambienceOn: true });
+    expect(parseSettings('{"ambience":2,"ambienceOn":false}')).toMatchObject({
+      ambience: 1,
+      ambienceOn: false,
+    });
+  });
 });
 
 describe('звуки по изменению состояния', () => {

@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run check:motion
+      - run: npm run check:sound
       - run: npm run build
       - run: node tools/export-design.js dist/design
       - uses: actions/upload-pages-artifact@v3

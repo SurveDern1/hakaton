@@ -1,6 +1,32 @@
-// Кирпичики синтеза для звуков и музыки: тон с огибающей и фильтром, полоса шума, орган из гармоник.
+// Кирпичики синтеза для звуков и музыки: тон с огибающей и фильтром, полоса шума (белый, розовый,
+// коричневый), орган из гармоник, панорама и вариации повторов.
 // Каждый вызов создаёт свои узлы и сам их останавливает; ничего не держится после затухания.
-import type { AudioEngine } from './audio';
+import type { AudioEngine, NoiseColor } from './audio';
+
+/**
+ * Вариация повтора: множитель 1 ± pct % (равномерно). `rnd` — генератор звука (engine.rnd или свой
+ * makeRandom), не игровой: так щелчки и удары каждый раз звучат чуть иначе.
+ */
+export function vary(rnd: () => number, pct: number): number {
+  return 1 + (rnd() * 2 - 1) * (pct / 100);
+}
+
+/** Вариация громкости в децибелах: множитель 10^(±db/20). */
+export function varyDb(rnd: () => number, db: number): number {
+  return 10 ** (((rnd() * 2 - 1) * db) / 20);
+}
+
+/**
+ * Узел панорамы −1 (слева) … 1 (справа) перед `dest`; без панорамы или без StereoPannerNode (старый
+ * Safari) — сам `dest`. Возвращает, куда подключать звук.
+ */
+export function panTo(ctx: BaseAudioContext, dest: AudioNode, pan: number | undefined, t = 0): AudioNode {
+  if (!pan || typeof ctx.createStereoPanner !== 'function') return dest;
+  const p = ctx.createStereoPanner();
+  p.pan.setValueAtTime(Math.max(-1, Math.min(1, pan)), t);
+  p.connect(dest);
+  return p;
+}
 
 export interface ToneOpts {
   freq: number;
@@ -23,6 +49,8 @@ export interface ToneOpts {
   vibrato?: [number, number];
   /** Доля сигнала в реверберацию. */
   send?: number;
+  /** Панорама −1 … 1 (реверберация остаётся общей, по центру). */
+  pan?: number;
 }
 
 /** Тон с огибающей ADSR без сустейна: атака → плато до dur → спад release. */
@@ -68,7 +96,7 @@ export function tone(e: AudioEngine, o: ToneOpts): void {
     lfo.start(o.t);
     lfo.stop(end);
   }
-  g.connect(o.dest);
+  g.connect(panTo(ctx, o.dest, o.pan, o.t));
   if (o.send) {
     const s = ctx.createGain();
     s.gain.value = o.send;
@@ -92,12 +120,15 @@ export interface NoiseOpts {
   to?: number;
   q?: number;
   send?: number;
+  pan?: number;
+  /** Цвет шума, по умолчанию белый. */
+  color?: NoiseColor;
 }
 
 /** Полоса шума: шелест, удар, ветер, обвал. */
 export function noise(e: AudioEngine, o: NoiseOpts): void {
   const ctx = e.ctx;
-  const buf = e.noiseBuffer();
+  const buf = e.noiseBuffer(o.color);
   if (!ctx || !buf) return;
   const attack = o.attack ?? 0.005;
   const release = o.release ?? 0.1;
@@ -115,14 +146,17 @@ export function noise(e: AudioEngine, o: NoiseOpts): void {
   g.gain.linearRampToValueAtTime(o.gain, o.t + attack);
   g.gain.setValueAtTime(o.gain, o.t + Math.max(attack, o.dur));
   g.gain.exponentialRampToValueAtTime(0.0001, end);
-  src.connect(f).connect(g).connect(o.dest);
+  src
+    .connect(f)
+    .connect(g)
+    .connect(panTo(ctx, o.dest, o.pan, o.t));
   if (o.send) {
     const s = ctx.createGain();
     s.gain.value = o.send;
     g.connect(s).connect(e.reverb);
   }
   // разные места буфера — разные «зёрна» шума у соседних ударов
-  src.start(o.t, (o.t * 7.31) % 1.9);
+  src.start(o.t, (o.t * 7.31) % (buf.duration - 0.1));
   src.stop(end + 0.02);
 }
 

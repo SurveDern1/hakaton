@@ -5,12 +5,15 @@
 // final → «финал». Звуки: клики по кнопкам, окно события и выбор (класс is-chosen у .ev-layer),
 // всплывающие числа .ev-float.up/.down, стенгазета .pp-layer, ночь, утро, финал.
 // Выключатель: пункты меню (menuItems: «Звук», «Настройки…»), кнопка в углу на стартовом экране и в финале,
-// клавиша M. Окно «Настройки» — settings-window.ts (openSettings).
+// клавиша M. Окно «Настройки» — settings-window.ts (openSettings). Файлы звуков — samples.ts
+// (preloadSamples после разблокировки), лаборатория `?sound=lab` — lab.ts.
 import type { GameLoop, Phase } from '../game/loop';
 import type { GameStore } from '../game/store';
 import { AudioEngine, type AudioSettings } from './audio';
 import { stateCues } from './cues';
+import type { Lab } from './lab';
 import { Music } from './music';
+import { preloadSamples } from './samples';
 import { openSettings } from './settings-window';
 import { playSfx, type SfxName } from './sfx';
 import './audio.css';
@@ -25,6 +28,8 @@ export interface SoundControls {
   menuItems(beforeOpen?: () => void): HTMLElement[];
   /** Окно «Настройки» поверх игры. */
   openSettings(): void;
+  /** Звуковая лаборатория — только на `?sound=lab` (main.ts подключает lab.ts). */
+  lab?: Lab;
 }
 
 /** Пауза между всплывающими числами, с: пачка чисел звучит как короткая россыпь, а не аккорд. */
@@ -35,6 +40,8 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   const engine = new AudioEngine();
   engine.unlockOn(window);
   const music = new Music(engine);
+  // Файлы звуков грузятся после разблокировки; пока их нет, играет синтезированная замена
+  engine.onReady(() => void preloadSamples(engine));
   const play = (name: SfxName, delay = 0) => playSfx(engine, name, delay);
   const corner = document.createElement('button');
   corner.type = 'button';

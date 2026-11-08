@@ -91,6 +91,8 @@ new Phaser.Game({
   backgroundColor: '#1a3437',
   scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' },
   dom: { createContainer: true },
+  // Звук игры — свой движок (src/audio); звуковой менеджер Phaser создал бы AudioContext до жеста
+  audio: { noAudio: true },
   scene: [towerScene],
 });
 
@@ -221,7 +223,13 @@ const eventIds = params.get('event')?.split(',').filter(Boolean) ?? [];
 // Проверка шага обучения: ?tutorial=build — новая игра (утренний шаг) или день из when.minDay,
 // остальные шаги считаются пройденными, прогресс не записывается.
 const debugStep = tutorial.debug(params.get('tutorial') ?? '');
-if (presetInput) {
+// Звуковая лаборатория: ?sound=lab — все звуки кнопками, индикаторы, sedmaya.sound.lab.measure().
+if (params.get('sound') === 'lab') {
+  ui.classList.add('is-bare');
+  void import('./audio/lab').then((m) => {
+    sound.lab = m.mountLab(ui, sound);
+  });
+} else if (presetInput) {
   ui.classList.add('is-bare', 'is-preset');
 } else if (debugVerdict === 'win' || debugVerdict === 'lose') {
   ui.classList.add('is-bare');

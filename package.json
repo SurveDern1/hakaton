@@ -18,6 +18,7 @@
     "design": "node tools/export-design.js --serve",
     "icons": "node tools/make-icons.js",
     "check:motion": "node tools/check-motion.mjs",
+    "check:sound": "node tools/check-sound.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run check:data && npm run check:design",
     "sim": "node tools/sim.mjs"
   },

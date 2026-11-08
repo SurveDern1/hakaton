@@ -1,0 +1,151 @@
+/* Звуковая лаборатория ?sound=lab (lab.ts): страница для разработки поверх игры, во всё окно. */
+.lab {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: auto;
+  padding: 16px max(16px, env(safe-area-inset-left)) 40px;
+  background: var(--ink);
+  color: var(--text);
+  font: 15px / 1.4 var(--f-ui);
+  user-select: text;
+  -webkit-user-select: text;
+}
+.lab-head {
+  position: sticky;
+  top: -16px;
+  z-index: 1;
+  margin: -16px -16px 8px;
+  padding: 16px 16px 10px;
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.lab-title {
+  margin: 0;
+  font: 20px / 1.2 var(--f-display);
+  color: var(--paper);
+}
+.lab-status {
+  min-height: 1.4em;
+  margin: 6px 0;
+  color: var(--muted);
+}
+.lab-meters {
+  display: grid;
+  gap: 4px;
+  max-width: 520px;
+}
+.lab-meter {
+  display: grid;
+  grid-template-columns: 90px 1fr 72px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.lab-meter-bar {
+  height: 10px;
+  background: var(--ink-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.lab-meter-fill {
+  height: 100%;
+  background: var(--good);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.lab-meter-fill.is-hot {
+  background: var(--bad);
+}
+.lab-meter-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lab-group {
+  margin-top: 16px;
+}
+.lab-h {
+  margin: 0 0 8px;
+  font: 600 14px / 1.2 var(--f-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ochre);
+}
+.lab-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lab-btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--ink-2);
+  color: var(--paper);
+  font: 14px / 1 var(--f-ui);
+  cursor: pointer;
+}
+.lab-btn:hover {
+  background: var(--ink-3);
+}
+.lab-btn:active {
+  transform: translateY(1px);
+}
+.lab-btn[aria-pressed="true"],
+.lab-btn-main {
+  background: var(--red);
+  border-color: var(--red-hi);
+}
+.lab-btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.lab-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 16px;
+}
+.lab-field {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.lab-field select,
+.lab-field input {
+  width: 100%;
+  accent-color: var(--ochre);
+}
+.lab-table-wrap {
+  margin-top: 8px;
+  overflow-x: auto;
+}
+.lab-table {
+  border-collapse: collapse;
+  font: 13px / 1.3 var(--f-ui);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lab-table th,
+.lab-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--ink-3);
+  text-align: right;
+}
+.lab-table th:first-child,
+.lab-table td:first-child,
+.lab-table td:last-child {
+  text-align: left;
+}
+.lab-table tr.is-bad td {
+  color: var(--bad);
+}
+.lab-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ether);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

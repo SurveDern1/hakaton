@@ -1,7 +1,7 @@
 // Звуки действий. Всё синтезируется на лету; громкости — доли шины звуков (0..1), здесь, а не в балансе.
 // При prefers-reduced-motion громкие удары (обвал, падение яруса, финал) звучат мягче, но не пропадают.
 import { type AudioEngine, midiToHz } from './audio';
-import { bell, noise, organ, tone } from './synth';
+import { bell, noise, organ, panTo, tone } from './synth';
 
 export type SfxName =
   | 'click'
@@ -27,12 +27,27 @@ export type SfxName =
 
 const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
+export interface SfxOpts {
+  /** Панорама −1 (слева) … 1 (справа): стройка звучит с той стороны башни, где слот. */
+  pan?: number;
+  /** Множитель громкости этого раза (вариация повторов, тише или громче по месту). */
+  gain?: number;
+  /** Куда играть вместо шины звуков. */
+  dest?: AudioNode;
+}
+
 /** Сыграть звук через `delay` секунд. До разблокировки контекста — молча. */
-export function playSfx(e: AudioEngine, name: SfxName, delay = 0): void {
+export function playSfx(e: AudioEngine, name: SfxName, delay = 0, opts: SfxOpts = {}): void {
   const ctx = e.ctx;
   if (!ctx || !e.ready || !e.sfxAudible) return;
   const t = ctx.currentTime + 0.01 + delay;
-  const out = e.sfxBus;
+  let out: AudioNode = opts.dest ?? e.sfxBus;
+  if (opts.pan || (opts.gain !== undefined && opts.gain !== 1)) {
+    const g = ctx.createGain();
+    g.gain.value = Math.max(0, opts.gain ?? 1);
+    g.connect(panTo(ctx, out, opts.pan, t));
+    out = g;
+  }
   const soft = reduced() ? 0.6 : 1;
   e.played.push([name, Math.round(t * 100) / 100]);
   if (e.played.length > 40) e.played.shift();
@@ -468,3 +483,6 @@ const SOUNDS: Record<SfxName, Sound> = {
     });
   },
 };
+
+/** Все звуки по порядку объявления — для лаборатории и проверки `check:sound`. */
+export const SFX_NAMES = Object.keys(SOUNDS) as SfxName[];
