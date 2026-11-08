@@ -154,16 +154,36 @@ export function mountCoach(root: HTMLElement, opts: CoachOptions = {}): Coach {
     lastTarget = undefined;
   });
 
+  // Время кадра — currentTime самой анимации tutIn/tutOut, а не часы страницы: у фоновой вкладки
+  // или при пропуске кадров часы уходят вперёд, а анимация стоит, и сэмпл «486 мс, прозрачность 0»
+  // выглядел бы как застывшее появление. Без анимации (prefers-reduced-motion) — часы страницы.
   function sample(now: number): void {
-    if (!sampling) return;
-    const cs = getComputedStyle(sampling.node);
-    samples.push({
-      phase: sampling.phase,
-      t: Math.max(0, Math.round(now - sampling.start)),
-      opacity: Number(cs.opacity),
+    const s = sampling;
+    if (!s) return;
+    if (!s.node.isConnected) {
+      sampling = null;
+      return;
+    }
+    const name = s.phase === 'in' ? 'tutIn' : 'tutOut';
+    const anim = s.node
+      .getAnimations?.()
+      .find((a) => (a as Animation & { animationName?: string }).animationName === name);
+    const ct = anim?.currentTime;
+    const t = typeof ct === 'number' ? ct : now - s.start;
+    const cs = getComputedStyle(s.node);
+    const prev = samples[samples.length - 1];
+    const row: CoachSample = {
+      phase: s.phase,
+      t: Math.max(0, Math.round(t)),
+      opacity: Math.round(Number(cs.opacity) * 1000) / 1000,
       dy: Math.round(translateY(cs.transform) * 100) / 100,
-    });
-    if (now - sampling.start > sampling.until) sampling = null;
+    };
+    // Один кадр анимации — один сэмпл (stop-кадр фоновой вкладки не множится).
+    if (!prev || prev.phase !== row.phase || prev.t !== row.t || prev.opacity !== row.opacity)
+      samples.push(row);
+    const finished = anim ? anim.playState === 'finished' : now - s.start > s.until;
+    // Запас: вкладка, где анимация так и не пошла, не сэмплирует бесконечно.
+    if (finished || now - s.start > s.until * 20) sampling = null;
   }
 
   // Один getBoundingClientRect цели за кадр (и меню стройки, когда оно открыто); пишем только при изменении.
@@ -236,6 +256,8 @@ export function mountCoach(root: HTMLElement, opts: CoachOptions = {}): Coach {
     requestAnimationFrame(outSample);
     return new Promise((done) => {
       const finish = () => {
+        // Последний кадр ухода — до удаления карточки, иначе конец ухода не попадёт в сэмплы.
+        if (sampling?.node === node) sample(performance.now());
         node.remove();
         done();
       };
