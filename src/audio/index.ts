@@ -101,6 +101,8 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
       play(el.classList.contains('up') ? 'plus' : 'minus', delay);
     } else if (el.classList.contains('pp-layer')) play('paper');
     else if (el.classList.contains('ev-layer')) play('eventOpen');
+    // Карточка обучения (src/tutorial/coach.ts): .tut в слое .tut-layer
+    else if (el.classList.contains('tut') && el.parentElement?.classList.contains('tut-layer')) play('hint');
   };
   new MutationObserver((records) => {
     for (const r of records) {

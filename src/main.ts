@@ -1,7 +1,8 @@
 // Точка входа: состояние из core → GameStore → сцена Phaser (башня) и DOM-панели (#ui).
 // Порядок игры: стартовый экран → GameLoop (src/game/loop.ts): утро (отчёт и окна событий) →
 // день (панель, меню стройки по клику на слот) → «Завершить день» → ночь (night.ts) → утро … → финал.
-// Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу.
+// Отладка: ?preset=<имя> — башня из набора макета без игры; ?event=<id>[,id] — окна событий сразу;
+// ?tutorial=<шаг> — шаг обучения поверх новой игры (день из when.minDay).
 import Phaser from 'phaser';
 import { initAudio } from './audio';
 import { getComic, outroFor, playComic, preloadComic } from './comics';
@@ -13,7 +14,7 @@ import { TowerScene, type TowerSource } from './scenes/TowerScene';
 import type { TowerInput } from './scenes/tower-model';
 import { towerInputFromState } from './scenes/tower-model';
 import { isPresetName, type PresetName, TOWER_PRESETS } from './scenes/tower-presets';
-import { mountCoach } from './tutorial/coach';
+import { debugDay, initTutorial, type Tutorial } from './tutorial';
 import { mountBuildMenu } from './ui/build-menu';
 import { fmtSigned, mountEventWindow } from './ui/event-window';
 import { flashHud, mountStatus } from './ui/feedback';
@@ -101,8 +102,11 @@ const flash = (key: string, delta: number) =>
 const events = mountEventWindow(ui, { store, data });
 const paper = mountPaper(ui, data);
 
+// Обучение подключается ниже, после меню стройки; утро ждёт его ворота (приветствие первого утра).
+let tutorial: Tutorial | null = null;
 const loop = new GameLoop(store, data, {
   async morning(queue, report: NightReport | null) {
+    await tutorial?.beforeMorning(store.state.day);
     const strip = report ? morningReport(report, data, store.state) : undefined;
     if (queue.length) await events.showMorning(queue, strip);
     else if (strip) await showReportCard(ui, strip, mistNote(store.state.altitude, store.state.mist));
@@ -130,7 +134,12 @@ function toggleMenu(force?: boolean) {
   });
   const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
   close.addEventListener('click', () => toggleMenu(false));
-  gameMenu.replaceChildren(restart, ...sound.menuItems(() => toggleMenu(false)), close);
+  gameMenu.replaceChildren(
+    restart,
+    ...(tutorial?.menuItems(() => toggleMenu(false)) ?? []),
+    ...sound.menuItems(() => toggleMenu(false)),
+    close,
+  );
   // Открыто мышью — без рамки фокуса на первом пункте; с клавиатуры браузер её покажет сам
   restart.focus({ focusVisible: false } as FocusOptions);
 }
@@ -154,6 +163,8 @@ const menu = mountBuildMenu(ui, {
   select: (tier, slot) => towerScene.selectSlot(tier, slot),
 });
 ui.append(gameMenu, floats);
+// Подсказки первых дней и по случаю (src/tutorial): наблюдают экран, состояние игры не меняют.
+tutorial = initTutorial({ root: ui, store, loop, data, status });
 
 towerScene.setSlotHandler((tier, slot, el) => menu.open(tier, slot, el));
 loop.onPhase((phase) => {
@@ -207,6 +218,9 @@ const debugVerdict = params.get('verdict');
 // Проверка окна без цикла: ?event=d02_raft или ?event=d01_first_morning,d02_raft (до двух окон);
 // день — из события (или &day=17), &flags=a,b — с флагами.
 const eventIds = params.get('event')?.split(',').filter(Boolean) ?? [];
+// Проверка шага обучения: ?tutorial=build — новая игра (утренний шаг) или день из when.minDay,
+// остальные шаги считаются пройденными, прогресс не записывается.
+const debugStep = tutorial.debug(params.get('tutorial') ?? '');
 if (presetInput) {
   ui.classList.add('is-bare', 'is-preset');
 } else if (debugVerdict === 'win' || debugVerdict === 'lose') {
@@ -215,6 +229,11 @@ if (presetInput) {
 } else if (debugComic) {
   ui.classList.add('is-bare');
   void playComic(ui, debugComic).then(start);
+} else if (debugStep) {
+  // Утренний шаг — на первом утре (окна событий), дневной — сразу днём нужного дня.
+  if (debugStep.phase === 'morning') void loop.newGame();
+  else loop.continueGame({ ...createInitialState(data.balance), day: debugDay(debugStep) });
+  window.setTimeout(() => tutorial?.show(debugStep.id), debugStep.phase === 'morning' ? 1200 : 600);
 } else if (eventIds.length) {
   const eventDay = data.events.find((e) => e.id === eventIds[0])?.day;
   const day = Number(params.get('day')) || eventDay;
@@ -239,9 +258,9 @@ Object.assign(window, {
       return c ? playComic(ui, c) : Promise.resolve();
     },
     sound,
-    // Карточка обучения до подключения к игре: sedmaya.coach.show({ title, text }, '.panel-end'),
-    // sedmaya.coach.confirm(), sedmaya.coach.samples (срез 3 заменит на sedmaya.tutorial).
-    coach: mountCoach(ui),
+    // Обучение: sedmaya.tutorial.progress, .current, .show('build'), .reset(), .samples (кадры появления
+    // и ухода карточки), .coach.show({ title, text }, '.panel-end') — карточка без шага.
+    tutorial,
     tower: {
       scene: towerScene,
       presets: Object.keys(TOWER_PRESETS),
