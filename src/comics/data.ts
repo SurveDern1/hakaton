@@ -13,6 +13,26 @@ export interface ComicBubble {
   kind?: 'speech' | 'radio';
 }
 
+/**
+ * Текст, привязанный к месту на картинке, как его расставил художник. x, y, w — проценты картинки
+ * (не кадра), поэтому текст едет вместе с камерой и при обрезке остаётся на своём облаке или плашке.
+ * Заметка без y встаёт под предыдущую, той же ширины.
+ */
+export interface ComicNote {
+  /** «\n» — перенос строки, как у художника (например, текст пирамидой в круге). */
+  text: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  /** box — кремовая плашка, frame — контур без заливки, cloud — плашка, растворённая в светлом фоне, plain — без плашки. */
+  style?: 'box' | 'frame' | 'cloud' | 'plain';
+  align?: 'left' | 'center';
+  /** Красный текст — для первой, ударной фразы. */
+  accent?: boolean;
+  /** Мельче обычного — когда место на картинке тесное. */
+  small?: boolean;
+}
+
 /** Сцена-заглушка, пока нет картинки (placeholder.ts). */
 export interface ComicArt {
   scene: string;
@@ -35,6 +55,12 @@ export interface ComicPanel {
   move?: 'in' | 'out' | 'left' | 'right' | 'up' | 'down' | 'none';
   /** object-position картинки, например `50% 20%`. */
   focus?: string;
+  /** Размер картинки в пикселях [ширина, высота]; нужен для notes и полностраничных листов. */
+  size?: [number, number];
+  /** Тексты на местах из макета художника. */
+  notes?: ComicNote[];
+  /** Точка, к которой едет камера (transform-origin), например `50% 0%` — край с текстом не уходит из кадра. */
+  origin?: string;
 }
 
 export interface ComicPage {
@@ -42,6 +68,8 @@ export interface ComicPage {
   grid?: string;
   /** Доли высоты рядов, по умолчанию поровну. */
   rows?: number[];
+  /** Лист — одна картинка во весь лист, без полей и рамки (как сверстал художник). */
+  bleed?: boolean;
   panels: ComicPanel[];
 }
 
@@ -136,6 +164,8 @@ export function checkComics(src: ComicsFile, endingIds: string[]): string[] {
     c.pages.forEach((p, i) => {
       const at = `${c.id}, стр. ${i + 1}`;
       if (!p.panels.length) errors.push(`${at}: нет кадров`);
+      if (p.bleed && (p.panels.length !== 1 || !p.panels[0]?.image || !p.panels[0]?.size))
+        errors.push(`${at}: лист bleed — один кадр с image и size`);
       try {
         pageGrid(p);
       } catch (e) {
@@ -148,6 +178,14 @@ export function checkComics(src: ComicsFile, endingIds: string[]): string[] {
           if (b.x < 0 || b.x > 100 || b.y < 0 || b.y > 100)
             errors.push(`${at}, кадр ${k + 1}: облачко вне 0–100`);
         }
+        if (panel.notes?.length && !panel.size) errors.push(`${at}, кадр ${k + 1}: notes без size картинки`);
+        panel.notes?.forEach((n, j) => {
+          const where = `${at}, кадр ${k + 1}, текст ${j + 1}`;
+          if (j === 0 && n.y === undefined) errors.push(`${where}: у первого текста нет y`);
+          for (const v of [n.x, n.y, n.w])
+            if (v !== undefined && (v < 0 || v > 100)) errors.push(`${where}: координата вне 0–100`);
+          if (!n.text.trim()) errors.push(`${where}: пустой текст`);
+        });
       });
     });
   }

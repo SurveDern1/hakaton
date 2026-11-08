@@ -81,14 +81,24 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
     let animating = false;
     let ended = false;
     let revealTimer = 0;
+    /** До этого момента на странице ещё появляются тексты; касание показывает их сразу. */
+    let settleUntil = 0;
 
     // ---- Проявление кадров ----
     const panelsOf = (page: HTMLElement) => [...page.querySelectorAll<HTMLElement>('.cx-panel')];
+    const markSettle = (panel: HTMLElement | undefined) => {
+      settleUntil = Math.max(settleUntil, performance.now() + Number(panel?.dataset.settle ?? 0));
+    };
+    function settleNow(): void {
+      settleUntil = 0;
+      cur.classList.add('is-settled');
+    }
     function revealNext(): void {
       const i = nav.shown;
       if (!nav.revealOne()) return;
       const panel = panelsOf(cur)[i];
       panel?.classList.add('is-in');
+      markSettle(panel);
       sync();
       if (!nav.complete) {
         const bubbles = panel?.querySelectorAll('.cx-bubble').length ?? 0;
@@ -99,7 +109,10 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
       window.clearTimeout(revealTimer);
       if (reduced) {
         nav.next();
-        for (const p of panelsOf(cur)) p.classList.add('is-in');
+        for (const p of panelsOf(cur)) {
+          p.classList.add('is-in');
+          markSettle(p);
+        }
         sync();
         return;
       }
@@ -109,6 +122,7 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
       window.clearTimeout(revealTimer);
       nav.next();
       for (const p of panelsOf(cur)) p.classList.add('is-in');
+      settleNow();
       sync();
     }
 
@@ -116,8 +130,12 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
     function beginTurn(dir: 1 | -1): Turn | null {
       const target = nav.page + dir;
       if (target < 0 || target >= total) return null;
+      settleUntil = 0;
       const incoming = renderPage(comic.pages[target] as ComicPage, target, total);
-      if (dir < 0) for (const p of panelsOf(incoming)) p.classList.add('is-in', 'is-instant');
+      if (dir < 0) {
+        for (const p of panelsOf(incoming)) p.classList.add('is-in', 'is-instant');
+        incoming.classList.add('is-settled');
+      }
       const t: Turn =
         dir > 0
           ? { dir, leaf: cur, under: incoming, incoming, p: 0 }
@@ -194,6 +212,10 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
       if (animating || ended || turn) return;
       if (!nav.complete) {
         revealAll();
+        return;
+      }
+      if (performance.now() < settleUntil) {
+        settleNow();
         return;
       }
       if (nav.isLast) {
@@ -336,13 +358,23 @@ export function playComic(root: HTMLElement, comic: Comic, opts: ComicOptions = 
 
     sync();
     live.textContent = `${comic.title}. Страница 1 из ${total}`;
-    startReveal(reduced ? 0 : 520);
+    // Первая картинка проявляется, когда загружена (не дольше 1,5 с ожидания), остальные — заранее
+    preloadComic(comic);
+    const firstImg = cur.querySelector('img');
+    const ready =
+      firstImg && !firstImg.complete
+        ? Promise.race([firstImg.decode().catch(() => undefined), wait(1500)])
+        : Promise.resolve();
+    void ready.then(() => {
+      if (!ended && nav.page === 0 && nav.shown === 0) startReveal(reduced ? 0 : 520);
+    });
   });
 }
 
 function renderPage(page: ComicPage, index: number, total: number): HTMLElement {
   const g = pageGrid(page);
   const grid = h('div', { class: 'cx-grid' });
+  const size = page.bleed ? page.panels[0]?.size : undefined;
   grid.style.gridTemplateAreas = g.areas;
   grid.style.gridTemplateColumns = `repeat(${g.columns}, minmax(0, 1fr))`;
   grid.style.gridTemplateRows = g.rows;
@@ -351,9 +383,9 @@ function renderPage(page: ComicPage, index: number, total: number): HTMLElement 
     el.style.gridArea = g.names[i] ?? 'auto';
     grid.append(el);
   });
-  return h(
+  const section = h(
     'section',
-    { class: 'cx-page', 'aria-label': `Страница ${index + 1} из ${total}` },
+    { class: `cx-page${size ? ' is-bleed' : ''}`, 'aria-label': `Страница ${index + 1} из ${total}` },
     h(
       'div',
       { class: 'cx-front' },
@@ -364,11 +396,36 @@ function renderPage(page: ComicPage, index: number, total: number): HTMLElement 
     ),
     h('div', { class: 'cx-cast' }),
   );
+  // Лист во весь размер картинки: его пропорция близка к картинке, лишнее книги остаётся фоном
+  if (size) section.style.setProperty('--r', ratio(size));
+  return section;
 }
+
+const ratio = ([w, h]: [number, number]) => (w / h).toFixed(4);
+
+/** Пауза перед первым текстом на картинке (картинка успевает проявиться) и время на каждый следующий. */
+const NOTE_START_MS = 420;
+const noteStep = (text: string) => Math.min(1700, 650 + text.length * 5);
 
 function renderPanel(p: ComicPanel): HTMLElement {
   let art: HTMLElement;
-  if (p.image) {
+  // Картинка с известным размером — в рамке её пропорции: текст из notes привязан к картинке
+  let frame: HTMLElement | null = null;
+  if (p.image && p.size) {
+    const img = h('img', {
+      class: 'cx-art',
+      src: asset(p.image),
+      alt: p.alt ?? '',
+      draggable: 'false',
+      decoding: 'async',
+    });
+    frame = h('div', { class: 'cx-frame' }, img);
+    frame.style.setProperty('--r', ratio(p.size));
+    const [fx, fy] = (p.focus ?? '50% 50%').split(/\s+/).map((v) => Number.parseFloat(v) / 100);
+    frame.style.setProperty('--fx', String(Number.isFinite(fx) ? fx : 0.5));
+    frame.style.setProperty('--fy', String(Number.isFinite(fy) ? fy : 0.5));
+    art = frame;
+  } else if (p.image) {
     const img = h('img', {
       class: 'cx-art',
       src: asset(p.image),
@@ -382,11 +439,9 @@ function renderPanel(p: ComicPanel): HTMLElement {
     art = h('div', { class: 'cx-art', role: 'img', 'aria-label': p.alt ?? '' });
     art.innerHTML = placeholderArt(p.art?.scene ?? '', p.art?.tone);
   }
-  const el = h(
-    'figure',
-    { class: 'cx-panel', 'data-move': p.move ?? 'in' },
-    h('div', { class: 'cx-cam' }, art),
-  );
+  const cam = h('div', { class: 'cx-cam' }, art);
+  if (p.origin) cam.style.transformOrigin = p.origin;
+  const el = h('figure', { class: 'cx-panel', 'data-move': p.move ?? 'in' }, cam);
   if (!p.image) el.append(h('span', { class: 'cx-stub', 'aria-hidden': 'true' }, 'эскиз'));
   let d = 0;
   const beat = (node: HTMLElement, step: number) => {
@@ -413,10 +468,43 @@ function renderPanel(p: ComicPanel): HTMLElement {
     bubble.style.top = `${b.y}%`;
     beat(bubble, BUBBLE_MS);
   }
+  if (frame && p.notes?.length) {
+    // Тексты художника: группа начинается с заметки с y, следующие без y встают под ней
+    d = Math.max(d, NOTE_START_MS);
+    let group: HTMLElement | null = null;
+    for (const n of p.notes) {
+      if (n.y !== undefined || !group) {
+        group = h('div', { class: 'cx-notes' });
+        group.style.setProperty('--x', String(n.x ?? 10));
+        group.style.setProperty('--y', String(n.y ?? 10));
+        group.style.setProperty('--w', String(n.w ?? 80));
+        frame.append(group);
+      }
+      const cls = ['cx-note', `is-${n.style ?? 'box'}`];
+      if (n.accent) cls.push('is-accent');
+      if (n.align === 'center') cls.push('is-center');
+      if (n.small) cls.push('is-small');
+      const note = h('p', { class: cls.join(' ') }, h('span', {}, n.text));
+      note.style.setProperty('--d', `${d}ms`);
+      d += noteStep(n.text);
+      group.append(note);
+    }
+  }
   if (p.title) beat(h('span', { class: 'cx-title disp' }, p.title), 0);
+  // Когда кадр «дописан»: касание до этого срока сначала показывает всё сразу, а не листает
+  el.dataset.settle = String(d + 500);
   return el;
 }
 
+/** Загрузить картинки комикса заранее, например пока открыт стартовый экран. */
+export function preloadComic(comic: Comic): void {
+  for (const page of comic.pages)
+    for (const p of page.panels) {
+      if (p.image) new Image().src = asset(p.image);
+    }
+}
+
+const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
 const easeOut = (x: number) => 1 - (1 - x) ** 3;

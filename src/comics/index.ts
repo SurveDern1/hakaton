@@ -2,4 +2,4 @@
 export * from './data';
 export { ComicNav } from './nav';
 export { PLACEHOLDER_SCENES, placeholderArt } from './placeholder';
-export { type ComicOptions, playComic } from './viewer';
+export { type ComicOptions, playComic, preloadComic } from './viewer';

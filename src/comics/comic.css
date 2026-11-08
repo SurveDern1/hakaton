@@ -2,6 +2,9 @@
    слева, проявление кадров: картинка светлеет и медленно едет, подпись выезжает, облачка выпрыгивают.
    Размеры — от рамки игры (@container app). */
 .cx-layer {
+  /* Рукописные буквы текстов художника (notes) и их цвет из макета */
+  --f-comic: "Balsamiq Sans", "Comic Sans MS", var(--f-ui);
+  --comic-ink: #1f4d5b;
   position: fixed;
   inset: 0;
   z-index: 70;
@@ -111,6 +114,7 @@
 /* ---- Книга и лист ---- */
 .cx-book {
   position: relative;
+  container-type: size;
   margin: 0 12px;
   perspective: 2400px;
   perspective-origin: 10% 50%;
@@ -203,6 +207,28 @@
   opacity: var(--cast, 0);
 }
 
+/* Лист во весь размер картинки (page.bleed): пропорция листа — пропорция картинки ±10 %,
+   чтобы обрезка была не больше пары процентов с краёв; лист по центру книги. --r = ширина / высота. */
+.cx-page.is-bleed {
+  margin: auto;
+  width: min(100cqw, 100cqh * var(--r) * 1.1);
+  height: min(100cqh, 100cqw / (var(--r) * 0.9));
+}
+.cx-page.is-bleed .cx-front {
+  padding: 0;
+  border-radius: 3px;
+  background: var(--ink);
+}
+.cx-page.is-bleed .cx-grid {
+  gap: 0;
+}
+.cx-page.is-bleed .cx-panel {
+  border: 0;
+}
+.cx-page.is-bleed .cx-folio {
+  display: none;
+}
+
 /* ---- Кадр ---- */
 .cx-panel {
   position: relative;
@@ -232,6 +258,113 @@
 }
 .cx-panel.is-in .cx-art {
   filter: none;
+}
+
+/* Картинка в рамке своей пропорции (panel.size): рамка накрывает кадр (как object-fit: cover),
+   --fx/--fy — какой край остаётся при обрезке. Тексты notes лежат в рамке и едут с камерой. */
+.cx-frame {
+  --fw: max(100cqw, 100cqh * var(--r));
+  --fh: max(100cqh, 100cqw / var(--r));
+  position: absolute;
+  width: var(--fw);
+  height: var(--fh);
+  left: calc((100cqw - var(--fw)) * var(--fx, 0.5));
+  top: calc((100cqh - var(--fh)) * var(--fy, 0.5));
+}
+.cx-frame > .cx-art {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- Тексты на местах из макета художника (panel.notes) ----
+   Группа стоит в точке x, y картинки шириной w, но не выходит за видимую часть кадра. */
+.cx-notes {
+  --vis: calc((var(--fw) - 100cqw) * var(--fx, 0.5));
+  --gw: min(var(--fw) * var(--w) / 100, 100cqw - 24px);
+  position: absolute;
+  top: calc(var(--y) * 1%);
+  left: clamp(var(--vis) + 12px, var(--fw) * var(--x) / 100, var(--vis) + 100cqw - 12px - var(--gw));
+  width: var(--gw);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 2.6cqw, 16px);
+}
+.cx-note {
+  margin: 0;
+  padding: 0.85em 1.25em 0.9em;
+  border-radius: 1.35em;
+  font-family: var(--f-comic);
+  font-weight: 700;
+  font-size: clamp(11.5px, 3.3cqw, 20px);
+  line-height: 1.26;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--comic-ink);
+  text-wrap: pretty;
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+  transform-origin: 50% 0;
+  transition:
+    opacity 420ms ease var(--d, 0ms),
+    transform 620ms cubic-bezier(0.2, 0.9, 0.25, 1.15) var(--d, 0ms);
+}
+/* Буквы проступают чуть позже плашки, как чернила */
+.cx-note > span {
+  display: block;
+  white-space: pre-line;
+  opacity: 0;
+  filter: blur(3px);
+  transition:
+    opacity 520ms ease calc(var(--d, 0ms) + 160ms),
+    filter 640ms ease calc(var(--d, 0ms) + 160ms);
+}
+.cx-panel.is-in .cx-note {
+  opacity: 1;
+  transform: none;
+}
+.cx-panel.is-in .cx-note > span {
+  opacity: 1;
+  filter: none;
+}
+.cx-note.is-box {
+  background: var(--paper);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 6px 18px rgba(10, 24, 26, 0.28);
+}
+.cx-note.is-frame {
+  border: 2px solid var(--comic-ink);
+  background: var(--paper);
+}
+/* Плашка цвета облака с размытым краем: на светлом облаке её не видно, на тёмном небе текст читается */
+.cx-note.is-cloud {
+  background: var(--paper);
+  box-shadow: 0 0 1.4em 0.9em var(--paper);
+  border-radius: 2.2em;
+}
+.cx-note.is-plain {
+  padding: 0.2em 0.4em;
+}
+.cx-note.is-center {
+  text-align: center;
+  text-wrap: balance;
+}
+.cx-note.is-small {
+  font-size: clamp(11px, 2.9cqw, 18px);
+}
+.cx-note.is-accent {
+  color: var(--red);
+}
+/* Касание во время появления — всё сразу, без задержек */
+.cx-page.is-settled .cx-panel.is-in *,
+.cx-page.is-settled .cx-panel.is-in .cx-note > span {
+  transition-delay: 0ms;
+  transition-duration: 160ms;
+}
+
+/* ---- Кадр ---- */
+.cx-cam {
+  will-change: transform;
 }
 
 /* Медленный наезд камеры после проявления кадра; стартовая точка задана заранее, без скачка */
@@ -476,6 +609,15 @@
 .cx-layer.is-reduced .cx-panel.is-in .cx-cap {
   opacity: 1;
 }
+.cx-layer.is-reduced .cx-note,
+.cx-layer.is-reduced .cx-panel.is-in .cx-note {
+  transform: none;
+  transition: opacity 200ms ease var(--d, 0ms);
+}
+.cx-layer.is-reduced .cx-note > span {
+  filter: none;
+  transition: opacity 200ms ease var(--d, 0ms);
+}
 .cx-layer.is-reduced .cx-bubble,
 .cx-layer.is-reduced .cx-panel.is-in .cx-bubble {
   transform: translate(-50%, -50%);
@@ -506,6 +648,8 @@
 .cx-layer .cx-panel.is-instant.is-in .cx-cap,
 .cx-layer .cx-panel.is-instant.is-in .cx-bubble,
 .cx-layer .cx-panel.is-instant.is-in .cx-sfx,
-.cx-layer .cx-panel.is-instant.is-in .cx-title {
+.cx-layer .cx-panel.is-instant.is-in .cx-title,
+.cx-layer .cx-panel.is-instant.is-in .cx-note,
+.cx-layer .cx-panel.is-instant.is-in .cx-note > span {
   transition: none;
 }
