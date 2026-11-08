@@ -1,0 +1,183 @@
+/* «Памятка» — лист в стиле стенгазеты (.pp в src/ui/game.css): бумага, скотч, наклон, тень.
+   Слой выше карточки обучения (35) и ниже финала (40): открытая памятка закрывает карточку.
+   Узкая рамка (< 760 px) — лист почти во всю ширину, без наклона и без горизонтальной прокрутки. */
+.pp-layer.memo-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.memo-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 52, 55, 0.72);
+  animation: evFade 200ms ease-out both;
+}
+.memo {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: calc(100cqh - 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: 28px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  outline: none;
+  transform: rotate(-0.6deg);
+  box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.35);
+  animation: memoIn 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.memo-layer.is-leaving .memo {
+  animation: memoOut 200ms ease-in both;
+}
+.memo-layer.is-leaving .memo-backdrop {
+  animation: evFadeOut 200ms ease-in both;
+}
+@keyframes memoIn {
+  from {
+    opacity: 0;
+    transform: rotate(-2.4deg) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-0.6deg);
+  }
+}
+@keyframes memoOut {
+  from {
+    opacity: 1;
+    transform: rotate(-0.6deg);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(0.6deg) translateY(16px);
+  }
+}
+.memo-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 6px solid var(--paper-ink);
+  padding-bottom: 12px;
+}
+.memo-title {
+  margin: 6px 0 0;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--red);
+}
+.memo-count {
+  flex: none;
+}
+.memo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-wrap: anywhere;
+}
+.memo-sec + .memo-sec {
+  padding-top: 16px;
+  border-top: 2px solid var(--paper-ink);
+}
+.memo-sec-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.memo-item + .memo-item {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(26, 52, 55, 0.3);
+}
+.memo-item-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.memo-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.memo-text + .memo-text {
+  margin-top: 6px;
+}
+.memo-empty {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.memo-off {
+  margin: 0;
+  padding: 10px 14px;
+  border: 2px dashed var(--paper-ink);
+  font-size: 15px;
+  line-height: 1.35;
+}
+/* Кнопка липнет к низу листа: длинную памятку можно закрыть, не листая до конца */
+.memo-close {
+  position: sticky;
+  bottom: 0;
+  align-self: flex-end;
+  box-shadow: 0 0 0 6px var(--paper);
+}
+
+@container app (max-width: 759px) {
+  .pp-layer.memo-layer {
+    padding: 10px;
+  }
+  .memo {
+    width: 100%;
+    max-height: calc(100cqh - 20px);
+    padding: 22px 18px;
+    transform: none;
+    animation-name: memoInFlat;
+  }
+  .memo-layer.is-leaving .memo {
+    animation-name: memoOutFlat;
+  }
+  .memo-title {
+    font-size: 36px;
+  }
+  .memo-text {
+    font-size: 15px;
+  }
+}
+@keyframes memoInFlat {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes memoOutFlat {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memo,
+  .memo-backdrop,
+  .memo-layer.is-leaving .memo,
+  .memo-layer.is-leaving .memo-backdrop {
+    animation: none;
+  }
+}

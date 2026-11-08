@@ -18,6 +18,8 @@ import type { GameStore } from '../game/store';
 import { findAnchor, queryAnchor } from './anchors';
 import { type Coach, type CoachSample, mountCoach } from './coach';
 import { flowSteps, stepCard, viewKey, WELCOME_ID } from './flow';
+import { buildMemo } from './memo';
+import { type MemoWindow, mountMemoWindow } from './memo-window';
 import {
   buildContext,
   currentStep,
@@ -37,6 +39,7 @@ import { loadProgress, saveProgress } from './storage';
 
 export * from './anchors';
 export * from './flow';
+export * from './memo';
 export * from './model';
 export * from './place';
 export * from './schema';
@@ -60,7 +63,7 @@ export interface TutorialOptions {
 export interface Tutorial {
   /** Ворота перед окнами утра: на первом утре — приветствие «Покажи» / «Я разберусь сам». */
   beforeMorning(day: number): Promise<void>;
-  /** Пункты меню игры: «Подсказки: вкл/выкл», «Пройти обучение заново». */
+  /** Пункты меню игры: «Памятка», «Подсказки: вкл/выкл», «Пройти обучение заново». */
   menuItems(close?: () => void): HTMLElement[];
   /** Показать шаг сразу, без условий (отладка, `?tutorial=`); false — нет такого шага. */
   show(id: string): boolean;
@@ -72,6 +75,8 @@ export interface Tutorial {
   readonly current: string | null;
   readonly samples: CoachSample[];
   readonly coach: Coach;
+  /** «Памятка»: пройденные подсказки по разделам (memo.ts, memo-window.ts). */
+  readonly memo: { open(): void; close(): void; readonly isOpen: boolean };
 }
 
 export function initTutorial(opts: TutorialOptions): Tutorial {
@@ -81,6 +86,7 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
   const welcomeStep = file.steps.find((s) => s.id === WELCOME_ID) ?? null;
   const frame = opts.frame ?? document.getElementById('app') ?? document.body;
   const coach = mountCoach(root, { frame, voice: file.speaker.name, labels: file.labels });
+  const memoWindow: MemoWindow = mountMemoWindow(root, file.speaker.name);
 
   let persist = true;
   let progress = loadProgress(file.steps);
@@ -260,6 +266,10 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
     schedule();
   }
 
+  function openMemo(): void {
+    memoWindow.open(buildMemo(file, data.balance, progress.done, readUi().layout), { off: !progress.on });
+  }
+
   function menuItems(close?: () => void): HTMLElement[] {
     const item = (text: string, onClick: () => void) => {
       const b = document.createElement('button');
@@ -274,6 +284,7 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
       return b;
     };
     return [
+      item('Памятка', openMemo),
       item(`Подсказки: ${progress.on ? 'вкл' : 'выкл'}`, () => {
         progress = setTutorialOn(progress, !progress.on);
         save();
@@ -331,5 +342,12 @@ export function initTutorial(opts: TutorialOptions): Tutorial {
       return coach.samples;
     },
     coach,
+    memo: {
+      open: openMemo,
+      close: () => memoWindow.close(),
+      get isOpen() {
+        return memoWindow.isOpen;
+      },
+    },
   };
 }
