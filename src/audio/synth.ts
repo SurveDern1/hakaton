@@ -20,12 +20,24 @@ export function varyDb(rnd: () => number, db: number): number {
  * Узел панорамы −1 (слева) … 1 (справа) перед `dest`; без панорамы или без StereoPannerNode (старый
  * Safari) — сам `dest`. Возвращает, куда подключать звук.
  */
-export function panTo(ctx: BaseAudioContext, dest: AudioNode, pan: number | undefined, t = 0): AudioNode {
+export function panTo(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  pan: number | undefined,
+  t = 0,
+  keepLevel = false,
+): AudioNode {
   if (!pan || typeof ctx.createStereoPanner !== 'function') return dest;
   const p = ctx.createStereoPanner();
   p.pan.setValueAtTime(Math.max(-1, Math.min(1, pan)), t);
   p.connect(dest);
-  return p;
+  if (!keepLevel) return p;
+  // Моно без панорамы шина копирует в оба канала (мощность ×2), панорама делит её между каналами:
+  // без поправки звук сбоку на 3 дБ тише того же звука по центру.
+  const g = ctx.createGain();
+  g.gain.value = Math.SQRT2;
+  g.connect(p);
+  return g;
 }
 
 export interface ToneOpts {

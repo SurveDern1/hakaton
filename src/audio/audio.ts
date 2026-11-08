@@ -5,6 +5,8 @@
 // Порядок: initAudio (index.ts) → engine.unlockOn(window) — контекст создаётся и запускается на первом
 // касании, клике или клавише (иначе браузер телефона не даст звука) → sfx/music берут engine.ctx.
 // Без колонок: AudioEngine.offline(секунды) — тот же граф на OfflineAudioContext → render() → metrics.ts.
+// Уровни сведения (MASTER_LEVEL, ограничитель, поправки групп) — mix.ts.
+import { LIMITER, MASTER_LEVEL } from './mix';
 
 /** Мелодия дня (окно «Настройки»): ночь и финал звучат своими темами при любой. */
 export type Melody = 'waltz' | 'march' | 'wind';
@@ -41,8 +43,6 @@ export const DEFAULT_SETTINGS: AudioSettings = {
   melody: 'waltz',
 };
 
-/** Общий уровень всего звука до шин: запас, чтобы аккорды и удары не перегружали выход. */
-const MASTER_LEVEL = 0.8;
 /** Мягкий переход громкости при включении, выключении и смене уровней, с. */
 const VOLUME_RAMP = 0.25;
 
@@ -189,6 +189,30 @@ export class AudioEngine {
     return { post: [ch(0), ch(1)], pre: [ch(2), ch(3)], sampleRate: buf.sampleRate };
   }
 
+  /**
+   * Компенсация ограничителя без ослабления, дБ: тихий тон (−30 дБFS) прямо в master, выход против входа.
+   * От неё metrics.limiterReduction отсчитывает ослабление (свойство reduction узла в оффлайн-рендере
+   * Chrome не обновляется).
+   */
+  static async makeupDb(sampleRate = 48000): Promise<number> {
+    const e = AudioEngine.offline(0.6, { sampleRate });
+    const ctx = e.ctx as OfflineAudioContext;
+    const o = ctx.createOscillator();
+    o.frequency.value = 440;
+    const g = ctx.createGain();
+    g.gain.value = 10 ** (-30 / 20) / e.master.gain.value;
+    o.connect(g).connect(e.master);
+    o.start(0);
+    const r = await e.render();
+    const a = Math.round(0.3 * sampleRate);
+    const rms = (c: Float32Array) => {
+      let s = 0;
+      for (let i = a; i < c.length; i++) s += (c[i] as number) ** 2;
+      return s;
+    };
+    return 10 * Math.log10(rms(r.post[0] as Float32Array) / rms(r.pre[0] as Float32Array));
+  }
+
   /** Живой контекст запущен жестом; оффлайновый готов всегда — у него своя готовность. */
   get ready(): boolean {
     if (this.offlineMode) return true;
@@ -272,11 +296,11 @@ export class AudioEngine {
     this.master.gain.value = l.master;
     // Мягкий ограничитель: громкие наложения не хрипят на динамике телефона
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14;
-    comp.knee.value = 12;
-    comp.ratio.value = 4;
-    comp.attack.value = 0.005;
-    comp.release.value = 0.25;
+    comp.threshold.value = LIMITER.threshold;
+    comp.knee.value = LIMITER.knee;
+    comp.ratio.value = LIMITER.ratio;
+    comp.attack.value = LIMITER.attack;
+    comp.release.value = LIMITER.release;
     this.master.connect(comp);
     this.output = comp;
     if (this.offlineMode) {

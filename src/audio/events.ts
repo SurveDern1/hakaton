@@ -7,9 +7,10 @@
 
 import { synthCreak } from './ambience';
 import type { AudioEngine } from './audio';
+import { dbGain, EVENT_TRIM_DB } from './mix';
 import { playSample, sampleBuffer } from './samples';
 import { DROP, playSfx } from './sfx';
-import { vary } from './synth';
+import { noise, vary } from './synth';
 
 /** Сброс яруса `tier` (0 — Корень): чем выше ярус, тем тяжелее стон — длиннее и ниже. */
 export function playTierDrop(e: AudioEngine, tier = 0, delay = 0): void {
@@ -27,14 +28,31 @@ export function playTierDrop(e: AudioEngine, tier = 0, delay = 0): void {
 
 /** Листок календаря отрывается; `red` — 7 ноября, следом отзвук медных с колоколом. */
 export function playCalendar(e: AudioEngine, red = false, delay = 0): void {
-  playSample(e, 'paperTear', { rate: vary(e.rnd, 5), pan: -0.2, gain: vary(e.rnd, 8), delay });
+  const gain = vary(e.rnd, 8) * dbGain(EVENT_TRIM_DB.calendar);
+  playSample(e, 'paperTear', { rate: vary(e.rnd, 5), pan: -0.2, gain, delay });
+  // листок слетает: мягкий шорох следом за отрывом — тело звука без лишнего пика
+  const ctx = e.ctx;
+  if (ctx && e.ready && e.sfxAudible)
+    noise(e, {
+      t: ctx.currentTime + 0.01 + delay + 0.16,
+      dur: 0.2,
+      attack: 0.06,
+      release: 0.22,
+      gain: 0.22 * vary(e.rnd, 10),
+      dest: e.sfxBus,
+      filter: 'bandpass',
+      freq: 2600,
+      to: 1500,
+      q: 0.9,
+      pan: 0.25,
+    });
   if (red) playSfx(e, 'calendarRed', delay + 0.32);
 }
 
 /** Рычаг двигателя: вверх — чуть выше и быстрее, вниз — ниже и тяжелее. */
 export function playLever(e: AudioEngine, dir: 1 | -1 = 1, delay = 0): void {
   const rate = (dir > 0 ? 1.06 : 0.9) * vary(e.rnd, 3);
-  playSample(e, 'lever', { rate, gain: vary(e.rnd, 6), delay });
+  playSample(e, 'lever', { rate, gain: vary(e.rnd, 6) * dbGain(EVENT_TRIM_DB.lever), delay });
 }
 
 /** Отметка в журнале `played` без звука: когда по расписанию придёт важный момент (удар сброса). */

@@ -4,3 +4,4 @@ coverage/
 *.log
 .vite/
 design/export/
+sound-wav/

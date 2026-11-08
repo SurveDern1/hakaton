@@ -10,9 +10,14 @@
 //   5. ?sound=lab → sedmaya.sound.lab.measure(): рендер каждого звука, темы и сцены фона на OfflineAudioContext,
 //      таблица метрик (src/audio/metrics.ts) и пороги (LIMITS: пик, сумма после ограничителя, щелчок
 //      на краях, хвост тишины); громкость сверяется с базовой линией tools/sound-baseline.json (±1 LU);
-//      радио — голос громче помех на 10 дБ (lab.radioSnr).
-// Код выхода 1 при нарушении. SOUND_WAV=<папка> — заодно WAV каждого звука для прослушивания.
+//      радио — голос громче помех на 10 дБ (lab.radioSnr). Сведение (src/audio/mix.ts): громкость
+//      каждого звука группы в коридоре группы (интерфейс, действия, крупные, фон, музыка); худший случай
+//      scene:worst — пик после ограничителя ≤ −0,5 дБFS, ослабление ≤ 6 дБ, рендер 10 с быстрее 2 с.
+// Код выхода 1 при нарушении. SOUND_WAV=<папка> — заодно набор WAV для прослушивания (имена с номером
+// группы, `СЛУШАТЬ.md` — что и на чём слушать, docs/sound-listening.md).
 // --update-baseline — записать текущие громкости как базовую линию (после намеренной правки звука).
+// --lab — только лаборатория (шаг 5), без проверок в игре: быстрый круг при подборе уровней.
+// --only=<подстрока id> — мерить только эти звуки (с --lab: подбор одного уровня за секунды).
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -51,6 +56,30 @@ export function midSamples(samples, from, to) {
   return samples.filter(([, v]) => v > lo && v < hi).length;
 }
 
+/** Порядок групп сведения в таблице и в именах WAV (как MIX_GROUPS в src/audio/mix.ts). */
+const MIX_ORDER = ['ui', 'action', 'large', 'amb', 'music'];
+const MIX_TITLE = { ui: 'интерфейс', action: 'действия', large: 'крупные', amb: 'фон', music: 'музыка' };
+
+/** Имя WAV: группа сведения с номером впереди, чтобы набор слушался по порядку; прочее — «9-прочее». */
+export function wavName(row) {
+  const i = MIX_ORDER.indexOf(row.mix);
+  const prefix = row.group === 'scene' ? '0-сведение' : i >= 0 ? `${i + 1}-${MIX_TITLE[row.mix]}` : '9-прочее';
+  return `${prefix}_${row.id.replace(/[^a-z0-9@-]+/gi, '_')}.wav`;
+}
+
+/** Сводка по группам: диапазон громкости против коридора. */
+export function mixSummary(rows) {
+  const out = [];
+  for (const g of MIX_ORDER) {
+    const list = rows.filter((r) => r.mix === g && Number.isFinite(r.lufs));
+    if (!list.length) continue;
+    const lo = Math.min(...list.map((r) => r.lufs));
+    const hi = Math.max(...list.map((r) => r.lufs));
+    out.push(`${MIX_TITLE[g].padEnd(10)} ${list.length} зв.  ${lo.toFixed(1)} … ${hi.toFixed(1)} LUFS`);
+  }
+  return out.join('\n');
+}
+
 const fmt = (v, d = 1) => (typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : '−∞');
 
 /** Сверка громкости с базовой линией: список расхождений больше допуска. */
@@ -67,9 +96,10 @@ export function compareBaseline(rows, baseline) {
 }
 
 function table(rows, baseline) {
-  const head = ['звук', 'пик', 'огр.', 'LUFS', 'база', 'край', 'хвост', '>150Гц', 'корр', 'длина'];
+  const head = ['звук', 'группа', 'пик', 'огр.', 'LUFS', 'база', 'край', 'хвост', '>150Гц', 'корр', 'длина'];
   const lines = rows.map((r) => [
     r.id,
+    r.mix ? MIX_TITLE[r.mix] : r.group === 'scene' ? 'сведение' : '',
     fmt(r.peak),
     fmt(r.peakPost),
     fmt(r.lufs),
@@ -87,6 +117,7 @@ function table(rows, baseline) {
 
 async function run() {
   const update = process.argv.includes('--update-baseline');
+  const labOnly = process.argv.includes('--lab');
   const server = await createServer({
     root,
     configFile: path.join(root, 'vite.config.mts'),
@@ -158,6 +189,25 @@ async function run() {
       })();`,
     });
 
+    if (!labOnly) await gameChecks(client, base, step);
+
+    // 5. Лаборатория: рендер и метрики
+    await labChecks(client, base, step, update);
+  } finally {
+    client?.close();
+    chrome.kill();
+    await server.close();
+  }
+  if (errors.length) {
+    console.error(`\nЗвук: ${errors.length} нарушений`);
+    process.exit(1);
+  }
+  console.log('\nЗвук: тишина до жеста, выключатель и все звуки в порогах');
+}
+
+/** Шаги 1–4: тишина до жеста, заставка и радио, «Без звука», фон и события в игре. */
+async function gameChecks(client, base, step) {
+  {
     // 1. Без жеста — заставка «Включить радио» и тишина
     await client.send('Page.navigate', { url: base });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.engine'), 30000, 'игра загрузилась');
@@ -342,14 +392,25 @@ async function run() {
       'помехи у облачка рации',
     ).catch(() => false);
     step(burst, 'комикс: у облачка рации — помехи (radioBurst)');
+  }
+}
 
-    // 5. Лаборатория: рендер и метрики
+/** Шаг 5: рендер каждого звука и сцены, пороги, сведение, базовая линия, набор WAV. */
+async function labChecks(client, base, step, update) {
+  {
     await client.send('Page.navigate', { url: `${base}?sound=lab` });
     await waitFor(() => client.eval('!!window.sedmaya?.sound?.lab'), 30000, 'лаборатория ?sound=lab');
-    const rows = await client.eval('window.sedmaya.sound.lab.measure()');
+    const only = process.argv.find((a) => a.startsWith('--only='))?.slice('--only='.length);
+    const rows = await client.eval(`window.sedmaya.sound.lab.measure(${JSON.stringify(only ?? '')})`);
     const baseline = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : {};
     console.log(`\nМетрики по рендеру (${rows.length} звуков; пик — сумма шин, огр. — после ограничителя):`);
     console.log(table(rows, baseline));
+    console.log(`\nСведение по группам:\n${mixSummary(rows)}`);
+    const worst = rows.find((r) => r.id === 'scene:worst');
+    if (worst)
+      console.log(
+        `Худший случай: пик после ограничителя ${fmt(worst.peakPost)} дБFS, ослабление ${fmt(worst.reduction)} дБ, рендер 10 с за ${Math.round(worst.renderMs)} мс`,
+      );
     for (const r of rows) for (const e of r.errors) step(false, `${r.id}: ${e}`);
     const snr = await client.eval('window.sedmaya.sound.lab.radioSnr()');
     step(
@@ -369,22 +430,23 @@ async function run() {
     const wavDir = process.env.SOUND_WAV;
     if (wavDir) {
       fs.mkdirSync(wavDir, { recursive: true });
-      for (const r of rows) {
+      // SOUND_WAV_SET=mix — только звуки групп сведения и худший случай (набор для команды, артефакт CI)
+      const set = process.env.SOUND_WAV_SET === 'mix' ? rows.filter((r) => r.mix || r.group === 'scene') : rows;
+      for (const r of set) {
         const b64 = await client.eval(`window.sedmaya.sound.lab.wav(${JSON.stringify(r.id)})`);
-        fs.writeFileSync(path.join(wavDir, `${r.id.replace(/[^a-z0-9@-]+/gi, '_')}.wav`), Buffer.from(b64, 'base64'));
+        fs.writeFileSync(path.join(wavDir, wavName(r)), Buffer.from(b64, 'base64'));
       }
-      console.log(`WAV: ${rows.length} файлов в ${wavDir}`);
+      fs.writeFileSync(path.join(wavDir, 'СЛУШАТЬ.md'), listening(set));
+      console.log(`WAV: ${set.length} файлов и СЛУШАТЬ.md в ${wavDir}`);
     }
-  } finally {
-    client?.close();
-    chrome.kill();
-    await server.close();
   }
-  if (errors.length) {
-    console.error(`\nЗвук: ${errors.length} нарушений`);
-    process.exit(1);
-  }
-  console.log('\nЗвук: тишина до жеста, выключатель и все звуки в порогах');
+}
+
+/** Список прослушивания к набору WAV: вопросы из docs/sound-listening.md и громкости набора. */
+function listening(rows) {
+  const guide = fs.readFileSync(path.join(root, 'docs', 'sound-listening.md'), 'utf8');
+  const lines = rows.map((r) => `| ${wavName(r)} | ${fmt(r.lufs)} | ${fmt(r.peakPost)} |`);
+  return `${guide}\n## Набор\n\n| файл | LUFS | пик |\n| --- | --- | --- |\n${lines.join('\n')}\n`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

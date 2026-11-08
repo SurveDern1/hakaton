@@ -6,6 +6,7 @@
 // start() → set(цели, true) → schedule(длина рендера) → render(). Так лаборатория и check:sound меряют фон.
 // Около 30 постоянных узлов; события короткоживущие и сами себя останавливают.
 import type { AudioEngine } from './audio';
+import { AMB_TRIM_DB, dbGain } from './mix';
 import { playSample, type SampleName, sampleBuffer } from './samples';
 import type { AmbTargets } from './soundscape';
 import { noise, panTo, vary } from './synth';
@@ -407,7 +408,7 @@ export class Ambience {
       return o;
     };
 
-    const out = gain(1, e.ambBus);
+    const out = gain(dbGain(AMB_TRIM_DB), e.ambBus);
 
     // ---- Ветер: коричневый и розовый шум с двух сторон, полосы с блуждающим центром ----
     const windGain = gain(0, out);

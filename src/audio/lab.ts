@@ -9,14 +9,23 @@ import { Ambience, type AmbienceOpts } from './ambience';
 import { AudioEngine, type DuckBus } from './audio';
 import './lab.css';
 import { playCalendar, playLever, playTierDrop } from './events';
-import { checkMetrics, encodeWav, measureChannels, rmsDb, type SoundMetrics } from './metrics';
+import {
+  checkMetrics,
+  encodeWav,
+  limiterReduction,
+  measureChannels,
+  rmsDb,
+  type SoundMetrics,
+  trimForListening,
+} from './metrics';
+import { MIX_GROUPS, type MixGroup, mixGroupOf, WORST_CASE } from './mix';
 import { type Music, marchDrum, scheduleTheme, THEMES, type ThemeName } from './music';
 import { playRadio, playRadioBurst, type RadioOpts, radioScript } from './radio';
 import { playSample, preloadSamples, SAMPLE_NAMES, SAMPLES, type SampleName } from './samples';
 import { playSfx, SFX_NAMES, type SfxName } from './sfx';
 import { type AmbMoment, type AmbPhase, type AmbTargets, type SoundInput, soundscape } from './soundscape';
 
-type Group = 'sfx' | 'event' | 'sample' | 'radio' | 'theme' | 'amb';
+type Group = 'sfx' | 'event' | 'sample' | 'radio' | 'theme' | 'amb' | 'scene';
 
 export interface LabItem {
   id: string;
@@ -32,7 +41,15 @@ export interface LabItem {
   /** Что должен вернуть schedule; иначе в таблице ошибка (файл не загрузился — играла замена). */
   expect?: 'sample';
   /** Пороги сверх общих (сцены фона): коридор громкости, доля выше 150 Гц, корреляция каналов. */
-  limits?: { lufs?: [number, number]; highMin?: number; corrMax?: number };
+  limits?: {
+    lufs?: [number, number];
+    highMin?: number;
+    corrMax?: number;
+    /** Самое глубокое ослабление ограничителем, дБ (рендер с остановками, см. AudioEngine.render). */
+    reductionMax?: number;
+    /** Рендер быстрее, мс (запас для телефона). */
+    renderMsMax?: number;
+  };
   /** Цели фона: в живой лаборатории кнопка сцены закрепляет их на фоне игры. */
   targets?: AmbTargets;
 }
@@ -40,8 +57,13 @@ export interface LabItem {
 export interface LabRow extends SoundMetrics {
   id: string;
   group: Group;
+  /** Группа сведения (mix.ts) — коридор громкости; null — часть составного звука или слой. */
+  mix: MixGroup | null;
   kind: 'oneshot' | 'loop';
   errors: string[];
+  /** Сцены сведения: ослабление ограничителем, дБ, и время рендера, мс. */
+  reduction?: number;
+  renderMs?: number;
 }
 
 /** Состояние для фона: по нему лаборатория закрепляет цели Ambience (soundscape). */
@@ -80,8 +102,6 @@ const AMB_SECONDS = 10;
 
 /** Спокойный день: двигатель держит высоту, эфира хватает, Мгла далеко. */
 const DAY: LabState = { mode: 'hold', aether: 0.7, mistGap: 40, phase: 'day', height: 16 };
-/** Коридор громкости сцены фона целиком, LUFS (уровни плана −30…−24 LUFS с запасом на сцены). */
-const AMB_LUFS: [number, number] = [-34, -22];
 
 type Layers = AmbienceOpts['layers'];
 const ONLY_ENGINE: Layers = { engine: true, wind: false, mist: false, creak: false };
@@ -119,7 +139,8 @@ function ambScene(
 
 /** Сцены фона из плана: старт, три режима, мало эфира, Мгла близко, ночь; двигатель и ветер отдельно. */
 function ambItems(): LabItem[] {
-  const full = { lufs: AMB_LUFS };
+  // коридор сцены целиком — группа «Фон» в mix.ts (labItems → withMix)
+  const full = {};
   const engine = { highMin: 0.4 };
   const wind = { corrMax: 0.8 };
   return [
@@ -180,7 +201,10 @@ function eventItems(): LabItem[] {
 }
 
 /** Нарушения порогов сцены сверх общих. */
-export function checkLimits(m: SoundMetrics, limits: LabItem['limits']): string[] {
+export function checkLimits(
+  m: SoundMetrics & { reduction?: number; renderMs?: number },
+  limits: LabItem['limits'],
+): string[] {
   const errs: string[] = [];
   if (!limits) return errs;
   const f = (v: number, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '−∞');
@@ -192,11 +216,66 @@ export function checkLimits(m: SoundMetrics, limits: LabItem['limits']): string[
     );
   if (limits.corrMax !== undefined && m.corr >= limits.corrMax)
     errs.push(`корреляция каналов ${f(m.corr, 2)} ≥ ${limits.corrMax}: стерео схлопнулось`);
+  if (limits.reductionMax !== undefined && m.reduction !== undefined && m.reduction > limits.reductionMax)
+    errs.push(
+      `ограничитель ослабляет на ${f(m.reduction)} дБ > ${limits.reductionMax}: понизить сумму, а не душить выход`,
+    );
+  if (limits.renderMsMax !== undefined && m.renderMs !== undefined && m.renderMs > limits.renderMsMax)
+    errs.push(`рендер ${Math.round(m.renderMs)} мс > ${limits.renderMsMax}: тяжело для телефона`);
   return errs;
+}
+
+/**
+ * Худший случай сведения (mix.ts → WORST_CASE): ночь с подъёмом Мглы и Мглой у Корня, ночная тема,
+ * радио с его приглушением музыки и фона, сброс яруса и пачка всплывающих чисел — всё разом.
+ */
+function sceneItems(): LabItem[] {
+  const S = WORST_CASE.seconds;
+  return [
+    {
+      id: 'scene:worst',
+      group: 'scene',
+      kind: 'loop',
+      seconds: S,
+      prepare: (e) => preloadSamples(e),
+      limits: { reductionMax: WORST_CASE.reduction, renderMsMax: WORST_CASE.renderMs },
+      schedule(e) {
+        const ctx = e.ctx;
+        if (!ctx) return;
+        // приглушение, как от радио; в живой лаборатории отпускается после сцены
+        const off = [e.duck('music', -12, 0.4), e.duck('amb', -6, 0.4)];
+        if (!e.offlineMode)
+          window.setTimeout(() => {
+            for (const f of off) f();
+          }, S * 1000);
+        const a = new Ambience(e);
+        a.set(soundscape(labInput({ ...DAY, mistGap: 6 }), 'night', undefined, { rising: true }), true);
+        a.start();
+        a.schedule(ctx.currentTime + S);
+        scheduleTheme(e, 'night', S);
+        playSfx(e, 'night', 0.2);
+        playRadio(e, { delay: 0.4 });
+        playTierDrop(e, 3, 2);
+        for (let i = 0; i < 8; i++) playSfx(e, i % 2 ? 'minus' : 'plus', 2.4 + i * 0.09);
+        playSfx(e, 'tierUp', 5);
+      },
+    },
+  ];
+}
+
+/** Коридор громкости группы сведения (mix.ts) — для каждого пункта группы. */
+function withMix(item: LabItem): LabItem {
+  const g = mixGroupOf(item.id);
+  if (!g) return item;
+  return { ...item, limits: { ...item.limits, lufs: MIX_GROUPS[g].lufs } };
 }
 
 /** Всё, что лаборатория играет и меряет. Срезы фона и событий добавляют сюда свои пункты. */
 export function labItems(): LabItem[] {
+  return [...rawItems(), ...sceneItems()].map(withMix);
+}
+
+function rawItems(): LabItem[] {
   return [
     ...SFX_NAMES.map(
       (name): LabItem => ({
@@ -313,22 +392,41 @@ export function fragmentSpread(rows: Pick<LabRow, 'id' | 'lufs'>[]): Map<string,
 }
 
 /** Отрендерить пункт без колонок. */
-export async function renderItem(
-  item: LabItem,
-): Promise<{ post: Float32Array[]; pre: Float32Array[]; sampleRate: number; played: unknown }> {
+export async function renderItem(item: LabItem): Promise<{
+  post: Float32Array[];
+  pre: Float32Array[];
+  sampleRate: number;
+  played: unknown;
+  renderMs: number;
+}> {
   const e = AudioEngine.offline(item.seconds);
   await item.prepare?.(e);
   const played = item.schedule(e);
-  return { ...(await e.render()), played };
+  const t0 = performance.now();
+  const r = await e.render();
+  return { ...r, played, renderMs: performance.now() - t0 };
 }
+
+let makeup: Promise<number> | null = null;
+/** Начало рендера, где ослабление не меряется (ограничитель выходит из начального состояния), мс. */
+const SKIP_MS = 150;
 
 export async function measureItem(item: LabItem): Promise<LabRow> {
   const r = await renderItem(item);
-  const m = measureChannels(r.pre, r.post, r.sampleRate);
+  const m: SoundMetrics & { reduction?: number; renderMs?: number } = measureChannels(
+    r.pre,
+    r.post,
+    r.sampleRate,
+  );
+  if (item.limits?.renderMsMax !== undefined) m.renderMs = r.renderMs;
+  if (item.limits?.reductionMax !== undefined) {
+    makeup ??= AudioEngine.makeupDb(r.sampleRate);
+    m.reduction = limiterReduction(r.pre, r.post, r.sampleRate, await makeup, { skipMs: SKIP_MS });
+  }
   const errors = [...checkMetrics(m, item.kind), ...checkLimits(m, item.limits)];
   if (item.expect && r.played !== item.expect)
     errors.push(`играла замена (${String(r.played)}): файл не загрузился`);
-  return { id: item.id, group: item.group, kind: item.kind, ...m, errors };
+  return { id: item.id, group: item.group, mix: mixGroupOf(item.id), kind: item.kind, ...m, errors };
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -460,6 +558,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     ['radio', 'Радио'],
     ['theme', 'Музыка'],
     ['amb', 'Фоны'],
+    ['scene', 'Сведение: худший случай'],
   ];
   let pinnedScene: string | null = null;
   const markScene = () => {
@@ -678,12 +777,15 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     },
     radioSnr,
     async wav(id) {
-      const r = await renderItem(find(id));
-      return toBase64(encodeWav(r.post, r.sampleRate));
+      const it = find(id);
+      const r = await renderItem(it);
+      return toBase64(encodeWav(trimForListening(r.post, r.sampleRate, it.kind), r.sampleRate));
     },
     async exportWav(id) {
-      const r = await renderItem(find(id));
-      const blob = new Blob([encodeWav(r.post, r.sampleRate)], { type: 'audio/wav' });
+      const it = find(id);
+      const r = await renderItem(it);
+      const wav = encodeWav(trimForListening(r.post, r.sampleRate, it.kind), r.sampleRate);
+      const blob = new Blob([wav], { type: 'audio/wav' });
       const a = el('a');
       a.href = URL.createObjectURL(blob);
       a.download = `${id.replace(/[^a-z0-9@-]+/gi, '_')}.wav`;

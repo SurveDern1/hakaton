@@ -1,6 +1,7 @@
 // Звуки действий. Всё синтезируется на лету; громкости — доли шины звуков (0..1), здесь, а не в балансе.
 // При prefers-reduced-motion громкие удары (обвал, падение яруса, финал) звучат мягче, но не пропадают.
 import { type AudioEngine, midiToHz } from './audio';
+import { dbGain, SFX_TRIM_DB } from './mix';
 import { bell, noise, organ, panTo, thump, tone } from './synth';
 
 export type SfxName =
@@ -51,10 +52,12 @@ export function playSfx(e: AudioEngine, name: SfxName, delay = 0, opts: SfxOpts 
   if (!ctx || !e.ready || !e.sfxAudible) return;
   const t = ctx.currentTime + 0.01 + delay;
   let out: AudioNode = opts.dest ?? e.sfxBus;
-  if (opts.pan || (opts.gain !== undefined && opts.gain !== 1)) {
+  // громкость этого раза × поправка сведения (mix.ts)
+  const level = (opts.gain ?? 1) * dbGain(SFX_TRIM_DB[name] ?? 0);
+  if (opts.pan || level !== 1) {
     const g = ctx.createGain();
-    g.gain.value = Math.max(0, opts.gain ?? 1);
-    g.connect(panTo(ctx, out, opts.pan, t));
+    g.gain.value = Math.max(0, level);
+    g.connect(panTo(ctx, out, opts.pan, t, true));
     out = g;
   }
   const soft = reduced() ? 0.6 : 1;
@@ -71,8 +74,10 @@ const SOUNDS: Record<SfxName, Sound> = {
     noise(e, { t, dur: 0.006, release: 0.03, gain: 0.35, dest: out, filter: 'bandpass', freq: 3200, q: 2 });
     tone(e, { freq: 1150, t, dur: 0.005, release: 0.05, gain: 0.08, dest: out });
   },
+  // Вкладка: щелчок мягче и ниже кнопки — короткий шорох и глухой «тик»
   tab(e, t, out) {
-    noise(e, { t, dur: 0.004, release: 0.025, gain: 0.22, dest: out, filter: 'bandpass', freq: 2400, q: 3 });
+    noise(e, { t, dur: 0.006, release: 0.04, gain: 0.3, dest: out, filter: 'bandpass', freq: 2000, q: 2.5 });
+    tone(e, { freq: 760, t, dur: 0.004, release: 0.05, gain: 0.05, dest: out });
   },
   // Отказ: глухой двойной «бум» вниз
   denied(e, t, out) {
@@ -117,13 +122,14 @@ const SOUNDS: Record<SfxName, Sound> = {
   },
   // Выбор: удар печати по бумаге
   choice(e, t, out, soft) {
-    tone(e, { freq: 140, to: 55, t, dur: 0.03, release: 0.18, gain: 0.4 * soft, dest: out });
-    thump(e, t, out, 0.42 * soft, 280);
+    // низ — для наушников; на нём держится пик, поэтому тише тела 280 Гц (слышно и на телефоне)
+    tone(e, { freq: 140, to: 55, t, dur: 0.03, release: 0.18, gain: 0.28 * soft, dest: out });
+    thump(e, t, out, 0.42 * soft, 280, 0.24);
     noise(e, {
       t,
       dur: 0.02,
       release: 0.09,
-      gain: 0.32 * soft,
+      gain: 0.2 * soft,
       dest: out,
       filter: 'lowpass',
       freq: 2200,
@@ -521,12 +527,14 @@ const SOUNDS: Record<SfxName, Sound> = {
   // Декрет: удар штампа потяжелее и подпись пером
   decree(e, t, out, soft) {
     SOUNDS.choice(e, t, out, soft);
+    // штамп тяжелее печати: второе тело чуть позже, чтобы пики ударов не складывались
+    thump(e, t + 0.012, out, 0.25 * soft, 200, 0.3);
     noise(e, {
       t: t + 0.18,
       dur: 0.22,
       attack: 0.02,
       release: 0.06,
-      gain: 0.05,
+      gain: 0.1,
       dest: out,
       filter: 'bandpass',
       freq: 5200,

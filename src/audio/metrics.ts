@@ -204,6 +204,39 @@ export interface SoundMetrics {
   length: number;
 }
 
+/**
+ * Ослабление ограничителем, дБ (≥ 0): по окнам `winMs` сравнивается громкость до и после него.
+ * Без ослабления выход = вход × `makeupDb` (автоматическая компенсация Chrome, меряется отдельно
+ * тихим тоном — AudioEngine.makeupDb); всё, что ниже этого, — работа ограничителя. Вход сдвинут на
+ * `delayMs` — упреждение ограничителя (в Chrome 6 мс). Окна тише `floorDb` не учитываются; первые
+ * `skipMs` — тоже: в начале рендера ограничитель Chrome ещё выходит из начального состояния.
+ */
+export function limiterReduction(
+  pre: Channels,
+  post: Channels,
+  sr: number,
+  makeupDb: number,
+  opts: { winMs?: number; delayMs?: number; floorDb?: number; skipMs?: number } = {},
+): number {
+  const win = Math.max(1, Math.round(((opts.winMs ?? 20) / 1000) * sr));
+  const delay = Math.round(((opts.delayMs ?? 6) / 1000) * sr);
+  const floor = 10 ** ((opts.floorDb ?? -50) / 10);
+  const n = Math.min(pre[0]?.length ?? 0, post[0]?.length ?? 0);
+  const power = (ch: Channels, a: number) => {
+    let s = 0;
+    for (const c of ch) for (let i = a; i < a + win; i++) s += (c[i] as number) ** 2;
+    return s / (win * ch.length);
+  };
+  let worst = 0;
+  for (let a = Math.round(((opts.skipMs ?? 0) / 1000) * sr); a + win + delay <= n; a += win) {
+    const p = power(pre, a);
+    if (p < floor) continue;
+    const g = 10 * Math.log10(power(post, a + delay) / p);
+    worst = Math.max(worst, makeupDb - g);
+  }
+  return worst;
+}
+
 /** Все метрики рендера: `pre` — сумма шин до ограничителя, `post` — то, что слышно. */
 export function measureChannels(pre: Channels, post: Channels, sr: number): SoundMetrics {
   return {
@@ -247,6 +280,27 @@ export function checkMetrics(m: SoundMetrics, kind: 'oneshot' | 'loop'): string[
     if (m.tail > LIMITS.tail) errs.push(`хвост ${f(m.tail)} дБFS > ${LIMITS.tail}: звук не затих`);
   }
   return errs;
+}
+
+/**
+ * Обрезка для набора WAV: короткий звук — до затухания (`activeSec`) плюс `tailSec`, тема и фон — не
+ * длиннее `maxSec`; в конце — затухание 20 мс, чтобы обрезка не щёлкала.
+ */
+export function trimForListening(
+  ch: Channels,
+  sr: number,
+  kind: 'oneshot' | 'loop',
+  opts: { tailSec?: number; maxSec?: number } = {},
+): Channels {
+  const n = ch[0]?.length ?? 0;
+  const want = kind === 'oneshot' ? activeSec(ch, sr) + (opts.tailSec ?? 0.3) : (opts.maxSec ?? 10);
+  const len = Math.min(n, Math.max(1, Math.ceil(want * sr)));
+  const fade = Math.min(len, Math.round(0.02 * sr));
+  return ch.map((c) => {
+    const out = c.slice(0, len);
+    if (len < n) for (let i = 0; i < fade; i++) out[len - 1 - i] = (out[len - 1 - i] as number) * (i / fade);
+    return out;
+  });
 }
 
 /** WAV 16 бит из каналов (для прослушивания набора на телефоне и в наушниках). */

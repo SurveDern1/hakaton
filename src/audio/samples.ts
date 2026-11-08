@@ -184,7 +184,7 @@ export function playSample(
   g.gain.linearRampToValueAtTime(level, t + fade);
   g.gain.setValueAtTime(level, t + dur - fade);
   g.gain.linearRampToValueAtTime(0, t + dur);
-  src.connect(g).connect(panTo(ctx, opts.dest ?? e.sfxBus, opts.pan, t));
+  src.connect(g).connect(panTo(ctx, opts.dest ?? e.sfxBus, opts.pan, t, true));
   src.start(t, start, len);
   src.stop(t + dur + 0.02);
   e.played.push([`sample:${name}`, Math.round(t * 100) / 100]);

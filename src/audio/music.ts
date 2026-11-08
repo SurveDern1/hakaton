@@ -9,6 +9,7 @@
 // final — гимн-марш в до-миноре: медные аккорды, литавры, в конце петли мажорный аккорд.
 // Смена темы — кроссфейд CROSSFADE секунд; под всеми темами тихий ламповый шум и потрескивание.
 import { type AudioEngine, makeRandom, midiToHz, ramp } from './audio';
+import { dbGain, MUSIC_TRIM_DB, THEME_TRIM_DB } from './mix';
 import { bell, noise, organ, thump, tone } from './synth';
 
 export type ThemeName = 'waltz' | 'march' | 'wind' | 'night' | 'final';
@@ -363,7 +364,12 @@ class ThemePlayer {
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
     this.gain.connect(e.musicBus);
-    ramp(this.gain.gain, theme.gain, ctx.currentTime, CROSSFADE);
+    ramp(
+      this.gain.gain,
+      theme.gain * dbGain(MUSIC_TRIM_DB + (THEME_TRIM_DB[name] ?? 0)),
+      ctx.currentTime,
+      CROSSFADE,
+    );
     this.nextTime = ctx.currentTime + 0.1;
   }
 
