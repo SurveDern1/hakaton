@@ -4,7 +4,7 @@
 import { characterFates, type GameData, type GameState, resolveEnding } from '../core';
 import { TowerDom } from '../scenes/tower-dom';
 import { buildTower, towerInputFromState } from '../scenes/tower-model';
-import { dayDate, fmtDate, h, plural } from './format';
+import { dayDate, dispText, fmtDate, h, plural } from './format';
 import { portraitOf } from './portraits';
 
 export interface FinalOptions {
@@ -108,7 +108,7 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
     h(
       'figcaption',
       {},
-      h('span', { class: 'disp fin-title', id: 'fin-title' }, ending.title),
+      h('span', { class: 'disp fin-title', id: 'fin-title' }, dispText(ending.title)),
       h(
         'span',
         { class: 'num fin-sub' },

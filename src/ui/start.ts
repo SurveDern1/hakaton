@@ -1,6 +1,6 @@
 // Стартовый экран (ТЗ 9, 3.2): «Всем! Всем! Всем!», «Продолжить» при сохранении и «Новая игра».
 import type { GameData, GameState } from '../core';
-import { dayDate, fmtDate, h } from './format';
+import { dayDate, dispText, fmtDate, h } from './format';
 
 export interface StartOptions {
   data: GameData;
@@ -50,7 +50,7 @@ export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
       'div',
       { class: 'start-in' },
       h('span', { class: 'lbl start-radio' }, 'Радио башни · 19 октября 1967'),
-      h('p', { class: 'disp start-call' }, 'Всем! Всем! Всем!'),
+      h('p', { class: 'disp start-call' }, dispText('Всем! Всем! Всем!')),
       h('h1', { class: 'disp start-title', id: 'start-title' }, 'Седьмая'),
       h(
         'p',

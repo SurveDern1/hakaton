@@ -31,10 +31,15 @@
 }
 
 .sd { font-family: var(--f-ui); color: var(--text); background: var(--ink); }
-.disp { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+/* Rubik Mono One моноширинный: пробел в нём шириной с букву, и слова заголовка разваливаются.
+   word-spacing сжимает пробел до трети буквы. */
+.disp { font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .01em; word-spacing: -.42em; text-wrap: balance; }
+/* Знак препинания после слова (запятая, «!») — к слову, иначе он стоит через клетку */
+.disp .dp { margin-left: -.26em; }
 .lbl { font-family: var(--f-ui); font-weight: 500; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .num { font-variant-numeric: tabular-nums; }
-.serif { font-family: var(--f-text); }
+/* pretty — без одного слова на последней строке абзаца */
+.serif { font-family: var(--f-text); text-wrap: pretty; }
 
 /* Кнопки: косой параллелограмм */
 .btn {
@@ -76,6 +81,8 @@
   background: rgba(26, 52, 55, .08); color: var(--paper-ink);
   font-family: var(--f-ui); font-size: 14px; font-weight: 500; white-space: nowrap;
 }
+/* Стрелок нет в Oswald, запасной шрифт ставит их ниже строки — поднимаем к середине букв */
+.hint .up, .hint .down { position: relative; top: -.12em; line-height: 1; }
 .hint .up { color: #2A7F94; font-weight: 700; letter-spacing: -.08em; }
 .hint .down { color: #C93C41; font-weight: 700; letter-spacing: -.08em; }
 .hint.memory { background: var(--paper-ink); color: var(--paper); }
@@ -92,7 +99,7 @@
 /* Отрывной календарь */
 .leaf { position: relative; background: var(--paper); color: var(--paper-ink); text-align: center;
   clip-path: polygon(0 0, 100% 0, 100% 92%, 90% 100%, 80% 93%, 70% 100%, 60% 93%, 50% 100%, 40% 93%, 30% 100%, 20% 93%, 10% 100%, 0 92%); }
-.leaf-top { background: var(--red); color: var(--paper); font-family: var(--f-ui); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+.leaf-top { background: var(--red); color: var(--paper); font-family: var(--f-ui); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
 
 /* Бумага */
 .paper { background: var(--paper); color: var(--paper-ink); }

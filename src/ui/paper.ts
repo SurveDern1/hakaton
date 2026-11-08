@@ -2,7 +2,7 @@
 // Главная заметка — первая запись последнего дня, справа — ночь (из последнего отчёта), склад и
 // журнал прошлых дней. Открывается кнопкой «Стенгазета», закрывается Esc или «Закрыть».
 import { forecastWarnings, type GameData, type GameState, type NightReport, residentsByTier } from '../core';
-import { dayDate, fmtDate, fmtNum, h } from './format';
+import { dayDate, dispText, fmtDate, fmtNum, h } from './format';
 
 export interface Paper {
   open(state: GameState, report: NightReport | null, forecast: NightReport): void;
@@ -36,7 +36,7 @@ export function mountPaper(root: HTMLElement, data: GameData): Paper {
       'article',
       { class: 'pp-main' },
       h('span', { class: 'plaque' }, 'Главное'),
-      h('h2', { class: 'disp pp-h2' }, headline ?? 'Башня держится'),
+      h('h2', { class: 'disp pp-h2' }, dispText(headline ?? 'Башня держится')),
       h(
         'p',
         { class: 'serif pp-p' },
@@ -110,7 +110,7 @@ export function mountPaper(root: HTMLElement, data: GameData): Paper {
           'div',
           {},
           h('span', { class: 'lbl' }, 'Стенгазета башни «Седьмое ноября» · Бортовой журнал'),
-          h('h1', { class: 'disp pp-title', id: 'pp-title' }, 'За высоту!'),
+          h('h1', { class: 'disp pp-title', id: 'pp-title' }, dispText('За высоту!')),
         ),
         h(
           'div',

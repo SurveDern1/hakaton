@@ -512,8 +512,10 @@
     padding: 10px 16px;
     font-size: 14px;
   }
+  /* Снизу место под кнопку звука (.snd-toggle, 44 px в левом нижнем углу), чтобы она не
+     закрывала легенду стрелок */
   .ev-main {
-    padding: 18px 16px 20px;
+    padding: 18px 16px 68px;
     gap: 14px;
   }
   .ev-title {
