@@ -3,6 +3,7 @@
 // проявление идёт плавно — сэмплы промежуточных значений карточки, портрета и облачка.
 // Запуск: npm run check:reply (нужен Chrome или Edge; путь можно задать в CHROME).
 // REPLY_SHOTS=<папка> — снимки готовой карточки и кадры проявления на каждом размере.
+// REPLY_CPU=<во сколько раз> — проверить плавность на медленном процессоре.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -120,6 +121,8 @@ async function run() {
     client = cdp(pages.find((t) => t.type === 'page').webSocketDebuggerUrl);
     await client.opened;
     await client.send('Page.enable');
+    // REPLY_CPU=4 — замедлить процессор, как на слабом телефоне или машине CI
+    if (process.env.REPLY_CPU) await client.send('Emulation.setCPUThrottlingRate', { rate: +process.env.REPLY_CPU });
     await client.send('Runtime.enable');
 
     const who = speakers();
@@ -141,8 +144,10 @@ async function run() {
           b.removeAttribute('aria-disabled');
           b.click();
         })()`);
-        // Сэмплы — только на первом персонаже каждого размера, остальным хватает конечного вида
-        const rows = n === 0 ? await client.eval(SAMPLE) : null;
+        // Сэмплы — на втором персонаже каждого размера: первый показ прогревает шрифты, текстуры зерна
+        // и модули Vite, и на медленной машине CI его кадры говорят о холодном старте, а не о самой анимации.
+        // Остальным хватает конечного вида.
+        const rows = n === 1 ? await client.eval(SAMPLE) : null;
         await waitFor(() => client.eval(`!!document.querySelector('.ev-reply')`), 5000, `реплика ${sp.who}`);
         if (rows) {
           const mid = rows.filter((r) => r.op > 0.05 && r.op < 0.95).length;
@@ -161,7 +166,7 @@ async function run() {
         else console.log(`OK   ${vp.name} ${sp.who}: ${Math.round(g.right - g.left)}×${Math.round(g.bottom - g.top)}`);
         await client.eval(`document.querySelector('.snd-toggle')?.setAttribute('hidden', '')`);
         // Раскадровка проявления: анимации карточки ставятся на паузу в моменты T и снимаются
-        if (shots && n === 0)
+        if (shots && n === 1)
           for (const t of [60, 160, 280, 420, 640]) {
             await client.eval(`document.querySelector('.ev-reply').getAnimations({ subtree: true })
               .forEach((a) => { a.pause(); a.currentTime = ${t}; })`);
