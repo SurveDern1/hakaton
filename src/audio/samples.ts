@@ -21,11 +21,36 @@ export interface SampleDef {
 /** Файлы срезов 2 и 6 плана звука; пока `file` не вписан, звучит замена. */
 export type SampleName = 'creakMetal' | 'creakWood' | 'paperTear' | 'lever' | 'radioVoice';
 
+// Файлы среза 2 — паки Kenney (CC0), собраны `npm run sounds` (tools/make-sounds.mjs), источники и
+// обработка — public/sounds/CREDITS.md. Отметки `offsets` печатает та же сборка: после пересборки
+// файла их переписывают сюда. Есть ли файлы на месте и укладываются ли в 300 КБ — tools/check-data.js.
 export const SAMPLES: Record<SampleName, SampleDef> = {
-  creakMetal: { gain: 0.6, fallback: 'demolish' },
-  creakWood: { gain: 0.5, fallback: 'tab' },
-  paperTear: { gain: 0.6, fallback: 'paper' },
-  lever: { gain: 0.6, fallback: 'click' },
+  creakMetal: { file: 'sounds/creak-metal.mp3', gain: 0.6, fallback: 'demolish' },
+  creakWood: {
+    file: 'sounds/creak-wood.mp3',
+    offsets: [
+      [0, 0.626],
+      [0.836, 0.784],
+      [1.83, 0.336],
+      [2.376, 1.151],
+      [3.738, 1.026],
+    ],
+    gain: 0.5,
+    fallback: 'tab',
+  },
+  paperTear: {
+    file: 'sounds/paper-tear.mp3',
+    offsets: [
+      [0, 0.666],
+      [0.876, 0.423],
+      [1.508, 0.297],
+    ],
+    // листок тише скрипов по природе: громкость поднята до уровня бывшей замены `paper`
+    gain: 1,
+    fallback: 'paper',
+  },
+  lever: { file: 'sounds/lever.mp3', gain: 0.6, fallback: 'click' },
+  // Срез 6: голос «Всем! Всем! Всем!» (radio-vsem.mp3) — пока замена
   radioVoice: { gain: 0.8, fallback: 'eventOpen' },
 };
 

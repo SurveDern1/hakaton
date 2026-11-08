@@ -98,6 +98,29 @@ for (const c of comics.comics) {
   }
 }
 
+// Звуки из файлов: каждый `file` манифеста src/audio/samples.ts лежит в public/ и записан в CREDITS.md,
+// лишних mp3 нет, вся папка public/sounds/ не больше 300 КБ. Отметки фрагментов и громкость меряет
+// check:sound. samples.ts импортирует Web Audio, поэтому манифест читается как текст.
+const SOUNDS_MAX_KB = 300;
+const samplesSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'audio', 'samples.ts'), 'utf8');
+const soundFiles = [...samplesSrc.matchAll(/file:\s*'([^']+)'/g)].map((m) => m[1]);
+for (const f of soundFiles) {
+  if (f.startsWith('/')) errors.push(`звук ${f}: путь без ведущего / (сайт открывается из подпапки)`);
+  else if (!fs.existsSync(path.join(__dirname, '..', 'public', f))) errors.push(`звук: нет файла public/${f}`);
+}
+const soundsDir = path.join(__dirname, '..', 'public', 'sounds');
+if (fs.existsSync(soundsDir)) {
+  const kb = fs.readdirSync(soundsDir).reduce((s, f) => s + fs.statSync(path.join(soundsDir, f)).size, 0) / 1024;
+  if (kb > SOUNDS_MAX_KB) errors.push(`public/sounds/: ${kb.toFixed(0)} КБ, больше ${SOUNDS_MAX_KB} КБ`);
+  for (const f of fs.readdirSync(soundsDir).filter((n) => n.endsWith('.mp3')))
+    if (!soundFiles.includes(`sounds/${f}`)) errors.push(`public/sounds/${f}: файла нет в манифесте samples.ts`);
+  const credits = path.join(soundsDir, 'CREDITS.md');
+  const creditsText = fs.existsSync(credits) ? fs.readFileSync(credits, 'utf8') : '';
+  for (const f of soundFiles)
+    if (!creditsText.includes(path.basename(f))) errors.push(`звук ${f}: нет строки в public/sounds/CREDITS.md`);
+}
+console.log(`звуков из файлов: ${soundFiles.length}`);
+
 // Обучение: та же проверка, что в src/tutorial/tutorial.test.ts. schema.ts без импортов во время
 // выполнения, поэтому Node подключает его сам, снимая типы.
 const { checkTutorial } = require('../src/tutorial/schema.ts');

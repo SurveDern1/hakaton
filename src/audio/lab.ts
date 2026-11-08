@@ -8,7 +8,7 @@ import { AudioEngine, type DuckBus, type NoiseColor } from './audio';
 import './lab.css';
 import { checkMetrics, encodeWav, measureChannels, type SoundMetrics } from './metrics';
 import { type Music, scheduleTheme, THEMES, type ThemeName } from './music';
-import { playSample, SAMPLE_NAMES, type SampleName } from './samples';
+import { playSample, preloadSamples, SAMPLE_NAMES, SAMPLES, type SampleName } from './samples';
 import { playSfx, SFX_NAMES } from './sfx';
 import { noise } from './synth';
 
@@ -21,8 +21,12 @@ export interface LabItem {
   kind: 'oneshot' | 'loop';
   /** Длина рендера, с. */
   seconds: number;
-  /** Поставить звук на движок (живой или оффлайновый) с начала. */
-  schedule(e: AudioEngine): void;
+  /** Поставить звук на движок (живой или оффлайновый) с начала; файл — что прозвучало (playSample). */
+  schedule(e: AudioEngine): unknown;
+  /** Подготовить движок до рендера (загрузить файлы звуков). */
+  prepare?(e: AudioEngine): Promise<unknown>;
+  /** Что должен вернуть schedule; иначе в таблице ошибка (файл не загрузился — играла замена). */
+  expect?: 'sample';
 }
 
 export interface LabRow extends SoundMetrics {
@@ -92,15 +96,7 @@ export function labItems(): LabItem[] {
       seconds: ONESHOT_SECONDS,
       schedule: (e) => playSfx(e, 'build', 0, { pan: -0.8 }),
     },
-    ...SAMPLE_NAMES.map(
-      (name): LabItem => ({
-        id: `sample:${name}`,
-        group: 'sample',
-        kind: 'oneshot',
-        seconds: ONESHOT_SECONDS,
-        schedule: (e) => void playSample(e, name),
-      }),
-    ),
+    ...SAMPLE_NAMES.flatMap(sampleItems),
     ...THEMES.map(
       (name): LabItem => ({
         id: `theme:${name}`,
@@ -114,19 +110,71 @@ export function labItems(): LabItem[] {
   ];
 }
 
+/**
+ * Пункты файла: весь звук (`sample:creakWood`, случайный фрагмент) и каждый фрагмент отдельно
+ * (`sample:creakWood#2`). Файл указан — рендер сперва его загружает, и играть должен файл, не замена.
+ */
+export function sampleItems(name: SampleName): LabItem[] {
+  const def = SAMPLES[name];
+  const base = {
+    group: 'sample' as const,
+    kind: 'oneshot' as const,
+    seconds: ONESHOT_SECONDS,
+    ...(def.file ? { prepare: (e: AudioEngine) => preloadSamples(e), expect: 'sample' as const } : {}),
+  };
+  return [
+    { ...base, id: `sample:${name}`, schedule: (e) => playSample(e, name) },
+    ...(def.offsets ?? []).map(
+      (_, i): LabItem => ({
+        ...base,
+        id: `sample:${name}#${i}`,
+        schedule: (e) => playSample(e, name, { fragment: i }),
+      }),
+    ),
+  ];
+}
+
+/** Разброс громкости фрагментов одного файла, LU: допуск плана — ±2 LU от среднего. */
+export const FRAGMENT_LU = 2;
+
+/** Фрагменты (`sample:x#i`), чья громкость дальше FRAGMENT_LU от средней по файлу: id → ошибка. */
+export function fragmentSpread(rows: Pick<LabRow, 'id' | 'lufs'>[]): Map<string, string> {
+  const groups = new Map<string, Pick<LabRow, 'id' | 'lufs'>[]>();
+  for (const r of rows) {
+    const m = /^(sample:[^#]+)#\d+$/.exec(r.id);
+    if (!m?.[1] || !Number.isFinite(r.lufs)) continue;
+    groups.set(m[1], [...(groups.get(m[1]) ?? []), r]);
+  }
+  const out = new Map<string, string>();
+  for (const list of groups.values()) {
+    const mean = list.reduce((s, r) => s + r.lufs, 0) / list.length;
+    for (const r of list)
+      if (Math.abs(r.lufs - mean) > FRAGMENT_LU)
+        out.set(
+          r.id,
+          `громкость фрагмента ${(r.lufs - mean).toFixed(1)} LU от средней по файлу (допуск ±${FRAGMENT_LU})`,
+        );
+  }
+  return out;
+}
+
 /** Отрендерить пункт без колонок. */
 export async function renderItem(
   item: LabItem,
-): Promise<{ post: Float32Array[]; pre: Float32Array[]; sampleRate: number }> {
+): Promise<{ post: Float32Array[]; pre: Float32Array[]; sampleRate: number; played: unknown }> {
   const e = AudioEngine.offline(item.seconds);
-  item.schedule(e);
-  return e.render();
+  await item.prepare?.(e);
+  const played = item.schedule(e);
+  return { ...(await e.render()), played };
 }
 
 export async function measureItem(item: LabItem): Promise<LabRow> {
   const r = await renderItem(item);
   const m = measureChannels(r.pre, r.post, r.sampleRate);
-  return { id: item.id, group: item.group, kind: item.kind, ...m, errors: checkMetrics(m, item.kind) };
+  const errors = checkMetrics(m, item.kind);
+  if (item.expect && r.played !== item.expect)
+    errors.push(`играла замена (${String(r.played)}): файл не загрузился`);
+  return { id: item.id, group: item.group, kind: item.kind, ...m, errors };
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -246,7 +294,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
   // ---- Кнопки звуков ----
   const GROUPS: [Group, string][] = [
     ['sfx', 'Звуки действий'],
-    ['sample', 'Файлы (пока нет файла — замена)'],
+    ['sample', 'Файлы (# — фрагмент; нет файла — замена)'],
     ['theme', 'Музыка'],
     ['amb', 'Фоны'],
   ];
@@ -259,7 +307,8 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
       return;
     }
     if (item.group === 'sample') {
-      const r = playSample(engine, item.id.slice('sample:'.length) as SampleName);
+      const [name, frag] = item.id.slice('sample:'.length).split('#') as [SampleName, string?];
+      const r = playSample(engine, name, frag === undefined ? {} : { fragment: Number(frag) });
       status.textContent = `${item.id}: ${r === 'sample' ? 'файл' : r === 'fallback' ? 'замена' : 'звук выключен'}`;
       return;
     }
@@ -442,6 +491,7 @@ export function mountLab(host: HTMLElement, deps: LabDeps): Lab {
     async measure(filter) {
       const rows: LabRow[] = [];
       for (const it of items) if (!filter || it.id.includes(filter)) rows.push(await measureItem(it));
+      for (const [id, err] of fragmentSpread(rows)) rows.find((r) => r.id === id)?.errors.push(err);
       return rows;
     },
     async wav(id) {
