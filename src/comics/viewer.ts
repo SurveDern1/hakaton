@@ -486,6 +486,7 @@ function renderPanel(p: ComicPanel): HTMLElement {
       if (n.small) cls.push('is-small');
       const note = h('p', { class: cls.join(' ') }, h('span', {}, n.text));
       note.style.setProperty('--d', `${d}ms`);
+      if (n.scale) note.style.setProperty('--ns', String(n.scale));
       d += noteStep(n.text);
       group.append(note);
     }

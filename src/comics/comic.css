@@ -301,7 +301,7 @@
   border-radius: 1.35em;
   font-family: var(--f-comic);
   font-weight: 700;
-  font-size: clamp(11.5px, 3.3cqw, 20px);
+  font-size: calc(clamp(11.5px, 3.3cqw, 20px) * var(--ns, 1));
   line-height: 1.26;
   letter-spacing: 0.01em;
   text-transform: uppercase;
@@ -356,7 +356,7 @@
   text-wrap: balance;
 }
 .cx-note.is-small {
-  font-size: clamp(11px, 2.9cqw, 18px);
+  font-size: calc(clamp(11px, 2.9cqw, 18px) * var(--ns, 1));
 }
 .cx-note.is-accent {
   color: var(--red);
