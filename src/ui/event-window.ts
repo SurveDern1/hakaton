@@ -16,6 +16,7 @@ import {
 } from '../core';
 import type { GameStore } from '../game/store';
 import { flashHud } from './feedback';
+import { sgn } from './format';
 import { FACTION_ICONS, portraitOf, svgIcon } from './portraits';
 import './event-window.css';
 
@@ -23,7 +24,23 @@ import './event-window.css';
 export interface MorningReport {
   /** «Отчёт о ночи на 20 октября». */
   title: string;
-  items: string[];
+  items: ReportItem[];
+}
+
+/** Строка отчёта: «Еда −3» и остаток «(37)» приглушённым цветом; tone 'bad' — беда (нехватка, смерти). */
+export interface ReportItem {
+  text: string;
+  rest?: string;
+  tone?: 'bad';
+}
+
+/** Строка отчёта разметкой: текст и остаток в скобках (.rest) — общая для полосы и карточки. */
+export function reportItemNodes(item: ReportItem): (Node | string)[] {
+  if (!item.rest) return [item.text];
+  const rest = document.createElement('span');
+  rest.className = 'rest';
+  rest.textContent = `(${item.rest})`;
+  return [`${item.text} `, rest];
 }
 
 export type DeltaKey = EffectKey | FactionKey;
@@ -107,6 +124,8 @@ const LEVEL_WORDS = ['немного', 'заметно', 'сильно'];
 const T_CHOSEN = 300;
 const T_LEAVE = 200;
 const T_REPLY = 2600;
+/** Высота строки чисел в карточке реплики, px: запас, чтобы число не всплыло под выросшей карточкой. */
+const CHIP_ROW = 44;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const wait = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
@@ -130,11 +149,8 @@ function svgNode(markup: string, cls: string): HTMLElement {
   return span;
 }
 
-export const fmtSigned = (n: number, key: DeltaKey) => {
-  const abs = Math.abs(n).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
-  const unit = key === 'altitude' || key === 'mist' ? ' м' : '';
-  return `${n > 0 ? '+' : '−'}${abs}${unit}`;
-};
+export const fmtSigned = (n: number, key: DeltaKey) =>
+  `${sgn(n)}${key === 'altitude' || key === 'mist' ? ' м' : ''}`;
 
 function dayLabel(data: GameData, day: number): string {
   const date = new Date(`${data.balance.calendar.firstDay}T00:00:00`);
@@ -206,7 +222,9 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         'div',
         { class: 'ev-report' },
         el('span', { class: 'lbl' }, report.title),
-        ...report.items.map((t) => el('span', { class: 'num' }, t)),
+        ...report.items.map((t) =>
+          el('span', { class: `num${t.tone ? ` ${t.tone}` : ''}` }, ...reportItemNodes(t)),
+        ),
       );
 
     const text = el(
@@ -306,10 +324,10 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
   }
 
   async function feedback(result: ChoiceResult) {
-    // Числа над шкалами HUD; то, чего на HUD нет (фракции, высота), — в карточке реплики.
-    const rest = deltasOf(result).filter(
-      (d) => !flashHud(root, floats, d.key, d.delta, fmtSigned(d.delta, d.key)),
-    );
+    // Сначала карточка реплики, потом числа: над видимой плиткой HUD всплывает число; то, чего на экране
+    // нет (фракции, другая вкладка) или что закрыто самой карточкой (шкалы нижней панели телефона), —
+    // строкой «Доверие +8» в карточке, чтобы числа не ложились на портрет и текст реплики.
+    const deltas = deltasOf(result);
     const who = result.reply ? portraitOf(result.reply.who) : null;
     const card = el(
       'div',
@@ -321,7 +339,19 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
         who && result.reply && el('span', { class: 'ev-reply-who' }, who.name),
         result.reply && el('p', { class: 'serif ev-reply-text' }, `«${result.reply.text}»`),
         el('p', { class: 'ev-reply-log' }, result.log.join(' ')),
-        rest.length > 0 &&
+      ),
+    );
+    replyZone.append(card);
+    // Зона реплик с запасом сверху на строку чисел, которая ещё добавится в карточку
+    const z = replyZone.getBoundingClientRect();
+    const covered = new DOMRect(z.left, z.top - CHIP_ROW, z.width, z.height + CHIP_ROW);
+    const rest = deltas.filter(
+      (d) => !flashHud(root, floats, d.key, d.delta, fmtSigned(d.delta, d.key), [covered]),
+    );
+    if (rest.length)
+      card
+        .querySelector('.ev-reply-body')
+        ?.append(
           el(
             'span',
             { class: 'ev-reply-deltas' },
@@ -335,9 +365,7 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
               ),
             ),
           ),
-      ),
-    );
-    replyZone.append(card);
+        );
     await wait(T_REPLY);
     card.classList.add('is-leaving');
     await wait(T_LEAVE);

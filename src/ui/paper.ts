@@ -9,6 +9,9 @@ export interface Paper {
   close(): void;
 }
 
+/** Заголовок газеты без точки на конце, как в Paper.dc.html; многоточие и «!»/«?» остаются. */
+const noDot = (t: string) => t.trim().replace(/([^.]).$/, '$1');
+
 export function mountPaper(root: HTMLElement, data: GameData): Paper {
   let layer: HTMLElement | null = null;
   let returnFocus: HTMLElement | null = null;
@@ -36,7 +39,7 @@ export function mountPaper(root: HTMLElement, data: GameData): Paper {
       'article',
       { class: 'pp-main' },
       h('span', { class: 'plaque' }, 'Главное'),
-      h('h2', { class: 'disp pp-h2' }, headline ?? 'Башня держится'),
+      h('h2', { class: 'disp pp-h2' }, headline ? noDot(headline) : 'Башня держится'),
       h(
         'p',
         { class: 'serif pp-p' },

@@ -135,8 +135,15 @@
   gap: 8px 22px;
   font-size: 15px;
 }
-.ev-report .lbl {
+/* .paper .lbl из sedmaya.css той же силы — подпись полосы охрой, как в Event.dc.html */
+.ev-body .ev-report .lbl {
   color: var(--ochre);
+}
+.ev-report .rest {
+  color: var(--mist-light);
+}
+.ev-report .bad {
+  color: var(--bad);
 }
 .ev-main {
   padding: 30px 36px 28px;

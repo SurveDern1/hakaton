@@ -28,10 +28,12 @@ export function showStart(root: HTMLElement, opts: StartOptions): HTMLElement {
   fresh.addEventListener('click', () => leave(opts.onNew), { once: true });
   const buttons: HTMLElement[] = [];
   if (saved) {
+    // Дата — второй строкой мельче: на телефоне одна строка не влезает в кнопку и рвётся посередине
     const cont = h(
       'button',
-      { type: 'button', class: 'btn' },
-      `Продолжить · день ${saved.day}, ${fmtDate(dayDate(data, saved.day))}`,
+      { type: 'button', class: 'btn start-cont' },
+      'Продолжить',
+      h('small', {}, `день ${saved.day} · ${fmtDate(dayDate(data, saved.day))}`),
     );
     cont.addEventListener('click', () => leave(() => opts.onContinue(saved)), { once: true });
     buttons.push(cont);

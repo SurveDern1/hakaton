@@ -28,7 +28,8 @@ export async function playNight(
     'div',
     { class: 'night-label', role: 'status', 'aria-live': 'polite' },
     h('span', { class: 'lbl' }, 'Ночь'),
-    h('span', { class: 'disp' }, `${fmtDate(dayDate(data, day))} → ${fmtDate(dayDate(data, day + 1))}`),
+    // Неразрывный пробел перед стрелкой: при переносе она остаётся с первой датой
+    h('span', { class: 'disp' }, `${fmtDate(dayDate(data, day))} → ${fmtDate(dayDate(data, day + 1))}`),
   );
   const veil = h('div', { class: 'night-veil' }, label);
   root.append(veil);

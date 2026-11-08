@@ -16,7 +16,7 @@ import {
 import type { GameLoop } from '../game/loop';
 import type { GameStore } from '../game/store';
 import type { StatusLine } from './feedback';
-import { buildingText, h, plural, tierName } from './format';
+import { buildingText, h, plural, sgn, tierName } from './format';
 
 export interface BuildMenuOptions {
   store: GameStore;
@@ -52,6 +52,7 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
     confirmDrop = false;
     card.hidden = true;
     card.classList.remove('is-in');
+    root.classList.remove('is-sheet-open');
     opts.select(null);
     if (document.activeElement && card.contains(document.activeElement))
       anchor.focus({ preventScroll: true });
@@ -94,7 +95,7 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
       }
       act(
         (st) => build(st, data, tier, slot, id),
-        () => `Построено: ${def.name} · −${def.cost ?? 0} мат.`,
+        () => `Построено: ${def.name} · ${sgn(-(def.cost ?? 0))} мат.`,
       );
     });
     return btn;
@@ -174,7 +175,7 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
         });
         body.push(drop);
       } else {
-        const sol = victims > 0 ? ` Солидарность ${b.tower.dropTier.solidarityPerTierWithPeople}.` : '';
+        const sol = victims > 0 ? ` Солидарность ${sgn(b.tower.dropTier.solidarityPerTierWithPeople)}.` : '';
         const yes = h('button', { type: 'button', class: 'btn small' }, 'Сбросить');
         const no = h('button', { type: 'button', class: 'btn ink small' }, 'Отмена');
         yes.addEventListener('click', () =>
@@ -223,9 +224,12 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
       card.style.left = '';
       card.style.top = '';
       card.classList.add('is-sheet');
+      // Лист закрывает низ кадра: табличка «Мгла ниже» прячется (game.css)
+      root.classList.add('is-sheet-open');
       return;
     }
     card.classList.remove('is-sheet');
+    root.classList.remove('is-sheet-open');
     const w = card.offsetWidth || 260;
     const hgt = card.offsetHeight || 300;
     let left = r.right - frame.left + 24;

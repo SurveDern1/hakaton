@@ -1,19 +1,34 @@
 // Видимое подтверждение действий: всплывающие числа над плитками HUD (data-key) и строка статуса.
 // Числа и вспышка — классы .ev-float / .ev-flash из event-window.css; статус — .status-line в game.css.
 
-/** Всплывающее число над плиткой `[data-key=key]`; false — плитки нет или она скрыта (вкладка на телефоне). */
+/** Место под всплывающим числом ниже плитки, px. */
+const FLOAT_H = 32;
+
+const overlaps = (a: DOMRect, b: DOMRect) =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * Всплывающее число над плиткой `[data-key=key]`. false — плитки нет, она скрыта (вкладка на телефоне),
+ * вне рамки #app или её вместе с местом под числом закрывает один из прямоугольников `covered`
+ * (карточка реплики): тогда вызывающий показывает изменение строкой в своём окне.
+ */
 export function flashHud(
   root: HTMLElement,
   floats: HTMLElement,
   key: string,
   delta: number,
   text: string,
+  covered: DOMRect[] = [],
 ): boolean {
   const target = [...root.querySelectorAll<HTMLElement>(`[data-key="${key}"]`)].find(
     (t) => t.getClientRects().length > 0 && t.getBoundingClientRect().width > 0,
   );
   if (!target) return false;
   const r = target.getBoundingClientRect();
+  const zone = new DOMRect(r.left, r.top, r.width, r.height + FLOAT_H);
+  const frame = (document.getElementById('app') ?? document.body).getBoundingClientRect();
+  if (zone.top < frame.top || zone.bottom > frame.bottom || covered.some((c) => overlaps(zone, c)))
+    return false;
   const f = document.createElement('span');
   f.className = `ev-float ${delta > 0 ? 'up' : 'down'} num`;
   f.textContent = text;
@@ -29,11 +44,6 @@ export function flashHud(
   window.setTimeout(() => target.classList.remove('ev-flash'), 1200);
   return true;
 }
-
-export const signed = (n: number, unit = ''): string => {
-  const abs = Math.abs(n).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
-  return `${n > 0 ? '+' : n < 0 ? '−' : '±'}${abs}${unit}`;
-};
 
 export interface StatusLine {
   /** Короткое подтверждение: «Построено: Ферма». Ошибка — tone 'bad', без анимации успеха. */

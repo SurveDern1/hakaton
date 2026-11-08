@@ -53,6 +53,9 @@ const MODE_PHRASE: Record<EngineMode, string> = {
   climb: 'набирать высоту',
   save: 'экономить эфир',
 };
+/** Сколько кадра башни под шапкой остаётся видно над раскрытой панелью телефона, px (вёрстка, не баланс). */
+const MIN_TOWER = 150;
+
 const TABS = [
   { id: 'stats', name: 'Шкалы' },
   { id: 'factions', name: 'Фракции' },
@@ -82,13 +85,10 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
   const warn = h('div', { class: 'panel-warn', role: 'status', 'aria-live': 'polite' });
   const end = h('button', { type: 'button', class: 'btn panel-end' }, 'Завершить день');
   const body = h('div', { class: 'panel-body' }, stats, factions, decrees, tower, forecast);
-  const aside = h(
-    'aside',
-    { class: 'panel', 'aria-label': 'Управление башней' },
-    tabs,
-    body,
-    h('div', { class: 'panel-foot' }, warn, end),
-  );
+  const foot = h('div', { class: 'panel-foot' }, warn, end);
+  // Невидимая мерка базовой высоты нижней панели телефона: по ней main.ts считает отступ камеры
+  const base = h('div', { class: 'panel-base', 'aria-hidden': 'true' });
+  const aside = h('aside', { class: 'panel', 'aria-label': 'Управление башней' }, tabs, body, foot, base);
   const engine = h('div', { class: 'engine-plaque' });
   root.append(aside, engine);
 
@@ -107,7 +107,48 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
       btn.setAttribute('aria-selected', String(btn.dataset.tab === tab));
     for (const sec of body.querySelectorAll<HTMLElement>('.panel-sec'))
       sec.classList.toggle('is-tab', sec.dataset.tab === tab);
+    fitPanel();
   }
+
+  // Телефон: вкладка, которой мало базовой высоты («Ночь», «Декреты»), раскрывает панель вверх поверх
+  // низа башни (переход height 200 мс в game.css). Камера смотрит на .panel-base, поэтому башня стоит;
+  // строка статуса и табличка Мглы поднимаются по --phone-panel-now. Не влезло и так — прокрутка с тенью.
+  function fitPanel() {
+    const app = (document.getElementById('app') ?? document.body).getBoundingClientRect();
+    const baseH = base.offsetHeight;
+    if (!baseH || app.width >= 760) {
+      aside.style.height = '';
+      root.classList.remove('is-panel-up');
+      root.style.removeProperty('--phone-panel-now');
+      body.classList.remove('is-scroll');
+      return;
+    }
+    const cs = getComputedStyle(body);
+    const shown = [...body.querySelectorAll<HTMLElement>('.panel-sec.is-tab')];
+    const content =
+      shown.reduce((sum, sec) => sum + sec.offsetHeight, 0) +
+      (Number.parseFloat(cs.rowGap) || 0) * Math.max(0, shown.length - 1) +
+      Number.parseFloat(cs.paddingTop) +
+      Number.parseFloat(cs.paddingBottom);
+    const chrome = aside.offsetHeight - body.clientHeight;
+    const hud = root.querySelector('.hud')?.getBoundingClientRect();
+    const max = Math.max(baseH, app.bottom - (hud && hud.height > 0 ? hud.bottom : app.top) - MIN_TOWER);
+    const want = aside.classList.contains('is-idle')
+      ? baseH
+      : Math.min(Math.max(baseH, chrome + content), max);
+    aside.style.height = want > baseH + 1 ? `${Math.ceil(want)}px` : '';
+    root.classList.toggle('is-panel-up', want > baseH + 1);
+    root.style.setProperty('--phone-panel-now', `${Math.ceil(want)}px`);
+    body.classList.toggle('is-scroll', chrome + content > want + 1);
+    syncScrollEnd();
+  }
+  function syncScrollEnd() {
+    body.classList.toggle('is-end', body.scrollTop + body.clientHeight >= body.scrollHeight - 2);
+  }
+  body.addEventListener('scroll', syncScrollEnd, { passive: true });
+  const ro = new ResizeObserver(() => fitPanel());
+  for (const el of [stats, factions, decrees, tower, forecast, foot, document.getElementById('app')])
+    if (el) ro.observe(el);
   syncTabs();
 
   function run(action: (s: GameState) => ActionResult, ok: (before: GameState, after: GameState) => string) {
@@ -151,7 +192,7 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
       run(
         (s) => startNewTier(s, data),
         (before, after) =>
-          `Заложен новый ярус · ${before.res.mat - after.res.mat} мат. · встанет через ${b.tower.newTier.nights} ${plural(b.tower.newTier.nights, 'ночь', 'ночи', 'ночей')}`,
+          `Заложен новый ярус · ${sgn(after.res.mat - before.res.mat)} мат. · встанет через ${b.tower.newTier.nights} ${plural(b.tower.newTier.nights, 'ночь', 'ночи', 'ночей')}`,
       );
     }
   });
@@ -161,6 +202,8 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
     aside.classList.toggle('is-idle', phase !== 'day');
     end.disabled = phase !== 'day';
     end.textContent = phase === 'night' ? 'Ночь…' : 'Завершить день';
+    // Ночью и утром панель опускается к базовой высоте: подъём Мглы виден целиком
+    fitPanel();
   });
 
   store.subscribe((s) => {
@@ -199,7 +242,7 @@ export function mountPanel(root: HTMLElement, opts: PanelOptions): Panel {
       return `<div class="fac ${st ?? ''}" data-key="${k}" title="${word || 'нейтралитет'}">
         <span class="fac-ico">${svgIcon(FACTION_ICONS[k] ?? '')}</span>
         <span class="fac-name">${FACTION_NAMES[k]}</span>
-        <span class="num fac-v ${v > 0 ? 'good' : v < 0 ? 'bad' : 'muted'}">${sgn(v).replace('±', '')}${word ? ` <small>${word}</small>` : ''}</span>
+        <span class="num fac-v ${v > 0 ? 'good' : v < 0 ? 'bad' : 'muted'}">${v ? sgn(v) : '0'}${word ? ` <small>${word}</small>` : ''}</span>
       </div>`;
     }).join('')}</div>`;
 

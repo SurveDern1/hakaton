@@ -1,35 +1,37 @@
-// Утренний отчёт о ночи (ТЗ 3.1): NightReport → строки полосы над первым окном события.
-// Если событий утром нет, тот же отчёт показывается отдельной карточкой с кнопкой «За работу».
-import type { GameData, NightReport } from '../core';
-import type { MorningReport } from './event-window';
+// Утренний отчёт о ночи (ТЗ 3.1): NightReport → строки полосы над первым окном события по Event.dc.html
+// («Еда −3 (37)»: изменение за ночь и остаток). Если событий утром нет, тот же отчёт — отдельной карточкой.
+import type { GameData, GameState, NightReport } from '../core';
+import { type MorningReport, type ReportItem, reportItemNodes } from './event-window';
 import { dayDate, fmtDate, fmtNum, h, plural, sgn } from './format';
 
-/** Строки отчёта: произведено и съедено, эфир, Мгла, высота, смерти, кражи, ярусы. */
-export function morningReport(report: NightReport, data: GameData, day: number): MorningReport {
-  const items: string[] = [];
-  const p = report.produced;
-  items.push(
-    `Еда ${sgn(p.food ?? 0)}, съели ${report.foodEaten}${report.foodShortage ? ' — не хватило!' : ''}`,
-  );
-  items.push(
-    `Эфир ${sgn(p.ether ?? 0)}, сожгли ${report.etherBurned}${report.etherShortfall > 0 ? ' — не хватило!' : ''}`,
-  );
-  if (p.mat) items.push(`Материалы ${sgn(p.mat)}`);
-  items.push(`Мгла ${sgn(report.mistRise)} м`);
-  if (report.altitudeDelta) items.push(`Высота ${sgn(report.altitudeDelta)} м`);
-  if (report.deaths) items.push(`Умерли от болезней: ${report.deaths}`);
+/** Строки отчёта: еда, эфир, материалы, Мгла, высота с остатком; потери или «Все живы»; кражи, ярусы. */
+export function morningReport(report: NightReport, data: GameData, state: GameState): MorningReport {
+  const items: ReportItem[] = [];
+  const d = report.delta;
+  items.push({ text: `Еда ${sgn(d.res.food)}`, rest: String(state.res.food) });
+  items.push({ text: `Эфир ${sgn(d.res.ether)}`, rest: String(state.res.ether) });
+  if (d.res.mat) items.push({ text: `Материалы ${sgn(d.res.mat)}`, rest: String(state.res.mat) });
+  items.push({ text: `Мгла ${sgn(report.mistRise)} м`, rest: `${fmtNum(state.mist)} м` });
+  if (report.altitudeDelta)
+    items.push({ text: `Высота ${sgn(report.altitudeDelta)} м`, rest: `${fmtNum(state.altitude)} м` });
+  if (report.foodShortage) items.push({ text: 'Еды не хватило', tone: 'bad' });
+  if (report.etherShortfall > 0) items.push({ text: 'Эфира не хватило', tone: 'bad' });
+  if (report.deaths) items.push({ text: `Умерли от болезней: ${report.deaths}`, tone: 'bad' });
+  else if (d.res.pop < 0) items.push({ text: `Жителей ${sgn(d.res.pop)}`, tone: 'bad' });
+  else items.push({ text: 'Все живы' });
   if (report.theft.food || report.theft.mat)
-    items.push(`Украли: еды ${report.theft.food}, мат. ${report.theft.mat}`);
-  if (report.sabotage) items.push('Саботаж в Корне');
-  if (report.tierBuilt) items.push('Новый ярус встал под Шпилем');
+    items.push({ text: `Украли: еды ${report.theft.food}, мат. ${report.theft.mat}`, tone: 'bad' });
+  if (report.sabotage) items.push({ text: 'Саботаж в Корне', tone: 'bad' });
+  if (report.tierBuilt) items.push({ text: 'Новый ярус встал под Шпилем' });
   if (report.newlySubmerged.length)
-    items.push(
-      `${report.newlySubmerged.length} ${plural(report.newlySubmerged.length, 'ярус ушёл', 'яруса ушли', 'ярусов ушли')} в Мглу`,
-    );
-  if (report.abandoned.length) items.push('Ярус заброшен');
-  if (report.homeless) items.push(`Без жилья: ${report.homeless}`);
-  if (report.expiredModifiers.length) items.push(`Закончилось: ${report.expiredModifiers.length}`);
-  return { title: `Отчёт о ночи на ${fmtDate(dayDate(data, day))}`, items };
+    items.push({
+      text: `${report.newlySubmerged.length} ${plural(report.newlySubmerged.length, 'ярус ушёл', 'яруса ушли', 'ярусов ушли')} в Мглу`,
+      tone: 'bad',
+    });
+  if (report.abandoned.length) items.push({ text: 'Ярус заброшен', tone: 'bad' });
+  if (report.homeless) items.push({ text: `Без жилья: ${report.homeless}` });
+  if (report.expiredModifiers.length) items.push({ text: `Закончилось: ${report.expiredModifiers.length}` });
+  return { title: `Отчёт о ночи на ${fmtDate(dayDate(data, state.day))}`, items };
 }
 
 /** Карточка отчёта, когда утром нет событий. Промис — после «За работу» (или Enter/Esc). */
@@ -41,7 +43,15 @@ export function showReportCard(root: HTMLElement, report: MorningReport, mistNot
       { class: 'paper report-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'report-title' },
       h('span', { class: 'lbl', id: 'report-title' }, report.title),
       h('h2', { class: 'disp report-head' }, 'Утро без происшествий'),
-      h('ul', { class: 'num report-list' }, ...report.items.map((t) => h('li', {}, t))),
+      h(
+        'ul',
+        { class: 'num report-list' },
+        ...report.items.map((t) => {
+          const li = h('li', { class: t.tone });
+          li.append(...reportItemNodes(t));
+          return li;
+        }),
+      ),
       h('p', { class: 'serif report-note' }, mistNote),
       go,
     );

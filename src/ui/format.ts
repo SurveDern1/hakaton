@@ -49,8 +49,12 @@ export const fmtDate = (d: Date, opts: Intl.DateTimeFormatOptions = { day: 'nume
 
 export const fmtNum = (n: number) => n.toLocaleString('ru-RU', { maximumFractionDigits: 1 });
 
-/** «+2», «−1», «±0». */
-export const sgn = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${fmtNum(Math.abs(n))}`;
+/** Минус как в макетах («−&#8201;7»): настоящий минус U+2212 и узкий неразрывный пробел, чтобы не путать с дефисом. */
+export const MINUS = '− ';
+
+/** «+2», «− 1», «± 0». */
+export const sgn = (n: number) =>
+  n > 0 ? `+${fmtNum(n)}` : n < 0 ? `${MINUS}${fmtNum(-n)}` : `± ${fmtNum(0)}`;
 
 /** «Ярус 2» по номеру среди обычных ярусов, «Корень», «Шпиль». */
 export function tierName(kinds: readonly string[], i: number): string {
@@ -79,7 +83,7 @@ export function buildingText(def: BuildingDef): string {
   if (def.housing) parts.push(`+${def.housing} мест жилья`);
   const per = effectsText(def.perNight);
   if (per.length) parts.push(`${per.join(', ')} за ночь`);
-  if (def.rootBonus) parts.push(`в Корне +${Math.round(def.rootBonus * 100)} %`);
+  if (def.rootBonus) parts.push(`в Корне +${Math.round(def.rootBonus * 100)}\u00a0%`);
   if (def.workers) parts.push(`${def.workers} рабоч.`);
   return parts.join(' · ');
 }
@@ -91,9 +95,9 @@ export function decreeText(def: DecreeDef): string {
     .map(([k, v]) => `${(RES_NAMES[k] ?? k).toLowerCase()} ${sgn(v ?? 0)}`);
   parts.push(...factionsText(def.factions));
   if (def.catcherFactor && def.catcherFactor !== 1)
-    parts.push(`уловители ${sgn(Math.round((def.catcherFactor - 1) * 100))} %`);
+    parts.push(`уловители ${sgn(Math.round((def.catcherFactor - 1) * 100))}\u00a0%`);
   if (def.foodFactor && def.foodFactor !== 1)
-    parts.push(`еды едят ${sgn(Math.round((def.foodFactor - 1) * 100))} %`);
+    parts.push(`еды едят ${sgn(Math.round((def.foodFactor - 1) * 100))}\u00a0%`);
   return parts.join(' · ');
 }
 

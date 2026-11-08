@@ -73,8 +73,11 @@ const towerScene = new TowerScene(towerSource, {
     const panel = document.querySelector<HTMLElement>('#ui .panel');
     if (!panel || ui.classList.contains('is-bare')) return { top, right: 0, bottom: 0, left: 0 };
     const r = panel.getBoundingClientRect();
+    // На телефоне — по базовой высоте панели: раскрытая вкладка ложится поверх башни, камера не дёргается
+    const base = panel.querySelector<HTMLElement>('.panel-base');
+    const panelTop = base && base.offsetHeight > 0 ? base.getBoundingClientRect().top : r.top;
     return a.width < 760
-      ? { top, right: 0, bottom: a.bottom - r.top, left: 0 }
+      ? { top, right: 0, bottom: a.bottom - panelTop, left: 0 }
       : { top, right: r.width, bottom: 40, left: 0 };
   },
 });
@@ -98,7 +101,7 @@ const paper = mountPaper(ui, data);
 
 const loop = new GameLoop(store, data, {
   async morning(queue, report: NightReport | null) {
-    const strip = report ? morningReport(report, data, store.state.day) : undefined;
+    const strip = report ? morningReport(report, data, store.state) : undefined;
     if (queue.length) await events.showMorning(queue, strip);
     else if (strip) await showReportCard(ui, strip, mistNote(store.state.altitude, store.state.mist));
   },
@@ -126,7 +129,8 @@ function toggleMenu(force?: boolean) {
   const close = h('button', { type: 'button', role: 'menuitem', class: 'gm-item' }, 'Вернуться к игре');
   close.addEventListener('click', () => toggleMenu(false));
   gameMenu.replaceChildren(restart, ...sound.menuItems(() => toggleMenu(false)), close);
-  restart.focus();
+  // Открыто мышью — без рамки фокуса на первом пункте; с клавиатуры браузер её покажет сам
+  restart.focus({ focusVisible: false } as FocusOptions);
 }
 gameMenu.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') toggleMenu(false);

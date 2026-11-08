@@ -375,3 +375,12 @@
     transition: none;
   }
 }
+
+/* Окна поверх экрана (событие, стенгазета, настройки) — кнопка уходит, чтобы не лечь на их текст */
+#app:has(.ev-layer, .st-layer) > .snd-toggle {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.18s ease,
+    visibility 0s linear 0.18s;
+}

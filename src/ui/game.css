@@ -156,6 +156,9 @@
 .panel-tabs {
   display: none;
 }
+.panel-base {
+  display: none;
+}
 .panel-body {
   flex: 1;
   min-height: 0;
@@ -337,12 +340,7 @@
   min-height: 58px;
   font-size: 20px;
 }
-.panel-end:not(.is-alarm) {
-  background: var(--ether-deep);
-}
-.panel-end:not(.is-alarm):hover {
-  background: #2f7486;
-}
+/* Красная по макету (Main, Mobile); тревога — пульс и строка причины .panel-warn, цвет тот же */
 .panel-end.is-alarm {
   animation: uiAlarm 1.8s ease-out infinite;
 }
@@ -392,8 +390,11 @@
   box-shadow: inset 0 0 0 4px rgba(246, 149, 80, 0.75);
   background: rgba(246, 149, 80, 0.08);
 }
+/* Рамка охрой — outline: box-shadow занят пульсом uiPulse (как .pulse у слота в Main.dc.html) */
 .tw-hits .tw-hit.is-selected {
-  box-shadow: inset 0 0 0 5px var(--ochre);
+  outline: 4px solid var(--ochre);
+  outline-offset: -4px;
+  background: rgba(221, 205, 165, 0.14);
   animation: uiPulse 1.8s ease-out infinite;
 }
 .tw-game .tw-tower {
@@ -426,6 +427,12 @@
 }
 .bmenu.is-in {
   animation: evIn 180ms ease-out;
+}
+@keyframes bmSheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
 }
 .bm-top {
   display: flex;
@@ -551,8 +558,12 @@
   bottom: 70px;
   z-index: 25;
   transform: translate(-50%, 8px);
+  /* Ширина по тексту: от left: 50% без max-content плашка сжималась до половины экрана */
+  width: max-content;
   max-width: min(560px, calc(100cqw - 32px));
+  box-sizing: border-box;
   padding: 10px 18px;
+  text-wrap: balance;
   background: var(--paper);
   color: var(--paper-ink);
   font-size: 15px;
@@ -576,6 +587,7 @@
   transform: translate(-50%, 0);
 }
 .game-menu {
+  animation: evIn 180ms ease-out;
   position: absolute;
   top: 96px;
   right: 24px;
@@ -629,6 +641,12 @@
   padding-left: 18px;
   font-size: 16px;
   line-height: 1.5;
+}
+.report-list .rest {
+  color: #577376;
+}
+.report-list .bad {
+  color: var(--red-deep);
 }
 .report-note {
   margin: 0;
@@ -1030,6 +1048,18 @@
   min-height: 56px;
   font-size: 18px;
 }
+.start-actions .start-cont {
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 8px;
+  line-height: 1.1;
+}
+.start-cont small {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
 
 /* ---------- Ночь ---------- */
 #ui > .night-veil {
@@ -1054,10 +1084,26 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  box-sizing: border-box;
+  max-width: calc(100cqw - 32px);
+  padding: 14px 22px 16px;
+  background: rgba(10, 22, 26, 0.55);
+  box-shadow: 0 10px 30px rgba(10, 22, 26, 0.35);
   color: var(--paper);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 250ms ease 150ms,
+    transform 250ms ease 150ms;
+}
+.night-veil.is-on .night-label {
+  opacity: 1;
+  transform: none;
 }
 .night-label .disp {
   font-size: 22px;
+  line-height: 1.3;
 }
 .night-label .lbl {
   color: var(--ether);
@@ -1066,6 +1112,7 @@
 @media (prefers-reduced-motion: reduce) {
   .hud-leaf.is-turn,
   .bmenu.is-in,
+  .game-menu,
   .panel-end.is-alarm,
   .tw-hits .tw-hit.is-selected,
   .pp,
@@ -1076,6 +1123,7 @@
     animation: none;
   }
   .night-veil,
+  .night-label,
   .status-line,
   .scale-fill,
   .tw-game .tw-tower,
@@ -1198,6 +1246,24 @@
     padding-bottom: env(safe-area-inset-bottom);
     border-left: 0;
     border-top: 3px solid var(--red);
+    box-shadow: 0 -10px 24px rgba(10, 22, 26, 0.35);
+    transition:
+      opacity 200ms ease,
+      height 200ms ease;
+  }
+  .panel-base {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--phone-panel);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  /* Не влезло даже в раскрытую панель — мягкая тень внизу подсказывает прокрутку */
+  .panel-body.is-scroll:not(.is-end) {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
   }
   .panel-tabs {
     display: flex;
@@ -1255,21 +1321,67 @@
   .engine-plaque {
     display: none;
   }
+  .night-veil {
+    place-items: center;
+    padding: 0 16px var(--phone-panel-now, var(--phone-panel));
+  }
+  .night-label .disp {
+    font-size: 18px;
+  }
   .status-line {
-    bottom: calc(var(--phone-panel) + 12px);
+    bottom: calc(var(--phone-panel-now, var(--phone-panel)) + 12px);
   }
   .game-menu {
     top: 64px;
     right: 12px;
   }
+  /* Лист стройки компактный: варианты в две колонки, выбранный слот Корня остаётся виден над листом */
   .bmenu.is-sheet {
     left: 8px !important;
     right: 8px;
     bottom: 8px;
     top: auto !important;
     width: auto;
-    max-height: 70cqh;
+    max-height: 56cqh;
     overflow: auto;
+    overscroll-behavior: contain;
+    padding: 10px 12px 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    animation-name: bmSheetIn;
+  }
+  .bmenu.is-sheet > :not(.bm-opt) {
+    grid-column: 1 / -1;
+  }
+  .bmenu.is-sheet .bm-top {
+    align-items: center;
+  }
+  .bmenu.is-sheet .bm-head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+  .bmenu.is-sheet .bm-opt {
+    padding: 7px 9px 8px;
+    gap: 1px 6px;
+    align-content: start;
+  }
+  .bmenu.is-sheet .bm-name {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .bmenu.is-sheet .bm-cost {
+    font-size: 13px;
+  }
+  .bmenu.is-sheet .bm-desc {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .bmenu.is-sheet .bm-close {
+    width: 36px;
+    height: 36px;
   }
   .pp {
     width: calc(100% - 20px);
@@ -1294,9 +1406,10 @@
     border-top: 2px solid var(--paper-ink);
     padding-top: 16px;
   }
+  /* Снизу запас под кнопку звука в углу: в конце прокрутки она не ложится на кнопки финала */
   .fin {
     flex-direction: column;
-    padding: 20px 16px;
+    padding: 20px 16px 84px;
     gap: 28px;
   }
   .fin-poster {
@@ -1312,6 +1425,10 @@
   .fin-cols {
     grid-template-columns: 1fr;
   }
+  .report-card {
+    width: calc(100% - 32px);
+    padding: 22px 20px;
+  }
   .fin-text {
     font-size: 18px;
   }
@@ -1321,7 +1438,7 @@
 .mist-below {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--phone-panel) + 10px);
+  bottom: calc(var(--phone-panel-now, var(--phone-panel)) + 10px);
   z-index: 4;
   display: flex;
   align-items: center;
@@ -1336,7 +1453,8 @@
   transform: translate(-50%, 6px);
   transition:
     opacity 220ms ease,
-    transform 220ms ease;
+    transform 220ms ease,
+    bottom 200ms ease;
 }
 #ui > .mist-below {
   pointer-events: none;
@@ -1352,11 +1470,21 @@
 #ui.is-bare > .mist-below {
   bottom: 12px;
 }
+/* Раскрытая панель или лист стройки закрывают низ кадра — табличка не висит на их краю */
+#ui.is-panel-up > .mist-below,
+#ui.is-sheet-open > .mist-below {
+  opacity: 0;
+}
 body:not([data-phase="day"]) #ui:not(.is-preset) > .mist-below {
   opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .mist-below {
+    transition: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
     transition: none;
   }
 }
