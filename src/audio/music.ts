@@ -7,9 +7,11 @@
 // night — ночь и утренние окна: ре-минор, медленный орган, бас, редкий колокол, тише.
 // Шум ветра и гул Мглы играет фон (ambience.ts), а не темы: иначе они задваиваются.
 // final — гимн-марш в до-миноре: медные аккорды, литавры, в конце петли мажорный аккорд.
-// Смена темы — кроссфейд CROSSFADE секунд; под всеми темами тихий ламповый шум и потрескивание.
+// Смена темы — кроссфейд CROSSFADE секунд; под темами редкое потрескивание пластинки.
+// Посыл тем в общий зал — через MUSIC_WET (musicEngine), постоянного шипения нет: на динамике телефона,
+// где басы и органный низ пропадают, от музыки оставались хвост реверберации и шипение — «шум».
 import { type AudioEngine, makeRandom, midiToHz, ramp } from './audio';
-import { dbGain, MUSIC_TRIM_DB, THEME_TRIM_DB } from './mix';
+import { CRACKLE_GAIN, dbGain, MUSIC_TRIM_DB, MUSIC_WET, THEME_TRIM_DB } from './mix';
 import { bell, noise, organ, thump, tone } from './synth';
 
 export type ThemeName = 'waltz' | 'march' | 'wind' | 'night' | 'final';
@@ -17,8 +19,19 @@ export type ThemeName = 'waltz' | 'march' | 'wind' | 'night' | 'final';
 const CROSSFADE = 1.6;
 const LOOKAHEAD = 0.3;
 const TICK_MS = 60;
-/** Уровень лампового шума под музыкой (доля шины музыки). */
-const HISS_LEVEL = 0.012;
+
+/**
+ * Движок для тем: посыл в зал идёт через приглушённый вход MUSIC_WET. Синтез (synth.ts) шлёт посыл
+ * в `e.reverb`, поэтому темам отдаётся вид того же движка со своим входом зала.
+ */
+export function musicEngine(e: AudioEngine): AudioEngine {
+  const wet = (e.ctx as BaseAudioContext).createGain();
+  wet.gain.value = MUSIC_WET;
+  wet.connect(e.reverb);
+  const view = Object.create(e) as AudioEngine;
+  view.reverb = wet;
+  return view;
+}
 
 interface Chord {
   bass: number;
@@ -418,8 +431,9 @@ export class Music {
   private wanted: ThemeName | null = null;
   private timer = 0;
   private seed = 7;
-  private hissOn = false;
   private crackle = makeRandom(1967);
+  /** Движок тем со своим входом зала (musicEngine); создаётся, когда звук разблокирован. */
+  private themeEngine: AudioEngine | null = null;
 
   constructor(private e: AudioEngine) {
     e.onReady(() => this.start());
@@ -436,7 +450,7 @@ export class Music {
   }
 
   private start(): void {
-    this.startHiss();
+    this.themeEngine ??= musicEngine(this.e);
     this.apply();
     if (!this.timer) this.timer = window.setInterval(() => this.tick(), TICK_MS);
   }
@@ -445,9 +459,10 @@ export class Music {
     const live = this.players.find((p) => p.name === this.wanted);
     for (const p of this.players) if (p !== live) p.fadeOut();
     this.players = live ? [live] : [];
-    if (!live && this.wanted) {
+    if (!live && this.wanted && this.themeEngine) {
       this.seed += 1;
-      this.players.push(new ThemePlayer(this.e, this.wanted, this.themes[this.wanted], this.seed * 7919));
+      const theme = this.themes[this.wanted];
+      this.players.push(new ThemePlayer(this.themeEngine, this.wanted, theme, this.seed * 7919));
     }
   }
 
@@ -462,31 +477,12 @@ export class Music {
         t: ctx.currentTime + 0.05,
         dur: 0.002,
         release: 0.01,
-        gain: 0.02,
+        gain: CRACKLE_GAIN,
         dest: this.e.musicBus,
         filter: 'highpass',
         freq: 3000,
       });
     }
-  }
-
-  /** Ламповый шум: постоянная тихая полоса шума на шине музыки. */
-  private startHiss(): void {
-    const ctx = this.e.ctx;
-    const buf = this.e.noiseBuffer();
-    if (!ctx || !buf || this.hissOn) return;
-    this.hissOn = true;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    const f = ctx.createBiquadFilter();
-    f.type = 'bandpass';
-    f.frequency.value = 3800;
-    f.Q.value = 0.5;
-    const g = ctx.createGain();
-    g.gain.value = HISS_LEVEL;
-    src.connect(f).connect(g).connect(this.e.musicBus);
-    src.start();
   }
 }
 
@@ -495,7 +491,7 @@ export class Music {
  * делал бы планировщик по часам. Вход — `AudioEngine.offline(...)`.
  */
 export function scheduleTheme(e: AudioEngine, name: ThemeName, seconds: number, seed = 7919): void {
-  const player = new ThemePlayer(e, name, makeThemes()[name], seed);
+  const player = new ThemePlayer(musicEngine(e), name, makeThemes()[name], seed);
   for (let t = 0; t < seconds; t += LOOKAHEAD / 2) player.schedule(t);
 }
 

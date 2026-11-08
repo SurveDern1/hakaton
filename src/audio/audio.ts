@@ -89,6 +89,16 @@ function saveSettings(s: AudioSettings): void {
 
 type Ctor = typeof AudioContext;
 
+/**
+ * Размер буфера вывода. С 'interactive' (≈10 мс) телефон, занятый отрисовкой башни, не успевал
+ * дописать буфер — музыка рассыпалась в треск и шум. Телефонам (грубый указатель) — 'playback',
+ * остальным — 'balanced': задержка щелчков вырастает на десятки миллисекунд, на слух незаметно.
+ */
+function latencyHint(): AudioContextLatencyCategory {
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  return coarse ? 'playback' : 'balanced';
+}
+
 /** Шины, которые можно приглушить: музыка и атмосфера (фон). Звуки действий не приглушаются. */
 export type DuckBus = 'music' | 'amb';
 /** Цвет шума: белый — шипение, розовый — ровный «воздух», коричневый — гул и далёкий ветер. */
@@ -259,7 +269,7 @@ export class AudioEngine {
         window.AudioContext ?? (window as unknown as { webkitAudioContext?: Ctor }).webkitAudioContext;
       if (!C) return;
       try {
-        this.ctx = new C({ latencyHint: 'interactive' });
+        this.ctx = new C({ latencyHint: latencyHint() });
       } catch {
         return;
       }

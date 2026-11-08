@@ -196,7 +196,7 @@ export function openSettings(host: HTMLElement, deps: SettingsDeps): void {
     { class: 'st-melody' },
     el('legend', { class: 'st-name' }, 'Мелодия'),
     el('div', { class: 'st-opts' }, ...melodyInputs.map((x) => x.label)),
-    el('small', { class: 'st-note' }, 'Играет днём; у ночи и финала свои темы.'),
+    el('small', { class: 'st-note' }, 'Звучит сразу и дальше днём; у ночи и финала свои темы.'),
   );
 
   const paintAll = () => {

@@ -2,7 +2,7 @@
 // на изменения GameStore (stateCues) и смотрит за слоем #ui (MutationObserver) и кликами.
 // Фазы: start/day → мелодия дня из настроек (waltz/march/wind), night/morning → «ночь»
 // (утренние окна читаются под ночную тему),
-// final → «финал». Звуки: клики по кнопкам, окно события и выбор (класс is-chosen у .ev-layer),
+// final → «финал». Смена мелодии в настройках звучит сразу в любой фазе, до следующей смены фазы. Звуки: клики по кнопкам, окно события и выбор (класс is-chosen у .ev-layer),
 // всплывающие числа .ev-float.up/.down, стенгазета .pp-layer, ночь, утро, финал.
 // Выключатель: пункты меню (menuItems: «Звук», «Настройки…»), кнопка в углу на стартовом экране и в финале,
 // клавиша M. Окно «Настройки» — settings-window.ts (openSettings). Файлы звуков — samples.ts
@@ -157,10 +157,14 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
   });
   // Музыка стартового экрана заиграет сама, как только жест разблокирует звук
   if (!music.current) music.set(engine.settings.melody);
-  // Новая мелодия в настройках — сразу, если сейчас её время (день или стартовый экран)
+  // Новая мелодия в настройках звучит сразу в любой фазе: игрок слышит, что выбор сработал.
+  // Ночь, утро и финал вернут свою тему со следующей сменой фазы.
+  let melody = engine.settings.melody;
   engine.onSettings((s) => {
+    if (s.melody === melody) return;
+    melody = s.melody;
     if (introHold) return;
-    if ((phase === 'day' || phase === 'start') && music.current !== s.melody) music.set(s.melody);
+    music.set(s.melody);
   });
 
   // ---- Действия дня по разнице состояний ----

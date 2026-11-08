@@ -127,6 +127,15 @@ export const THEME_TRIM_DB: Partial<Record<'waltz' | 'march' | 'wind' | 'night' 
   night: 4,
 };
 
+/**
+ * Доля посыла тем в общий зал (music.ts → musicEngine). При полном посыле хвост реверберации звучал
+ * наравне с нотами, и на динамике телефона, где низ пропадает, музыка расплывалась в шум.
+ */
+export const MUSIC_WET = 0.45;
+
+/** Щелчок пластинки под темами, доля шины музыки. */
+export const CRACKLE_GAIN = 0.01;
+
 /** Поправка всего фона, дБ (выход Ambience): сумма слоёв ночью не должна выходить из коридора. */
 export const AMB_TRIM_DB = -0.5;
 
