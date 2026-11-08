@@ -367,14 +367,36 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
         P('laundry', 13, -4, w * 0.72 - 15, 11);
       } else if (S === 1) P('laundry', 6, 22, w * 0.5, 11);
     } else if (b === 'farm') {
+      // Теплица: стеклянный купол с рёбрами-меридианами на цоколе. Внутри два яруса растений разной
+      // формы — сзади высокие кусты на шпалере, спереди круглые кочаны в лотке с бегущей водой.
+      // 1 — деревянные рёбра, плёнка с заплатами, ящики и бочка; 2 — сталь, стекло, гидропоника
+      // и тёплые лампы; 3 — латунь, эфирные лампы со световыми конусами, больше плодов.
       const dry = lowHealth ? ' dry' : '';
-      P(`dome-back d${S}`, 3, 2, w - 6, h - 16);
-      P(`bed${dry}`, 30, h - 64, w - 60, 13);
-      P(`bed${dry}`, 17, h - 46, w - 34, 13);
-      P(`bed${dry}`, 9, h - 28, w - 18, 13);
-      fig(x + w * 0.68, y + h - 16);
-      if (S === 3) P('growlamp', 18, 16, w - 36, 5, op(0.4 + 0.6 * e));
-      P(`dome d${S}`, 3, 2, w - 6, h - 16);
+      const dh = h - 16;
+      const fs = ` f${S}`;
+      P(`dome-back d${S}`, 3, 2, w - 6, dh);
+      if (S >= 2)
+        for (const k of [0.33, 0.67]) {
+          P(
+            `lamp-cone${S === 3 ? ' ether' : ''}`,
+            w * k - 20,
+            18,
+            40,
+            dh - 30,
+            op(S === 3 ? 0.35 + 0.65 * e : 1),
+          );
+          P('hookline', w * k - 0.75, 7, 1.5, 9);
+          P(`growlamp${S === 3 ? ' ether' : ''}`, w * k - 9, 15, 18, 5);
+        }
+      P(`plant tall${fs}${dry}`, 24, dh - 52, w - 48, 40);
+      P(`shelf${fs}`, 18, dh - 13, w - 36, 5);
+      P(`plant leafy${dry}`, 9, dh - 21, w - 18, 15);
+      P(`trough${fs}${dry}`, 8, dh - 7, w - 16, 7);
+      if (S === 1) P('barrel', w - 26, dh - 15, 11, 15);
+      fig(x + w * 0.7, y + dh);
+      P(`dome d${S}`, 3, 2, w - 6, dh);
+      P(`dome-rib d${S}`, 3 + (w - 6) * 0.19, 2, (w - 6) * 0.62, dh);
+      P(`dome-rib d${S}`, 3 + (w - 6) * 0.37, 2, (w - 6) * 0.26, dh);
       if (S === 1) {
         L('rope', 2, h - 18, w * 0.3, 6, 1.5);
         L('rope', w - 2, h - 18, w * 0.7, 6, 1.5);
@@ -401,38 +423,62 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
         P('ant-tip', cx + 30, -7, 6, 6);
       }
       if (S === 3) P('crystal', cx - 6, 10, 12, 20);
-      P('spark', cx - 15, -18, 30, 30, op(0.25 + 0.75 * e));
+      P('spark', cx - 15, -3, 30, 16, op(0.25 + 0.75 * e));
       fig(x + w * 0.1, y + h);
     } else if (b === 'core') {
-      const d = Math.min(w - 40, h) - 16;
+      // Эфирный реактор: стеклянная сфера с вихрями света внутри и бьющимся сердцем, обручи кардана
+      // (задняя половина за сферой, передняя перед ней), опоры от стен, постамент и световод в потолок.
+      // 1 — один железный обруч на досках и верёвках; 2 — стальной кардан из двух обручей;
+      // 3 — латунный кардан из трёх обручей с эфирной насечкой, кристаллы на опорах.
+      const d = Math.min(w - 64, h - 18);
       const ccx = w / 2;
-      const ccy = h / 2 + 2;
-      P('core-halo', ccx - d, ccy - d, d * 2, d * 2, op(0.15 + 0.85 * e));
-      P(`pipeh p${S}`, 0, h - 28, w, 9);
-      P(`core-base b${S}`, ccx - d * 0.55, h - 14, d * 1.1, 14);
-      P('core-orbit', ccx - d / 2 - 18, ccy - 9, d + 36, 18, op(0.3 + 0.7 * e));
-      P(
-        'core-orbit tilt',
-        ccx - d / 2 - 12,
-        ccy - 7,
-        d + 24,
-        14,
-        `transform:rotate(58deg);${op(0.2 + 0.6 * e)}`,
-      );
-      P('core', ccx - d / 2, ccy - d / 2, d, d, op(0.35 + 0.65 * e));
-      P(`core-cage c${S}`, ccx - d / 2 - 5, ccy - d / 2 - 5, d + 10, d + 10);
-      P('core-orbit front', ccx - d / 2 - 18, ccy - 9, d + 36, 18, op(0.3 + 0.7 * e));
-      P(`clamp c${S}`, ccx - 10, ccy - d / 2 - 13, 20, 9);
-      P('gauge', 6, h - 56, 18, 18);
+      const ccy = h / 2 - 1;
+      const cs = ` c${S}`;
+      const R = d / 2;
+      const eqW = d + 28;
+      const eqH = Math.round(eqW * 0.28);
+      const mW = Math.round((d + 12) * 0.36);
+      const mH = d + 12;
+      const rings: [string, number, number, number, number, string][] = [
+        ['eq', ccx - eqW / 2, ccy - eqH / 2, eqW, eqH, ''],
+      ];
+      if (S >= 2) rings.push(['mer', ccx - mW / 2, ccy - mH / 2, mW, mH, 'transform:rotate(24deg);']);
+      if (S === 3)
+        rings.push([
+          'mer',
+          ccx - mW / 2,
+          ccy - mH / 2,
+          mW,
+          mH,
+          'transform:rotate(-24deg);animation-delay:-3s;',
+        ]);
+      P('core-halo', ccx - d * 0.95, ccy - d * 0.6, d * 1.9, d * 1.2, op(0.15 + 0.85 * e));
+      P(`pipeh p${S}`, 0, h - 30, w, 9);
+      P(`core-conduit${cs}`, ccx - 4, -10, 8, ccy - R + 12);
+      P('core-flow', ccx - 1.5, -10, 3, ccy - R + 10, op(0.15 + 0.85 * e));
+      P(`core-arm${cs}`, 2, ccy - 5, ccx - eqW / 2 + 2, 10);
+      P(`core-arm${cs}`, ccx + eqW / 2 - 4, ccy - 5, w - 2 - (ccx + eqW / 2 - 4), 10);
+      for (const r of rings) P(`core-ring ${r[0]} back${cs}`, r[1], r[2], r[3], r[4], r[5]);
+      P(`core${cs}`, ccx - R, ccy - R, d, d, op(0.35 + 0.65 * e));
+      P('core-swirl', ccx - d * 0.41, ccy - d * 0.41, d * 0.82, d * 0.82, op(0.2 + 0.8 * e));
+      P('core-swirl rev', ccx - d * 0.41, ccy - d * 0.41, d * 0.82, d * 0.82, op(0.15 + 0.7 * e));
+      P('core-heart', ccx - d * 0.2, ccy - d * 0.17, d * 0.4, d * 0.4, op(0.3 + 0.7 * e));
+      P('core-glint', ccx - d * 0.33, ccy - d * 0.37, d * 0.3, d * 0.17, 'transform:rotate(-32deg);');
+      for (const r of rings) P(`core-ring ${r[0]} front${cs}`, r[1], r[2], r[3], r[4], r[5]);
+      P('core-pin', ccx - eqW / 2 - 3, ccy - 4, 8, 8);
+      P('core-pin', ccx + eqW / 2 - 5, ccy - 4, 8, 8);
+      P(`core-cap${cs}`, ccx - 9, ccy - R - 5, 18, 8);
+      P(`core-base b${S}`, ccx - d * 0.42, ccy + R - 4, d * 0.84, h - (ccy + R - 4));
+      P('gauge', 7, h - 27, 15, 15);
       if (S === 3) {
-        P('crystal', 8, h - 50, 10, 18);
-        P('crystal', w - 18, h - 50, 10, 18);
+        P('crystal', 9, ccy - 21, 9, 16);
+        P('crystal', w - 18, ccy - 21, 9, 16);
       }
       if (S === 1) {
-        L('rope', ccx - d / 2 - 4, ccy - d / 3, ccx - d * 0.55, h - 12, 1.5);
-        L('rope', ccx + d / 2 + 4, ccy - d / 3, ccx + d * 0.55, h - 12, 1.5);
+        L('rope', ccx - R - 6, ccy + 3, ccx - d * 0.42, h - 8, 1.5);
+        L('rope', ccx + R + 6, ccy + 3, ccx + d * 0.42, h - 8, 1.5);
       }
-      fig(x + w - 14, y + h);
+      fig(x + w - 12, y + h);
     } else if (b === 'council') {
       shell('#B32E35', 0, 18, w, h - 18, true);
       P(`attic a${S}`, w * 0.14, 3, w * 0.72, 16);
@@ -445,21 +491,32 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       P('steps', w / 2 - 20, h - 6, 40, 6);
       fig(x + w * 0.3, y + h);
     } else if (b === 'infirmary') {
+      // Лазарет. 1 — полевой госпиталь: палатка с красным крестом, тёмный проём с койкой, откинутый
+      // полог, носилки у входа. 2–3 — больница: белый корпус с красной полосой, световой крест над
+      // входом, палаты с койками в окнах, козырёк, пандус и носилки; 3 — латунь и эфирный крест.
       if (S === 1) {
         P('tent', 0, 6, w, h - 6);
         L('rope', 2, h - 2, w * 0.18, 26, 1.5);
         L('rope', w - 2, h - 2, w * 0.82, 26, 1.5);
-        P('tent-door', w / 2 - 13, h - 36, 26, 36);
-        P('cross-sign', w / 2 - 12, 18, 24, 24);
+        P('tent-cross', w / 2 - 10, 20, 20, 20);
+        P('tent-door', w / 2 - 18, h - 40, 36, 40);
+        P('ward', w / 2 - 12, h - 10, 24, 8);
+        P('tent-flap', w / 2 + 4, h - 40, 18, 36);
       } else {
         shell('#E9E2CF', 0, 12, w, h - 12);
-        grid(2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
-        grid(w * 0.7 - 2, 14, w * 0.3, h - 18, 1, 2, 16, 17);
-        P(`cross-sign${S === 3 ? ' glow' : ''}`, w / 2 - 15, 18, 30, 30);
-        P(`door d${S}`, w / 2 - 9, h - 28, 18, 28);
-        P('awning', w / 2 - 20, h - 36, 40, 9);
+        for (const wx of [8, 26, w - 40, w - 22]) win(x + wx, y + 17, 14, 13, ti, S);
+        P(`cross-light${S === 3 ? ' ether' : ''}`, w / 2 - 12, 14, 24, 24);
+        P('med-band', 0, 40, w, 5);
+        for (const wx of [6, w - 36]) {
+          win(x + wx, y + 48, 30, 18, ti, S);
+          P('ward', wx + 3, 57, 24, 8);
+        }
+        P('awning', w / 2 - 18, h - 33, 36, 7);
+        P(`door d${S}`, w / 2 - 9, h - 26, 18, 26);
+        P('ramp', w / 2 + 9, h - 5, 22, 5);
       }
-      fig(x + w * 0.8, y + h, 'medic');
+      P('stretcher', 6, h - 9, 30, 9);
+      fig(x + w * 0.82, y + h, 'medic');
     } else if (b === 'guard') {
       // Пост: стена с зубцами, сторожевая башенка с прожектором справа, звезда над дверью
       const tx = w - 46;
@@ -501,22 +558,32 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       P('barrel', w * 0.36, h - 15, 11, 15);
       fig(x + w * 0.42, y + h);
     } else if (b === 'radio') {
-      // Рубка с окном и тарелкой на крыше, решётчатая мачта на растяжках, волны сигнала
-      const hw = Math.round(w * 0.62);
+      // Рубка с окном; на её крыше тарелка на поворотной опоре. Справа решётчатая мачта на бетонной
+      // опоре: площадка, штырь антенны с огнём, растяжки на крышу рубки и на палубу, фидер от рубки.
+      // Волны сигнала расходятся в стороны от верхушки. Всё в пределах слота.
+      const hw = Math.round(w * 0.56);
       const mx = w * 0.8;
-      L('wire', mx, 8, hw + 2, h - 44, 1.2);
-      L('wire', mx, 8, w - 2, h - 2, 1.2);
-      P(`radiomast y${S}`, mx - 9, 4, 18, h - 4);
-      P('ring wave', mx - 8, 0, 16, 16, op(0.5 + 0.5 * e));
-      P('ring wave', mx - 15, -7, 30, 30, `${op(0.3 + 0.4 * e)}animation-delay:-.8s;`);
-      P('beacon', mx - 3, 2, 6, 6);
-      P(`booth b${S}`, mx - 12, h - 18, 24, 18);
-      if (S === 3) P('crystal', mx - 5, h - 33, 10, 14);
-      shell('#6F8E91', 2, h - 44, hw, 44, true);
-      win(x + 9, y + h - 34, 18, 15, ti, S);
-      P(`door d${S}`, hw - 20, h - 26, 15, 26);
-      P('dish-arm', 2 + hw * 0.24, h - 56, 3, 12);
-      P('dish', 2 + hw * 0.24 - 10, h - 68, 22, 15, 'transform:rotate(-28deg);');
+      const mt = 15;
+      const roof = h - 44;
+      const dx = 2 + hw * 0.42;
+      L('wire', mx, mt + 8, hw - 1, roof + 1, 1.2);
+      L('wire', mx, mt + 8, w - 3, h - 2, 1.2);
+      P('ring wave', mx - 15, mt - 22, 30, 30, op(0.35 + 0.65 * e));
+      P('ring wave', mx - 15, mt - 22, 30, 30, `${op(0.35 + 0.65 * e)}animation-delay:-1.2s;`);
+      P('mast-foot', mx - 12, h - 6, 24, 6);
+      P(`radiomast y${S}`, mx - 8, mt, 16, h - 6 - mt);
+      P('mast-deck', mx - 10, mt + Math.round((h - mt) * 0.4), 20, 4);
+      P('ant', mx - 1, mt - 9, 2, 10);
+      P('beacon', mx - 3, mt - 13, 6, 6);
+      L('feeder', hw, h - 30, mx - 5, h - 34, 2);
+      shell('#6F8E91', 2, roof, hw, 44, true);
+      win(x + 8, y + h - 34, 18, 15, ti, S);
+      P(`door d${S}`, hw - 18, h - 26, 15, 26);
+      P('dish-arm', dx - 2, roof - 14, 4, 10);
+      P('dish-yoke', dx - 6, roof - 6, 12, 4);
+      P('dish', dx - 14, roof - 29, 28, 15, 'transform:rotate(-22deg);');
+      L('dish-feed', dx, roof - 19, dx - 5, roof - 30, 1.5);
+      if (S === 3) P('crystal', hw - 13, roof - 19, 9, 13);
     } else if (b === 'corner') {
       shell('#9A3335', 0, 12, w, h - 12);
       P('poster', 8, 20, w * 0.34, h - 38);
@@ -599,15 +666,40 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
   open('frame', 'tower');
   const roofTop = topY - 46;
   px('shaft', -16, roofTop, 32, -roofTop + 44);
+  // Внешний лифт: решётчатая шахта слева, мостки и хомуты у каждой палубы. Сверху оголовок: плита,
+  // А-рама, блок под красным колпаком с огнём; через блок трос к кабине и к противовесу, они ходят
+  // навстречу (одна анимация twLift, тросы тянутся twLiftRope). Снизу буфер, опорная плита и подкос.
   const liftX = -rootW / 2 - OV - 44;
+  const lc = liftX + 9;
   const spYb = n > 1 ? ym(A + 10 * (n - 1)) : 0;
-  px('liftshaft', liftX, spYb - 44, 18, -spYb + 56);
+  const lsTop = spYb - 44;
+  const lsBot = 12;
+  const travel = -spYb;
+  const shY = lsTop - 26;
+  const cabTop = -GEOM.deck - 22;
+  const cwTop = shY + 14;
+  const rope = cabTop - shY;
+  const rope2 = travel + 14;
+  line('lift-brace', liftX + 16, lsBot - 1, -rootW / 2 - 2, 20, 5);
+  px('liftshaft', liftX, lsTop, 18, lsBot - lsTop);
+  px('lift-head', liftX - 4, lsTop - 4, 26, 5);
+  line('lift-leg', liftX + 1, lsTop - 3, lc - 4, shY, 2.5);
+  line('lift-leg', liftX + 17, lsTop - 3, lc - 4, shY, 2.5);
   tiers.forEach((_t, i) => {
     const gy = ym(A + 10 * i);
     const gx = -tw(i) / 2 - OV;
     px('gang', liftX + 18, gy - GEOM.deck, gx - liftX - 18, 5);
+    px('lift-collar', liftX - 3, gy - GEOM.deck - 2, 24, 8);
   });
-  px('lift', liftX + 2, -GEOM.deck - 22, 14, 20, `--lift:${r1(spYb)}px;`);
+  px('lift-buffer', liftX + 4, -10, 10, lsBot - 4 + 10);
+  px('lift-pit', liftX - 5, lsBot - 4, 28, 8);
+  px('lift-rope', lc + 3.4, shY, 1.2, rope, `--r0:1;--r1:${((rope - travel) / rope).toFixed(3)};`);
+  px('lift-rope', lc - 12.6, shY, 1.2, rope2, `--r0:${(14 / rope2).toFixed(3)};--r1:1;`);
+  px('lift-cw', lc - 14.5, cwTop, 5, 16, `--lift:${r1(travel)}px;`);
+  px('lift', liftX + 2, cabTop, 14, 20, `--lift:${r1(-travel)}px;`);
+  px('lift-sheave', lc - 12, shY - 8, 16, 16);
+  px('lift-hood', lc - 14, shY - 12, 20, 10);
+  px('avl', lc - 7, shY - 17, 6, 6, 'animation-delay:-.9s;');
 
   // Двигатели и киль под Корнем; эфирная подушка: линза света, струи, волны давления, искры.
   // Яркость и скорость — от эфира: при нехватке подушка тускнеет, замедляется и рвётся.
@@ -616,32 +708,37 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
   const pace = 1 / Math.max(e, 0.3);
   const dur = (sec: number) => `animation-duration:${(sec * pace).toFixed(2)}s;`;
   const weak = e < 0.5;
-  px('cushion', -270, 30, 540, reach + 60, op(0.15 + 0.6 * e) + dur(3.2));
-  px('motes', -130, 72, 260, reach, op(0.1 + 0.8 * e) + dur(2.2));
-  // Луч эфира: мягкий конус без жёстких краёв (маска-конус с вершиной над соплом), по нему вниз
-  // идут светлые «узлы» давления, быстрые искры-штрихи, в центре дрожит раскалённое ядро; вокруг ореол.
+  px('cushion', -230, 40, 460, reach + 40, op(0.12 + 0.45 * e) + dur(3.6));
+  px('motes', -130, 80, 260, reach, op(0.1 + 0.8 * e) + dur(3.1));
+  // Луч эфира: мягкий конус без жёстких краёв (маска-конус с вершиной над соплом). Внутри — ровное
+  // свечение, два слоя неровных сгустков с разным шагом и скоростью (турбулентность без полос),
+  // редкие искры, дрожащее раскалённое ядро; у главного луча под соплом — узлы скачков уплотнения.
   const beam = (bx: number, by: number, bw: number, len: number, top: number, k: number, side: boolean) => {
     const ta = (bw - top) / 2 / len;
     const a = (Math.atan(ta) * 180) / Math.PI;
     const ap = top / 2 / Math.max(ta, 0.01);
     const cone = `--a:${a.toFixed(1)}deg;--ap:${Math.round(ap)}px;`;
     const wk = weak ? ' weak' : '';
-    px('jet-halo', bx - bw * 0.9, by - 8, bw * 1.8, len * 0.95, op(0.12 + 0.5 * e) + dur(3.2 * k));
-    px(`jet${wk}${side ? ' side' : ''}`, bx - bw / 2, by, bw, len, cone + op(0.2 + 0.75 * e) + dur(0.9 * k));
-    px('jet-streak', bx - bw / 2, by, bw, len * 0.9, cone + op(0.1 + 0.85 * e) + dur(0.55 * k));
-    px(`jet-core${wk}`, bx - bw / 2, by, bw, len * 0.72, cone + op(0.25 + 0.75 * e) + dur(0.14));
+    const sd = side ? ' side' : '';
+    px(`jet-halo${sd}`, bx - bw * 0.75, by - 4, bw * 1.5, len * 0.8, op(0.1 + 0.45 * e) + dur(4 * k));
+    px(`jet${wk}${sd}`, bx - bw / 2, by, bw, len, cone + op(0.2 + 0.75 * e) + dur(1.8 * k));
+    px(`jet-flow${sd}`, bx - bw / 2, by, bw, len, cone + op(0.15 + 0.8 * e) + dur(1.3 * k));
+    px(`jet-flow slow${sd}`, bx - bw / 2, by, bw, len, cone + op(0.1 + 0.7 * e) + dur(2.1 * k));
+    px('jet-spark', bx - bw / 2, by, bw, len * 0.9, cone + op(0.1 + 0.85 * e) + dur(1.1 * k));
+    px(`jet-core${wk}`, bx - bw / 2, by, bw, len * 0.72, cone + op(0.25 + 0.75 * e));
+    if (!side) px('jet-knots', bx - top / 2, by, top, 76, op(0.2 + 0.8 * e) + dur(0.9));
   };
   for (const side of [-1, 1]) beam(side * 200, 62, 170, reach * 0.72, 112, 1.25, true);
-  beam(0, 72, 96, reach, 34, 1, false);
+  beam(0, 94, 124, reach - 22, 54, 1, false);
   if (e > 0.15)
     for (let k = 0; k < 3; k++) {
       px(
         'shock',
-        -46,
-        78,
-        92,
-        18,
-        `--fall:${Math.round(reach * 0.75)}px;${dur(2.4)}animation-delay:${(-0.8 * k * pace).toFixed(2)}s;`,
+        -40,
+        98,
+        80,
+        16,
+        `--fall:${Math.round(reach * 0.7)}px;${dur(2.4)}animation-delay:${(-0.8 * k * pace).toFixed(2)}s;`,
       );
     }
   const splash = e > 0.15 && gapPx - 70 <= 330;
@@ -667,9 +764,20 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
       px('arc', ex + 72, 46, 10, 22, `${dur(2.3)}animation-delay:${(-0.9 * (side + 2) * pace).toFixed(2)}s;`);
     }
   }
+  // Киль: корпус с гранями, красным поясом на заклёпках и светящимися иллюминаторами. Сопло —
+  // настоящий раструб: фланец, рулевые приводы, колокол с кольцами охлаждения и рёбрами, который
+  // калится к кромке, рули по бокам; в горле видна раскалённая кромка, из неё выходит луч.
   px('keel', -110, 0, 220, 66);
-  px('nozzle-glow', -32, 70, 64, 34, op(0.2 + 0.8 * e));
-  px('nozzle', -24, 58, 48, 18);
+  for (const dx of [-40, 0, 40]) px('keel-port', dx - 5, 30, 10, 10, op(0.4 + 0.6 * e));
+  line('nozzle-rod', -30, 56, -21, 78, 3);
+  line('nozzle-rod', 30, 56, 21, 78, 3);
+  px('nozzle-ring', -22, 58, 44, 10);
+  px('nozzle-fin l', -37, 74, 9, 18);
+  px('nozzle-fin r', 28, 74, 9, 18);
+  px('nozzle', -32, 66, 64, 30);
+  px('nozzle-heat', -32, 66, 64, 30, op(0.2 + 0.8 * e));
+  px('nozzle-glow', -46, 88, 92, 18, op(0.25 + 0.75 * e));
+  px('nozzle-lip', -33, 90, 66, 10);
   if (close) px('icicles', -rootW / 2 - OV, 4, rootW + 2 * OV, 14);
 
   // Ярусы снизу вверх: ферма под палубой верхнего, стена, карниз, пилоны, здания, палуба с перилами
@@ -768,38 +876,40 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     px('roofstep', x0 + 8, r1y, w - 16, 16);
     px('roofstep', x0 + 52, r2y, w - 104, 16);
     px('roofstep hi', x0 + 100, r3y, w - 200, 14);
+    // Шатёр под звезду, а не радиомачта: цоколь на верхней ступени, кирпичный барабан с часами,
+    // галерея с огнями, фонарь-ротонда с тёплым светом, гранёный шатёр с золотыми рёбрами,
+    // шар, шток и золотая чаша-венец, которая держит звезду между нижними лучами.
     const b0 = r3y - 10;
-    const p1 = b0 - 50;
-    const p2 = p1 - 4 - 38;
-    const ntop = p2 - 3 - 16;
-    const ballY = ntop - 8;
-    line('wire', 0, p1 + 2, x0 + 16, r1y + 1, 1.5);
-    line('wire', 0, p1 + 2, x0 + w - 16, r1y + 1, 1.5);
-    line('wire', 0, p2 + 4, x0 + 58, r2y + 1, 1.5);
-    line('wire', 0, p2 + 4, x0 + w - 58, r2y + 1, 1.5);
-    px('mast-base', -24, b0, 48, 10);
-    px('mast', -16, p1, 32, b0 - p1);
-    line('mast-leg', -16, b0, -7, p1, 3);
-    line('mast-leg', 16, b0, 7, p1, 3);
-    px('mast-deck', -19, p1 - 4, 38, 5);
-    px('mast', -8, p2, 16, p1 - 4 - p2);
-    line('mast-leg', -8, p1 - 4, -3, p2, 2.5);
-    line('mast-leg', 8, p1 - 4, 3, p2, 2.5);
-    px('dipole', -26, p2 + 12, 52, 3);
-    px('dipole', -18, p2 + 25, 36, 3);
-    px('mast-deck', -11, p2 - 3, 22, 4);
-    px('needle', -2, ntop, 4, p2 - 2 - ntop);
-    px('avl', -23, p1 - 10, 6, 6);
-    px('avl', 17, p1 - 10, 6, 6, 'animation-delay:-1.2s;');
-    px('avl', -15, p2 - 9, 5, 5, 'animation-delay:-.6s;');
-    px('avl', 10, p2 - 9, 5, 5, 'animation-delay:-1.8s;');
+    const ballY = b0 - 122;
+    px('spire-plinth', -28, b0, 56, 10);
+    px('spire-drum', -16, b0 - 26, 32, 26);
+    px('spire-clock', -7, b0 - 21, 14, 14);
+    px('spire-gallery', -21, b0 - 31, 42, 6);
+    px('avl', -24, b0 - 37, 6, 6);
+    px('avl', 18, b0 - 37, 6, 6, 'animation-delay:-1.2s;');
+    px('spire-lantern', -11, b0 - 51, 22, 21);
+    px('spire-eave', -15, b0 - 55, 30, 5);
+    px('spire-tent', -13, b0 - 114, 26, 60);
     px('ball', -6, ballY, 12, 12);
-    // Правильная пятиконечная звезда: центр на 54,8 % высоты рамки, нижние лучи — на 95,2 %
+    px('star-stem', -2, ballY - 6, 4, 8);
+    // Правильная пятиконечная звезда: центр на 54,8 % высоты рамки, нижние лучи — на 95,2 %.
+    // Норма — дышащий ореол, медленные лучи, блик по граням, искры на концах лучей; мигание —
+    // сбоящий свет; погасшая — тёмная, без ореола.
     const mode = st.trust >= 60 ? '' : st.trust >= 30 ? ' blink' : ' off';
-    const cy = ballY + 4 - 0.4045 * 78;
+    const cy = ballY - 27;
+    const rt = cy - 0.5478 * 78;
+    const bt = cy - 0.5478 * 64;
     px(`star-halo${mode}`, -68, cy - 68, 136, 136);
-    px(`star rim${mode}`, -39, cy - 0.5478 * 78, 78, 78);
-    px(`star big${mode}`, -32, cy - 0.5478 * 64, 64, 64);
+    if (!mode) px('star-rays', -80, cy - 80, 160, 160);
+    px(`star rim${mode}`, -39, rt, 78, 78);
+    px(`star big${mode}`, -32, bt, 64, 64);
+    if (!mode) {
+      px('star glint', -32, bt, 64, 64);
+      px('star-flare', -9, rt - 5, 18, 18);
+      px('star-flare', 37 - 9, rt + 30.7 - 9, 18, 18, 'animation-delay:-2.6s;');
+      px('star-flare', -23 - 9, rt + 74.3 - 9, 18, 18, 'animation-delay:-4.1s;');
+    }
+    px('star-cup', -14, cy + 12, 28, 11);
     if (hiTrust) {
       [x0 + 12, x0 + w - 15].forEach((fx, k) => {
         px('pole', fx, r1y - 54, 3, 54);
