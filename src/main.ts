@@ -28,7 +28,7 @@ import { mountPaper } from './ui/paper';
 import { showRadioSplash } from './ui/radio-splash';
 import { mistNote, morningReport, showReportCard } from './ui/report';
 import { showStart } from './ui/start';
-import { showVerdict } from './ui/verdict';
+import { showVerdict, verdictStats } from './ui/verdict';
 import './scenes/tower.css';
 import './ui/style.css';
 import './ui/game.css';
@@ -186,7 +186,8 @@ async function showEnding() {
   const outro = outroFor(id);
   if (outro) await playComic(ui as HTMLElement, outro);
   const kind = data.endings.endings.find((e) => e.id === id)?.verdict;
-  if (kind) await showVerdict(ui as HTMLElement, kind, data.endings.verdicts[kind]);
+  if (kind)
+    await showVerdict(ui as HTMLElement, kind, data.endings.verdicts[kind], verdictStats(state, kind));
   showFinal(ui as HTMLElement, state, { data, onRestart: () => void loop.newGame() });
 }
 
@@ -251,7 +252,10 @@ if (params.get('sound') === 'lab') {
   ui.classList.add('is-bare', 'is-preset');
 } else if (debugVerdict === 'win' || debugVerdict === 'lose') {
   ui.classList.add('is-bare');
-  void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict]).then(() => start());
+  // Итоги — со стартового состояния на день из &day= (по умолчанию 9)
+  const demo = { ...createInitialState(data.balance), day: Number(params.get('day')) || 9 };
+  const stats = verdictStats(demo, debugVerdict);
+  void showVerdict(ui, debugVerdict, data.endings.verdicts[debugVerdict], stats).then(() => start());
 } else if (debugComic) {
   ui.classList.add('is-bare');
   void playComic(ui, debugComic).then(() => start());
