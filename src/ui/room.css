@@ -1,0 +1,962 @@
+/* Комната в разрезе (src/ui/room.ts, room-model.ts).
+   Сцена — та же разметка .tw .p, что у башни: детали башни (ядро, растения, лампы, жители) берут вид
+   из sedmaya.css, свои детали комнаты — классы .rm-* ниже. Окно открывается из слота башни:
+   карточка растёт из его прямоугольника, фасад уезжает вверх и открывает комнату. */
+
+/* ---------- Окно ---------- */
+.room-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.room-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 52, 55, 0.62);
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+}
+.room-layer.is-open .room-backdrop {
+  opacity: 1;
+  animation: roomFade 220ms ease-out;
+}
+@keyframes roomFade {
+  from {
+    opacity: 0;
+  }
+}
+.room {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 14px 14px 0 rgba(0, 0, 0, 0.42);
+  transform-origin: 0 0;
+  outline: none;
+  overscroll-behavior: contain;
+}
+.room.is-flying {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 200ms ease-out;
+}
+.room.is-closing {
+  transition:
+    transform 200ms cubic-bezier(0.5, 0, 0.75, 0.4),
+    opacity 200ms ease-in;
+}
+/* Пока карточка летит из слота, текст не мелькает растянутым */
+.room > :not(.room-stage) {
+  transition: opacity 160ms ease-out 140ms;
+}
+.room.is-flying > :not(.room-stage),
+.room.is-closing > :not(.room-stage) {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+
+.room-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.room-head {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.room-head .plaque {
+  align-self: flex-start;
+  font-size: 12px;
+}
+.room-title {
+  margin: 0;
+  font-size: clamp(18px, 3.4cqw, 26px);
+  line-height: 1.1;
+}
+.room-close {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--paper-ink);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.room-close:focus-visible {
+  outline: 2px solid var(--red);
+}
+
+/* Сцена: 400×240, масштаб --k под ширину карточки */
+.room-stage {
+  position: relative;
+  aspect-ratio: 400 / 240;
+  overflow: hidden;
+  background: #1a3437;
+  box-shadow: inset 0 0 0 3px var(--paper-ink);
+}
+.room-stage > .tw.rm {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 400px;
+  height: 240px;
+  transform: scale(var(--k, 1));
+  transform-origin: 0 0;
+}
+/* Фасад здания закрывает разрез, пока окно летит, и уезжает вверх, как ставень */
+.room-facade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 26px),
+    linear-gradient(180deg, rgba(251, 240, 214, 0.12), rgba(0, 0, 0, 0.25)), var(--fc, #8e7a6a);
+  display: grid;
+  place-items: center;
+  transition: transform 380ms cubic-bezier(0.6, 0, 0.2, 1) 180ms;
+}
+.room-facade span {
+  font-family: var(--f-ui);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--paper-ink);
+  padding: 4px 14px;
+}
+.room-layer.is-open .room-facade {
+  transform: translateY(-101%);
+}
+.room-layer.is-leaving .room-facade {
+  transform: none;
+  transition-delay: 0ms;
+  transition-duration: 160ms;
+}
+
+/* Что здесь: люди, выработка, настроение */
+.room-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 15px;
+}
+.room-facts dt {
+  font-family: var(--f-ui);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #577376;
+  padding-top: 3px;
+}
+.room-facts dd {
+  margin: 0;
+  font-family: var(--f-ui);
+}
+.room-facts .num b {
+  font-weight: 600;
+}
+.room-why {
+  display: block;
+  font-size: 13px;
+  color: #577376;
+}
+.room-why .bad {
+  color: var(--red-deep);
+}
+.room-moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.room-mood {
+  font-family: var(--f-ui);
+  font-size: 13px;
+  padding: 2px 9px;
+  border: 1px solid rgba(26, 52, 55, 0.3);
+  cursor: help;
+}
+.room-mood.is-bad {
+  border-color: var(--red);
+  color: var(--red-deep);
+}
+.room-mood.is-good {
+  border-color: var(--ether-deep);
+  color: var(--ether-deep);
+}
+
+/* Голос комнаты */
+.room-voice {
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 4px solid var(--red);
+  background: rgba(26, 52, 55, 0.06);
+  font-family: var(--f-text);
+  font-size: 16px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.room-voice cite {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--f-ui);
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #577376;
+}
+.room-voice.is-new {
+  animation: roomVoice 320ms ease-out;
+}
+@keyframes roomVoice {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Обход */
+.room-visit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.room-visit .btn[aria-busy="true"] {
+  cursor: progress;
+  filter: saturate(0.6);
+}
+.room-visit-note {
+  font-family: var(--f-ui);
+  font-size: 14px;
+  color: #577376;
+}
+.room-visit-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-ui);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ether-deep);
+}
+.room-visit-done svg {
+  width: 22px;
+  height: 22px;
+}
+.room-visit-done.is-new svg path {
+  stroke-dasharray: 30;
+  animation: roomTick 420ms ease-out both;
+}
+.room-visit-done.is-new {
+  animation: roomPop 300ms cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes roomTick {
+  from {
+    stroke-dashoffset: 30;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes roomPop {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+
+/* ---------- Сцена ---------- */
+.tw.rm {
+  background: #1a3437;
+}
+.rm .rm-wall {
+  background-color: var(--bc, #8e7a6a);
+  background-image:
+    radial-gradient(120% 90% at 50% 30%, rgba(251, 240, 214, 0.18), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, transparent 78%, rgba(0, 0, 0, 0.22) 78% 79%, rgba(0, 0, 0, 0.12) 79%);
+}
+.rm .rm-wall.s1 {
+  background-image:
+    radial-gradient(120% 90% at 50% 30%, rgba(251, 240, 214, 0.16), rgba(0, 0, 0, 0.3)),
+    repeating-linear-gradient(90deg, rgba(60, 38, 24, 0.35) 0 2px, transparent 2px 26px),
+    linear-gradient(rgba(136, 90, 60, 0.35), rgba(97, 64, 42, 0.45));
+}
+.rm .rm-wall.s2 {
+  background-image:
+    radial-gradient(120% 90% at 50% 30%, rgba(251, 240, 214, 0.16), rgba(0, 0, 0, 0.3)),
+    radial-gradient(circle, rgba(26, 52, 55, 0.5) 0 1.4px, transparent 2px) 0 0 / 40px 40px,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 40px),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 52px);
+}
+.rm .rm-wall.s3 {
+  background-image:
+    radial-gradient(120% 90% at 50% 30%, rgba(205, 243, 254, 0.2), rgba(0, 0, 0, 0.28)),
+    repeating-linear-gradient(90deg, transparent 0 46px, #c77a45 46px 48px);
+}
+.rm .rm-ceil {
+  background: linear-gradient(180deg, #24494f, #1a3437);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.rm .rm-ceil.s1 {
+  background: repeating-linear-gradient(90deg, #5c3e2a 0 30px, #4a3121 30px 32px);
+}
+.rm .rm-floor {
+  background:
+    linear-gradient(180deg, rgba(251, 240, 214, 0.25) 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, #334e51 0 44px, #24494f 44px 46px);
+}
+.rm .rm-floor.s1 {
+  background:
+    linear-gradient(180deg, rgba(251, 240, 214, 0.2) 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, #795135 0 34px, #5c3e2a 34px 36px);
+}
+.rm .rm-floor.s3 {
+  background:
+    linear-gradient(180deg, #e6d7b4 0 2px, transparent 2px),
+    repeating-linear-gradient(90deg, #334e51 0 44px, #c77a45 44px 46px);
+}
+
+/* Окно наружу: небо, при Мгле — Мгла, при Мгле у Корня — иней */
+.rm .rm-view {
+  border: 4px solid #2c4649;
+  background:
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 2px),
+      #2c4649 calc(50% - 2px) calc(50% + 2px),
+      transparent 0
+    ),
+    linear-gradient(transparent calc(45% - 2px), #2c4649 calc(45% - 2px) calc(45% + 2px), transparent 0),
+    radial-gradient(14px 6px at 30% 34%, rgba(251, 240, 214, 0.55), transparent),
+    linear-gradient(180deg, #4f6a6d, #7e9b9e 70%, #c9d6d2);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.rm .rm-view.mist {
+  background:
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 2px),
+      #2c4649 calc(50% - 2px) calc(50% + 2px),
+      transparent 0
+    ),
+    linear-gradient(transparent calc(45% - 2px), #2c4649 calc(45% - 2px) calc(45% + 2px), transparent 0),
+    linear-gradient(180deg, #b0ced2, #90adb0);
+  animation: rmMistGlass 6s ease-in-out infinite;
+}
+.rm .rm-view.frost {
+  box-shadow:
+    inset 0 0 0 3px rgba(251, 240, 214, 0.85),
+    inset 0 -10px 10px rgba(251, 240, 214, 0.6),
+    0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.rm .rm-boards {
+  background:
+    linear-gradient(8deg, transparent 30%, #795135 30% 46%, transparent 46%),
+    linear-gradient(-6deg, transparent 54%, #5c3e2a 54% 70%, transparent 70%);
+}
+
+/* Свет */
+.rm .rm-cord {
+  background: #1a3437;
+}
+.rm .rm-bulb {
+  border-radius: 50% 50% 40% 40%;
+  background: radial-gradient(circle at 50% 70%, #fff7e2, #f6cd96 60%, #c77a45);
+  box-shadow: 0 0 14px 4px rgba(246, 205, 150, 0.6);
+}
+.rm .rm-light {
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgba(246, 205, 150, 0.4), rgba(246, 205, 150, 0));
+  pointer-events: none;
+}
+.rm .flicker {
+  animation: rmFlicker 2.6s steps(1) infinite;
+}
+.rm .rm-dim {
+  background: radial-gradient(70% 70% at 50% 40%, rgba(10, 24, 26, 0.05), rgba(10, 24, 26, 0.6));
+  animation: rmDim 2.6s steps(1) infinite;
+}
+
+/* Жители: та же фигура .tw .man, позы */
+.rm .rm-man {
+  transform-origin: 50% 100%;
+}
+.rm .rm-man.work {
+  animation: rmWork 1.6s ease-in-out infinite;
+}
+.rm .rm-man.walk {
+  animation: rmWalk 7s ease-in-out infinite;
+}
+.rm .rm-man.talk {
+  animation: rmTalk 2.4s ease-in-out infinite;
+}
+.rm .rm-man.sit {
+  clip-path: polygon(
+    36% 0,
+    64% 0,
+    76% 11%,
+    72% 23%,
+    60% 28%,
+    88% 33%,
+    100% 70%,
+    86% 72%,
+    80% 50%,
+    78% 100%,
+    22% 100%,
+    20% 50%,
+    14% 72%,
+    0 70%,
+    12% 33%,
+    40% 28%,
+    28% 23%,
+    24% 11%
+  );
+  animation: rmTalk 3.2s ease-in-out infinite;
+}
+.rm .rm-man.lie {
+  clip-path: polygon(0 36%, 0 64%, 9% 76%, 19% 72%, 23% 60%, 100% 70%, 100% 30%, 23% 40%, 19% 28%, 9% 24%);
+  animation: rmBreathe 3.6s ease-in-out infinite;
+}
+.rm .rm-phones {
+  border: 3px solid #c93c41;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+.rm .rm-chair {
+  animation: rmIn 500ms ease-out both;
+}
+.rm.is-greeting .rm-man:not(.lie):not(.rm-chair) {
+  animation: rmGreet 520ms ease-out 2;
+}
+
+/* Жилой модуль */
+.rm .rm-bunk {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 22px,
+      #9a3335 22px 34px,
+      #5c3e2a 34px 42px,
+      transparent 42px 84px,
+      #255d6b 84px 96px,
+      #5c3e2a 96px 104px,
+      transparent 104px
+    ),
+    linear-gradient(90deg, #5c3e2a 0 6px, transparent 6px calc(100% - 6px), #5c3e2a calc(100% - 6px));
+}
+.rm .rm-bunk.s2,
+.rm .rm-bunk.s3 {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 22px,
+      #9a3335 22px 34px,
+      #536e71 34px 40px,
+      transparent 40px 84px,
+      #255d6b 84px 96px,
+      #536e71 96px 102px,
+      transparent 102px
+    ),
+    linear-gradient(90deg, #536e71 0 5px, transparent 5px calc(100% - 5px), #536e71 calc(100% - 5px));
+}
+.rm .rm-table {
+  background:
+    linear-gradient(#ac7a5a 0 6px, transparent 6px),
+    linear-gradient(
+      90deg,
+      transparent 6%,
+      #684630 6% 12%,
+      transparent 12% 88%,
+      #684630 88% 94%,
+      transparent 94%
+    );
+}
+.rm .rm-table.s2,
+.rm .rm-table.s3 {
+  background:
+    linear-gradient(#a9c0be 0 5px, transparent 5px),
+    linear-gradient(
+      90deg,
+      transparent 6%,
+      #536e71 6% 11%,
+      transparent 11% 89%,
+      #536e71 89% 94%,
+      transparent 94%
+    );
+}
+.rm .rm-bowl {
+  border-radius: 0 0 7px 7px;
+  background: linear-gradient(#f69550 0 2px, #fbf0d6 2px);
+}
+.rm .rm-bowl.empty {
+  background: #fbf0d6;
+  opacity: 0.7;
+}
+.rm .rm-stove {
+  border-radius: 4px 4px 0 0;
+  background:
+    radial-gradient(circle, rgba(0, 0, 0, 0.45) 0 1.5px, transparent 2px) 6px 6px / 12px 12px,
+    linear-gradient(180deg, #536e71, #2c4649);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.rm .rm-stove.s1 {
+  background: linear-gradient(180deg, #6e4a32, #3c281b);
+}
+.rm .rm-fire {
+  border-radius: 3px;
+  background: radial-gradient(60% 80% at 50% 100%, #fff7e2, #f69550 50%, #c93c41 80%, #1a3437);
+  box-shadow: 0 0 16px 4px rgba(246, 149, 80, 0.5);
+  animation: rmFire 0.9s ease-in-out infinite alternate;
+}
+.rm .rm-pipe {
+  background: linear-gradient(90deg, #22393c, #718d90 40%, #334e51);
+}
+
+/* Ферма */
+.rm .rm-rack {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 50px,
+      #536e71 50px 54px,
+      transparent 54px 100px,
+      #536e71 100px 104px,
+      transparent 104px
+    ),
+    linear-gradient(90deg, #536e71 0 4px, transparent 4px calc(100% - 4px), #536e71 calc(100% - 4px));
+}
+.rm .rm-rack.s1 {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 50px,
+      #795135 50px 55px,
+      transparent 55px 100px,
+      #795135 100px 105px,
+      transparent 105px
+    ),
+    linear-gradient(90deg, #795135 0 5px, transparent 5px calc(100% - 5px), #795135 calc(100% - 5px));
+}
+
+/* Уловитель */
+.rm .rm-funnel {
+  clip-path: polygon(0 0, 100% 0, 60% 100%, 40% 100%);
+  background: linear-gradient(90deg, #536e71, #dbe5e2 40%, #536e71);
+}
+.rm .rm-funnel.s1 {
+  background:
+    repeating-linear-gradient(90deg, rgba(26, 52, 55, 0.5) 0 2px, transparent 2px 14px),
+    linear-gradient(90deg, #3c281b, #d3a07c 40%, #3c281b);
+}
+.rm .rm-funnel.s3 {
+  background: linear-gradient(90deg, #84522f, #fbf0d6 40%, #c77a45);
+}
+.rm .rm-tank {
+  border-radius: 14px 14px 4px 4px;
+  border: 4px solid #536e71;
+  background: linear-gradient(90deg, rgba(251, 240, 214, 0.18) 0 14%, transparent 14%), rgba(26, 52, 55, 0.6);
+}
+.rm .rm-tank.s1 {
+  border-color: #795135;
+}
+.rm .rm-tank.s3 {
+  border-color: #c77a45;
+}
+.rm .rm-tank-fill {
+  border-radius: 2px;
+  background: linear-gradient(180deg, #e6faff, #9fd6df 30%, #4e9aab);
+  box-shadow: 0 0 14px rgba(165, 213, 226, 0.7);
+  animation: rmSlosh 3s ease-in-out infinite;
+}
+.rm .rm-wheel {
+  border-radius: 50%;
+  border: 4px solid #c93c41;
+  background:
+    linear-gradient(transparent 45%, #c93c41 45% 55%, transparent 55%),
+    linear-gradient(90deg, transparent 45%, #c93c41 45% 55%, transparent 55%);
+  animation: rmTurn 6s ease-in-out infinite alternate;
+}
+.rm .rm-pipes {
+  background: linear-gradient(180deg, #a9c0be, #536e71 50%, #2c4649);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Ядро */
+.rm .rm-panel {
+  background: linear-gradient(180deg, #2c4649, #1f3f44);
+  border: 3px solid #536e71;
+}
+.rm .rm-catwalk {
+  background:
+    repeating-linear-gradient(90deg, #536e71 0 3px, transparent 3px 12px) 0 0 / 100% 4px no-repeat,
+    linear-gradient(transparent 4px, #334e51 4px);
+}
+.rm .rm-crates {
+  background:
+    linear-gradient(90deg, transparent 49%, rgba(0, 0, 0, 0.4) 49% 51%, transparent 51%),
+    linear-gradient(135deg, transparent 47%, rgba(0, 0, 0, 0.25) 47% 53%, transparent 53%),
+    linear-gradient(#ac7a5a, #795135);
+  border: 2px solid #5c3e2a;
+}
+
+/* Совет */
+.rm .rm-banner {
+  background: linear-gradient(180deg, #c93c41, #8f2a2f);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 86%, 0 100%);
+}
+.rm .rm-banner.s3 {
+  background: linear-gradient(180deg, #dd5156, #8f2a2f), #c77a45;
+  box-shadow: inset 0 0 0 3px #c77a45;
+}
+.rm .rm-star {
+  background: #fbf0d6;
+}
+.rm .rm-map {
+  background:
+    linear-gradient(90deg, transparent 46%, #255d6b 46% 54%, transparent 54%) 0 10px / 100% calc(100% - 20px)
+    no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 12px, rgba(37, 93, 107, 0.5) 12px 14px),
+    #efddb8;
+  border: 3px solid #5c3e2a;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+}
+.rm .rm-desk {
+  background: linear-gradient(#ac7a5a 0 7px, transparent 7px), linear-gradient(180deg, #795135, #5c3e2a);
+  box-shadow: 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+.rm .rm-desk.s2,
+.rm .rm-desk.s3 {
+  background: linear-gradient(#c93c41 0 6px, transparent 6px), linear-gradient(180deg, #8f2a2f, #5e1d20);
+}
+.rm .rm-papers {
+  background: repeating-linear-gradient(180deg, #fbf0d6 0 2px, #cfc09d 2px 3px);
+  transform: rotate(-4deg);
+}
+.rm .rm-lampdesk {
+  clip-path: polygon(30% 0, 70% 0, 100% 40%, 60% 40%, 60% 100%, 40% 100%, 40% 40%, 0 40%);
+  background: #2c6a4e;
+  box-shadow: 0 0 12px rgba(246, 205, 150, 0.6);
+}
+
+/* Лазарет */
+.rm .rm-bed {
+  background:
+    linear-gradient(#fbf0d6 0 10px, #a9c0be 10px 14px, transparent 14px),
+    linear-gradient(90deg, #718d90 0 4px, transparent 4px calc(100% - 4px), #718d90 calc(100% - 4px));
+}
+.rm .rm-bed.s1 {
+  background:
+    linear-gradient(#efddb8 0 10px, #795135 10px 14px, transparent 14px),
+    linear-gradient(90deg, #795135 0 5px, transparent 5px calc(100% - 5px), #795135 calc(100% - 5px));
+}
+.rm .rm-drip {
+  background:
+    radial-gradient(7px 10px at 50% 12px, rgba(159, 214, 223, 0.9) 0 90%, transparent 100%),
+    linear-gradient(90deg, transparent 45%, #a9c0be 45% 55%, transparent 55%);
+}
+.rm .rm-cabinet {
+  background:
+    linear-gradient(90deg, transparent 49%, rgba(0, 0, 0, 0.2) 49% 51%, transparent 51%),
+    linear-gradient(180deg, #fbf0d6, #cfc09d);
+  border: 3px solid #a9c0be;
+}
+.rm .rm-cross {
+  background:
+    linear-gradient(90deg, transparent 34%, #c93c41 34% 66%, transparent 66%),
+    linear-gradient(transparent 34%, #c93c41 34% 66%, transparent 66%);
+}
+
+/* Стража */
+.rm .rm-rack-tools {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 10px, #1a3437 10px 15px, transparent 15px 19px) 0 18px /
+    100% 64px no-repeat,
+    linear-gradient(#536e71 0 6px, transparent 6px calc(100% - 8px), #536e71 calc(100% - 8px));
+}
+.rm .rm-rack-tools.s1 {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 10px, #5c3e2a 10px 15px, transparent 15px 19px) 0 18px /
+    100% 64px no-repeat,
+    linear-gradient(#795135 0 6px, transparent 6px calc(100% - 8px), #795135 calc(100% - 8px));
+}
+.rm .rm-console {
+  border-radius: 4px 4px 0 0;
+  background:
+    radial-gradient(circle, #f69550 0 2px, transparent 2.5px) 10px 10px / 22px 18px,
+    linear-gradient(180deg, #536e71, #2c4649);
+  box-shadow: 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Разборка */
+.rm .rm-bench {
+  background:
+    linear-gradient(#a9c0be 0 6px, transparent 6px),
+    linear-gradient(
+      90deg,
+      transparent 4%,
+      #536e71 4% 9%,
+      transparent 9% 91%,
+      #536e71 91% 96%,
+      transparent 96%
+    );
+}
+.rm .rm-bench.s1 {
+  background:
+    linear-gradient(#ac7a5a 0 7px, transparent 7px),
+    linear-gradient(
+      90deg,
+      transparent 4%,
+      #684630 4% 10%,
+      transparent 10% 90%,
+      #684630 90% 96%,
+      transparent 96%
+    );
+}
+.rm .rm-vise {
+  background: linear-gradient(90deg, #334e51 0 40%, #718d90 40% 60%, #334e51 60%);
+}
+.rm .rm-sparks {
+  background:
+    radial-gradient(circle, #fff7e2 0 1.5px, transparent 2px) 4px 6px / 13px 11px,
+    radial-gradient(circle, #f69550 0 1.5px, transparent 2px) 0 0 / 9px 15px;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  animation: rmSparks 0.5s steps(3) infinite;
+}
+
+/* Красный уголок */
+.rm .rm-samovar {
+  border-radius: 40% 40% 10% 10%;
+  background: linear-gradient(90deg, #84522f, #fbf0d6 35%, #c77a45 70%, #84522f);
+}
+.rm .rm-gramo {
+  background:
+    radial-gradient(circle at 70% 18%, #c77a45 0 30%, transparent 32%),
+    linear-gradient(transparent 60%, #5c3e2a 60%);
+}
+.rm .rm-benches {
+  background: repeating-linear-gradient(90deg, #795135 0 90px, transparent 90px 110px);
+  opacity: 0.85;
+}
+
+/* Радиорубка */
+.rm .rm-speaker {
+  border-radius: 4px;
+  background: radial-gradient(circle, #1a3437 0 40%, #536e71 42% 56%, #334e51 58%);
+}
+.rm .rm-wires {
+  background:
+    radial-gradient(60% 40px at 30% 0, transparent 0 96%, #1a3437 97% 100%, transparent 100%),
+    radial-gradient(50% 30px at 72% 0, transparent 0 95%, #9a3335 96% 100%, transparent 100%);
+}
+.rm .rm-lights {
+  background: radial-gradient(circle, #9fd6df 0 3px, transparent 3.5px) 0 50% / 18px 100%;
+  animation: rmBlink 1.4s steps(2) infinite;
+}
+
+/* Обсерватория */
+.rm .rm-slit {
+  background:
+    radial-gradient(circle, #fbf0d6 0 1px, transparent 1.6px) 6px 8px / 17px 13px,
+    radial-gradient(circle, #9fd6df 0 1px, transparent 1.6px) 0 3px / 23px 19px,
+    #0f2326;
+}
+.rm .rm-scope {
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(90deg, #84522f, #f1e2be 40%, #c77a45 70%, #84522f);
+}
+.rm .rm-mount {
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+  background: linear-gradient(#536e71, #2c4649);
+}
+.rm .rm-chart {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fbf0d6 0 1.2px, transparent 1.8px) 4px 7px / 14px 11px,
+    radial-gradient(circle, transparent 0 46%, rgba(251, 240, 214, 0.5) 46% 47%, transparent 47%),
+    #1f3f44;
+  border: 3px solid #c77a45;
+}
+
+/* Настроения */
+.rm .rm-mist {
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(201, 214, 210, 0.75),
+    rgba(176, 206, 210, 0.35) 60%,
+    rgba(176, 206, 210, 0)
+  );
+  animation: rmMist 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.rm .rm-mist.m1 {
+  animation-duration: 13s;
+  animation-direction: alternate-reverse;
+}
+.rm .rm-frost {
+  box-shadow:
+    inset 0 0 0 6px rgba(251, 240, 214, 0.45),
+    inset 0 0 40px 12px rgba(251, 240, 214, 0.35);
+  pointer-events: none;
+}
+.rm .rm-dust {
+  background: rgba(26, 52, 55, 0.35);
+}
+.rm .rm-scrawl {
+  font-family: var(--f-display);
+  font-size: 13px;
+  color: rgba(201, 60, 65, 0.85);
+  transform: rotate(-7deg);
+  white-space: nowrap;
+}
+
+/* Кадры анимаций сцены */
+@keyframes rmWork {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(2px) rotate(-6deg);
+  }
+}
+@keyframes rmWalk {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  45%,
+  55% {
+    translate: -46px 0;
+  }
+}
+@keyframes rmTalk {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes rmBreathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.06);
+  }
+}
+@keyframes rmGreet {
+  40% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes rmIn {
+  from {
+    opacity: 0;
+    translate: 24px 0;
+  }
+}
+@keyframes rmFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  8% {
+    opacity: 0.25;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  15% {
+    opacity: 0.3;
+  }
+  60% {
+    opacity: 1;
+  }
+  63% {
+    opacity: 0.4;
+  }
+}
+@keyframes rmDim {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  8%,
+  15% {
+    opacity: 1;
+  }
+}
+@keyframes rmFire {
+  to {
+    filter: brightness(1.25);
+    transform: scaleY(1.08);
+  }
+}
+@keyframes rmSlosh {
+  50% {
+    transform: translateY(-2px) skewY(1deg);
+  }
+}
+@keyframes rmTurn {
+  to {
+    transform: rotate(180deg);
+  }
+}
+@keyframes rmSparks {
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes rmBlink {
+  50% {
+    filter: brightness(0.5);
+  }
+}
+@keyframes rmMist {
+  to {
+    transform: translate(30px, -10px) scale(1.08);
+  }
+}
+@keyframes rmMistGlass {
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room.is-flying,
+  .room.is-closing,
+  .room-facade,
+  .room-backdrop {
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+  .rm .p,
+  .room-voice.is-new,
+  .room-visit-done.is-new,
+  .room-visit-done.is-new svg path {
+    animation: none !important;
+  }
+}

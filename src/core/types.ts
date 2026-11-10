@@ -204,12 +204,56 @@ export interface Balance {
   /** Пороги финала (ТЗ 6.9); раскол — по `thresholds.solidarityCrisis`. */
   endings: { harborSolidarity: number; fortressOrder: number; sealTrust: number };
   preview: { statSteps: number[]; resSteps: number[]; factionPortraitMin: number };
+  /** Взгляд в комнату и обход Председателя (src/core/rooms.ts). */
+  rooms: {
+    /** С какой солидарности в комнатах празднично. */
+    festiveSolidarity: number;
+    /** Мгла ближе стольких метров к днищу Корня — в Корне иней. */
+    frostGap: number;
+    /** Что даёт обход раз в день: id здания → эффекты сразу. */
+    visit: Record<string, Effects>;
+  };
+}
+
+/** Настроение комнаты: что видно внутри. Порядок в ROOM_MOODS — от важного к фону. */
+export type RoomMood =
+  | 'mist'
+  | 'frost'
+  | 'dark'
+  | 'hungry'
+  | 'sick'
+  | 'unrest'
+  | 'rumors'
+  | 'quarrel'
+  | 'empty'
+  | 'short'
+  | 'crowded'
+  | 'festive'
+  | 'calm';
+
+/** Реплика жителя в комнате: здание (нет — любое), настроение (нет — спокойно), условие. */
+export interface RoomLine {
+  b?: string;
+  mood?: RoomMood;
+  requires?: Requires;
+  who: string;
+  text: string;
+}
+
+/** data/rooms.json: подписи настроений, реплики и ответы на обход. */
+export interface RoomsFile {
+  version: number;
+  moods: Record<RoomMood, { label: string; hint: string }>;
+  lines: RoomLine[];
+  /** Ответ на обход: id здания или «*». */
+  visit: Record<string, { who: string; text: string }>;
 }
 
 export interface GameData {
   balance: Balance;
   events: GameEvent[];
   endings: EndingsFile;
+  rooms: RoomsFile;
 }
 
 export interface Tier extends TierDef {
@@ -246,4 +290,6 @@ export interface GameState {
   unlocked: string[];
   memories: number;
   ending: string | null;
+  /** Обход Председателя: в какой день и в какую комнату заходил (раз в день). Нет — ещё не было. */
+  visit?: { day: number; tier: number; slot: number } | null;
 }

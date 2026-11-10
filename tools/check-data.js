@@ -98,6 +98,23 @@ for (const c of comics.comics) {
   }
 }
 
+// Комнаты: реплики жителей с известными настроением и зданием, флаги в условиях ставятся событиями,
+// у обхода есть эффект для каждого здания
+const rooms = load('rooms.json');
+for (const [i, l] of rooms.lines.entries()) {
+  const where = `rooms.json, реплика ${i + 1}`;
+  if (!l.text || !l.who) errors.push(`${where}: нет text или who`);
+  if (l.mood && !rooms.moods[l.mood]) errors.push(`${where}: неизвестное настроение ${l.mood}`);
+  if (l.b && !balance.buildings[l.b]) errors.push(`${where}: неизвестное здание ${l.b}`);
+  readReq(l.requires, where);
+}
+for (const id of Object.keys(balance.buildings)) {
+  if (!balance.rooms?.visit?.[id]) errors.push(`balance.rooms.visit: нет обхода для здания ${id}`);
+}
+for (const [id, eff] of Object.entries(balance.rooms?.visit || {})) {
+  for (const k of Object.keys(eff)) if (!STAT_KEYS.includes(k)) errors.push(`обход ${id}: неизвестный эффект ${k}`);
+}
+
 const unused = [...setFlags].filter((f) => !readFlags.has(f) && !JSON.stringify(endings).includes(`"${f}"`));
 console.log(`событий: ${events.length}, флагов ставится: ${setFlags.size}, читается: ${readFlags.size}`);
 if (unused.length) console.log(`флаги без чтения (для эпилога и будущих событий): ${unused.join(', ')}`);

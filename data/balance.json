@@ -92,5 +92,22 @@
   },
   "events": { "maxWindowsPerMorning": 2, "poolRepeatGapDays": 3 },
   "endings": { "harborSolidarity": 50, "fortressOrder": 60, "sealTrust": 50 },
-  "preview": { "statSteps": [1, 5, 15], "resSteps": [1, 10, 20], "factionPortraitMin": 5 }
+  "preview": { "statSteps": [1, 5, 15], "resSteps": [1, 10, 20], "factionPortraitMin": 5 },
+  "rooms": {
+    "festiveSolidarity": 70,
+    "frostGap": 10,
+    "visit": {
+      "core": { "ether": 2 },
+      "council": { "trust": 2 },
+      "housing": { "solidarity": 2 },
+      "farm": { "food": 3 },
+      "catcher": { "ether": 3 },
+      "salvage": { "mat": 3 },
+      "infirmary": { "health": 2 },
+      "guard": { "order": 2 },
+      "red_corner": { "trust": 1, "solidarity": 1 },
+      "radio": { "trust": 1 },
+      "observatory": { "trust": 1 }
+    }
+  }
 }

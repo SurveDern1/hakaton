@@ -9,9 +9,11 @@ import {
   etherNeed,
   factionStance,
   isTierInMist,
+  productionFactors,
   RES_KEYS,
   residentsByTier,
   STAT_KEYS,
+  slotOutput,
   staffing,
   tierMiddle,
 } from './tower';
@@ -83,14 +85,12 @@ export function runNight(input: GameState, data: GameData): { state: GameState; 
   }
 
   // 2. Декреты.
-  let catcherFactor = 1;
   let foodFactor = 1;
   for (const id of s.decrees) {
     const d = b.decrees.list[id];
     if (!d) continue;
     addEffects(s, d.perNight);
     addFactions(s, b, d.factions);
-    catcherFactor *= d.catcherFactor ?? 1;
     foodFactor *= d.foodFactor ?? 1;
   }
 
@@ -98,27 +98,15 @@ export function runNight(input: GameState, data: GameData): { state: GameState; 
   const staff = staffing(input, b);
   const understaffed: string[] = [];
 
-  // 4. Производство.
-  const instituteEnemy = factionStance(input, b, 'institute') === 'enemy';
-  const infirmaryFactor = instituteEnemy
-    ? Number(b.factions.passive.institute.enemy.infirmaryFactor ?? 1)
-    : 1;
+  // 4. Производство: слот за слотом (slotOutput — тот же расчёт показывает окно комнаты).
+  const factors = productionFactors(input, b);
   const produced: Record<string, number> = {};
   s.tiers.forEach((tier, i) => {
-    if (tier.abandoned) return;
-    tier.slots.forEach((slot, j) => {
-      const def = slot ? b.buildings[slot] : undefined;
-      if (!slot || !def?.perNight) return;
-      const st = staff.get(`${i}:${j}`);
-      let factor = st ? st.have / st.need : 1;
-      if (st && st.have < st.need) understaffed.push(`${i}:${j}`);
-      if (inMistAtDusk[i]) factor *= b.tower.mistTierBuildingFactor;
-      if (slot === 'catcher') {
-        factor *= catcherFactor;
-        if (tier.kind === 'root') factor *= 1 + (def.rootBonus ?? 0);
-      }
-      if (slot === 'infirmary') factor *= infirmaryFactor;
-      for (const [k, v] of Object.entries(def.perNight)) produced[k] = (produced[k] ?? 0) + (v ?? 0) * factor;
+    tier.slots.forEach((_slot, j) => {
+      const out = slotOutput(s, b, i, j, { staff, factors, inMist: inMistAtDusk[i] });
+      if (!out) return;
+      if (out.staff && out.staff.have < out.staff.need) understaffed.push(`${i}:${j}`);
+      for (const [k, v] of Object.entries(out.effects)) produced[k] = (produced[k] ?? 0) + v;
     });
   });
   for (const k of Object.keys(produced)) produced[k] = Math.round(produced[k] ?? 0);

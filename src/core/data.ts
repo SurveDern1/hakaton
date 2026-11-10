@@ -3,10 +3,12 @@
 import balance from '../../data/balance.json';
 import endings from '../../data/endings.json';
 import events from '../../data/events.json';
-import type { Balance, EndingsFile, EventsFile, GameData } from './types';
+import rooms from '../../data/rooms.json';
+import type { Balance, EndingsFile, EventsFile, GameData, RoomsFile } from './types';
 
 export const gameData: GameData = {
   balance: balance as unknown as Balance,
   events: (events as unknown as EventsFile).events,
   endings: endings as unknown as EndingsFile,
+  rooms: rooms as unknown as RoomsFile,
 };

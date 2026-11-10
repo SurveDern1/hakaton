@@ -39,6 +39,9 @@ const ZOOM_MAX = 1.25;
 const TOWER_FOOT = 320;
 /** Время, за которое камера проходит ~63 % пути к новой рамке. */
 const CAMERA_LAG_MS = 140;
+/** Наезд на комнату: слот занимает примерно 1/FOCUS_SHARE кадра, но не крупнее FOCUS_ZOOM_MAX. */
+const FOCUS_SHARE = 2.6;
+const FOCUS_ZOOM_MAX = 2.4;
 
 interface Frame {
   t: number;
@@ -61,6 +64,8 @@ export class TowerScene extends Phaser.Scene {
   tweenMs = TWEEN_MS;
   private pendingSlots: SlotHandler | null = null;
   private mistBelow: number | null | undefined;
+  /** Слот, на который наехала камера (окно комнаты); null — общий план. */
+  private focus: { tier: number; slot: number } | null = null;
 
   constructor(
     private source: TowerSource,
@@ -149,21 +154,33 @@ export class TowerScene extends Phaser.Scene {
     // Центр свободной области смещён от центра экрана на разницу отступов
     const dx = (ins.left - ins.right) / 2;
     const dy = (ins.top - ins.bottom) / 2;
-    const x = b.x + b.w / 2 - dx / zoom;
-    const y = cy - dy / zoom;
+    let x = b.x + b.w / 2 - dx / zoom;
+    let y = cy - dy / zoom;
     this.reportMist(b.y + visH < m.gapPx - 20);
+    // Окно комнаты: камера наезжает на слот, пока окно открыто (плавно — тем же запаздыванием)
+    let z = zoom;
+    const fs = this.focus && m.slots.find((r) => r.tier === this.focus?.tier && r.slot === this.focus?.slot);
+    if (fs) {
+      z = Phaser.Math.Clamp(
+        Math.min(vw / (fs.w * FOCUS_SHARE), vh / (fs.h * FOCUS_SHARE)),
+        zoom,
+        FOCUS_ZOOM_MAX,
+      );
+      x = fs.x + fs.w / 2 - dx / z;
+      y = fs.y + fs.h / 2 - dy / z;
+    }
 
     const c = this.cam;
     if (snap || this.reduced || !c.ready) {
       c.x = x;
       c.y = y;
-      c.zoom = zoom;
+      c.zoom = z;
       c.ready = true;
     } else {
       const k = 1 - Math.exp(-delta / CAMERA_LAG_MS);
       c.x += (x - c.x) * k;
       c.y += (y - c.y) * k;
-      c.zoom += (zoom - c.zoom) * k;
+      c.zoom += (z - c.zoom) * k;
     }
     const cam = this.cameras.main;
     cam.setZoom(c.zoom);
@@ -206,6 +223,11 @@ export class TowerScene extends Phaser.Scene {
 
   selectSlot(tier: number | null, slot = 0): void {
     this.dom?.select(tier, slot);
+  }
+
+  /** Наехать камерой на слот (окно комнаты); null — вернуть общий план. */
+  focusSlot(tier: number | null, slot = 0): void {
+    this.focus = tier == null ? null : { tier, slot };
   }
 
   slotElement(tier: number, slot: number): HTMLElement | null {

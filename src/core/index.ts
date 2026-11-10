@@ -31,6 +31,15 @@ export type { Defeat, NightReport } from './night';
 export { forecastNight, forecastWarnings, runNight } from './night';
 export { checkRequires } from './requires';
 export { nextRandom, pickWeighted, seedFrom } from './rng';
+export {
+  ROOM_MOODS,
+  type RoomInfo,
+  type RoomReason,
+  roomInfo,
+  visitBlocker,
+  visitReply,
+  visitRoom,
+} from './rooms';
 export { countBuildings, createInitialState } from './state';
 export {
   etherBurn,
