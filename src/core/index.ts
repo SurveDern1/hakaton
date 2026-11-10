@@ -43,6 +43,7 @@ export {
   type RoomInfo,
   type RoomReason,
   roomInfo,
+  tapLine,
   visitBlocker,
   visitReply,
   visitRoom,

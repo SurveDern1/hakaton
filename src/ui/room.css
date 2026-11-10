@@ -395,56 +395,396 @@
   animation: rmDim 2.6s steps(1) infinite;
 }
 
-/* Жители: та же фигура .tw .man, позы */
+/* Жители: фигура из частей тела (room-model.ts → body). Поза части — --r в transform, живое
+   движение — отдельные свойства rotate/translate/scale, фаза — --dl от номера комнаты и жителя.
+   Житель — кнопка: нажатие даёт .is-tap (реакция 1,2 с) и .is-saying (пока видно облачко). */
 .rm .rm-man {
   transform-origin: 50% 100%;
+  animation-delay: var(--dl, 0s);
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
+.rm .rm-man .p {
+  transform: rotate(var(--r, 0deg));
+  animation-delay: var(--dl, 0s);
+}
+/* Цель касания шире фигуры: житель меньше пальца */
+.rm .rm-man[role="button"]::after {
+  content: "";
+  position: absolute;
+  inset: -8px -7px -2px;
+}
+.rm .rm-man.lie[role="button"]::after {
+  inset: -7px -3px -2px;
+}
+.rm .rm-man:focus-visible::before {
+  content: "";
+  position: absolute;
+  inset: -5px -4px -2px;
+  border: 2px solid #f6cd96;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(26, 52, 55, 0.6);
+}
+.rm .rm-man.lie:focus-visible::before {
+  inset: -6px -3px -2px;
+}
+
+.rm .rm-torso {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.12), transparent 30%), var(--cc);
+  border-radius: 5px 5px 2px 2px;
+}
+.rm .rm-torso.side {
+  border-radius: 4px 6px 2px 3px;
+}
+.rm .rm-head {
+  border-radius: 46% 46% 44% 44%;
+  background:
+    radial-gradient(circle at 33% 58%, #2b241f 0 0.75px, transparent 1.05px),
+    radial-gradient(circle at 67% 58%, #2b241f 0 0.75px, transparent 1.05px), var(--sk);
+}
+.rm .rm-head.side {
+  border-radius: 45% 40% 40% 50%;
+  background: radial-gradient(circle at 76% 52%, #2b241f 0 0.75px, transparent 1.05px), var(--sk);
+}
+/* Спящий: волосы на подушке, глаз закрыт */
+.rm .rm-head.sleep {
+  border-radius: 50%;
+  background:
+    linear-gradient(#2b241f, #2b241f) 64% 56% / 2.6px 0.8px no-repeat,
+    linear-gradient(90deg, var(--hr) 0 32%, transparent 32%),
+    var(--sk);
+}
+.rm .rm-hat.cap {
+  border-radius: 5px 5px 1px 1px;
+  background: #3a3833;
+}
+.rm .rm-hat.cap::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -0.6px;
+  height: 1.6px;
+  border-radius: 1px;
+  background: #2b2925;
+}
+.rm .rm-hat.cap.side::after {
+  left: 3px;
+  right: -3px;
+}
+.rm .rm-man.guard .rm-hat.cap {
+  background: #1a3437;
+}
+.rm .rm-chair .rm-hat.cap {
+  background: #2b241f;
+}
+.rm .rm-hat.scarf {
+  border: 1.8px solid var(--sc);
+  border-bottom: 0;
+  border-radius: 50% 50% 38% 38%;
+  background: linear-gradient(var(--sc) 0 36%, transparent 36%);
+}
+.rm .rm-hat.scarf.side {
+  border-right-width: 0;
+  border-left-width: 3px;
+}
+.rm .rm-hat.hair {
+  border-radius: 4px 4px 1px 1px;
+  background: var(--hr);
+}
+.rm .rm-hat.hair.side {
+  border-radius: 4px 3px 1px 4px;
+  box-shadow: -1px 2px 0 -0.4px var(--hr);
+}
+.rm .rm-hat.medcap {
+  border-radius: 2px 2px 0 0;
+  background:
+    linear-gradient(#c93c41, #c93c41) 50% 55% / 1px 2.6px no-repeat,
+    linear-gradient(#c93c41, #c93c41) 50% 55% / 2.6px 1px no-repeat,
+    #fbf0d6;
+  box-shadow: inset 0 0 0 0.5px rgba(26, 52, 55, 0.3);
+}
+.rm .rm-arm {
+  border-radius: 2px;
+  background: var(--cc);
+}
+.rm .rm-fore {
+  border-radius: 1.6px 1.6px 2.2px 2.2px;
+  background: linear-gradient(var(--cc) 0 70%, var(--sk) 70%);
+}
+.rm .rm-arm.b,
+.rm .rm-leg.b {
+  filter: brightness(0.78);
+}
+.rm .rm-leg {
+  border-radius: 2px 2px 1px 1px;
+  background: var(--pt);
+}
+.rm .rm-shin {
+  border-radius: 1px;
+  background: linear-gradient(var(--pt) 0 80%, #0b1b1d 80%);
+}
+.rm .rm-foot {
+  border-radius: 1px 2px 1px 1px;
+  background: #0b1b1d;
+}
+.rm .rm-man.medic .rm-leg,
+.rm .rm-man.medic .rm-shin {
+  --pt: #2c4649;
+}
+.rm .rm-stool {
+  background:
+    linear-gradient(#795135 0 3px, transparent 3px),
+    linear-gradient(
+      90deg,
+      transparent 1px,
+      #5c3e2a 1px 3.5px,
+      transparent 3.5px calc(100% - 3.5px),
+      #5c3e2a calc(100% - 3.5px) calc(100% - 1px),
+      transparent 0
+    );
+}
+.rm .rm-mug {
+  border-radius: 1px 1px 2px 2px;
+  background: #e6d7b4;
+  box-shadow: inset 0 1.2px 0 #c93c41;
+}
+.rm .rm-paper,
+.rm .rm-page {
+  background:
+    repeating-linear-gradient(transparent 0 2px, rgba(26, 52, 55, 0.35) 2px 2.6px, transparent 2.6px 3.4px)
+    1.5px 2px / calc(100% - 3px) calc(100% - 3px) no-repeat,
+    #fbf0d6;
+  box-shadow: inset 0 0 0 0.5px rgba(26, 52, 55, 0.35);
+}
+.rm .rm-page {
+  background-color: #efddb8;
+}
+.rm .rm-phones {
+  border: 2px solid #c93c41;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+.rm .rm-pillow {
+  border-radius: 4px 5px 4px 4px;
+  background: #e6d7b4;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+}
+.rm .rm-blanket {
+  border-radius: 5px 10px 2px 2px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 6px, rgba(26, 52, 55, 0.13) 6px 8px),
+    repeating-linear-gradient(transparent 0 5px, rgba(26, 52, 55, 0.08) 5px 7px),
+    linear-gradient(transparent 70%, rgba(0, 0, 0, 0.18) 70%), var(--bl);
+}
+.rm .rm-man.patient .rm-blanket {
+  --bl: #cfd8d3;
+}
+.rm .rm-sleeve {
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cc) 0 74%, var(--sk) 74%);
+}
+.rm .rm-man.patient .rm-sleeve {
+  --cc: #8eabae;
+}
+.rm .rm-z {
+  font: 700 8px / 8px var(--f-ui);
+  color: #fbf0d6;
+  text-shadow: 0 0 2px rgba(26, 52, 55, 0.8);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Живое движение по позам */
 .rm .rm-man.work {
-  animation: rmWork 1.6s ease-in-out infinite;
+  animation: rmBob 1.4s ease-in-out infinite;
+}
+.rm .rm-man.work > .rm-arm.f {
+  animation: rmHammer 1.4s ease-in-out infinite;
+}
+.rm .rm-man.work > .rm-arm.f > .rm-fore {
+  animation: rmHammerF 1.4s ease-in-out infinite;
+}
+.rm .rm-man.work > .rm-arm.b {
+  animation: rmHold 1.4s ease-in-out infinite;
 }
 .rm .rm-man.walk {
   animation: rmWalk 7s ease-in-out infinite;
 }
-.rm .rm-man.talk {
-  animation: rmTalk 2.4s ease-in-out infinite;
+.rm .rm-man.walk > .rm-leg,
+.rm .rm-man.walk > .rm-arm {
+  animation: rmStep 0.45s ease-in-out infinite alternate;
 }
-.rm .rm-man.sit {
-  clip-path: polygon(
-    36% 0,
-    64% 0,
-    76% 11%,
-    72% 23%,
-    60% 28%,
-    88% 33%,
-    100% 70%,
-    86% 72%,
-    80% 50%,
-    78% 100%,
-    22% 100%,
-    20% 50%,
-    14% 72%,
-    0 70%,
-    12% 33%,
-    40% 28%,
-    28% 23%,
-    24% 11%
-  );
-  animation: rmTalk 3.2s ease-in-out infinite;
+.rm .rm-man.walk > .rm-leg.b,
+.rm .rm-man.walk > .rm-arm.f {
+  animation-direction: alternate-reverse;
 }
-.rm .rm-man.lie {
-  clip-path: polygon(0 36%, 0 64%, 9% 76%, 19% 72%, 23% 60%, 100% 70%, 100% 30%, 23% 40%, 19% 28%, 9% 24%);
-  animation: rmBreathe 3.6s ease-in-out infinite;
+.rm .rm-man.walk > .rm-leg > .rm-shin {
+  animation: rmKnee 0.45s ease-in-out infinite alternate;
 }
-.rm .rm-phones {
-  border: 3px solid #c93c41;
-  border-bottom: 0;
-  border-radius: 12px 12px 0 0;
+.rm .rm-man.walk > .rm-leg.b > .rm-shin {
+  animation-direction: alternate-reverse;
+}
+.rm .rm-man.talk > .rm-arm.f {
+  animation: rmGesture 2.4s ease-in-out infinite;
+}
+.rm .rm-man.talk > .rm-arm.f > .rm-fore {
+  animation: rmGestureF 2.4s ease-in-out infinite;
+}
+.rm .rm-man.talk > .rm-head {
+  animation: rmTalkHead 2.4s ease-in-out infinite;
+}
+.rm .rm-man.do-drink > .rm-arm.f {
+  animation: rmSip 3.6s ease-in-out infinite;
+}
+.rm .rm-man.do-drink > .rm-arm.f > .rm-fore {
+  animation: rmSipF 3.6s ease-in-out infinite;
+}
+.rm .rm-man.do-drink > .rm-head {
+  animation: rmSipHead 3.6s ease-in-out infinite;
+}
+.rm .rm-man.do-read .rm-page {
+  animation: rmPage 3.2s ease-in-out infinite;
+}
+.rm .rm-man.do-read > .rm-head,
+.rm .rm-man.do-nod > .rm-head {
+  animation: rmDoze 3.2s ease-in-out infinite;
+}
+.rm .rm-man.do-read > .rm-head {
+  animation-name: rmRead;
+}
+.rm .rm-man.do-swing > .rm-leg.f > .rm-shin {
+  animation: rmDangle 0.8s ease-in-out infinite alternate;
+}
+.rm .rm-man.sit > .rm-torso,
+.rm .rm-man.do-swing > .rm-head {
+  animation: rmBreathSit 3.4s ease-in-out infinite;
+}
+.rm .rm-man.lie .rm-blanket {
+  animation:
+    rmBreathe 3.6s ease-in-out infinite,
+    rmTossBody 11s ease-in-out infinite;
+}
+.rm .rm-man.lie .rm-head {
+  animation: rmTossHead 11s ease-in-out infinite;
+}
+.rm .rm-man.lie .rm-z {
+  animation: rmZ 3s ease-out infinite;
+}
+.rm .rm-man.lie .rm-z.z2 {
+  animation-delay: calc(var(--dl, 0s) - 1s);
+}
+.rm .rm-man.lie .rm-z.z3 {
+  animation-delay: calc(var(--dl, 0s) - 2s);
+}
+
+/* Реакция на нажатие: идёт один раз до конца, повтор её не перезапускает (room.ts) */
+.rm .rm-man.is-tap:not(.lie),
+.rm .rm-man.walk.is-saying {
+  animation-play-state: paused;
+}
+.rm .rm-man.walk.is-saying > .rm-leg,
+.rm .rm-man.walk.is-saying > .rm-leg > .rm-shin,
+.rm .rm-man.walk.is-saying > .rm-arm,
+.rm .rm-man.walk.is-saying > .rm-arm > .rm-fore,
+.rm .rm-man.is-tap.work > .rm-arm.b {
+  animation: none;
+}
+.rm .rm-man.is-tap:not(.lie) > .rm-arm.f {
+  animation: rmWave 1.2s ease-in-out;
+}
+.rm .rm-man.is-tap:not(.lie) > .rm-arm.f > .rm-fore {
+  animation: rmWaveF 1.2s ease-in-out;
+}
+.rm .rm-man.walk.is-tap > .rm-arm.f,
+.rm .rm-man.walk.is-tap > .rm-arm.f > .rm-fore {
+  animation: none;
+}
+.rm .rm-man.is-tap:not(.lie):not(.sit) > .rm-head {
+  animation: rmNod 1.2s ease-in-out;
+}
+.rm .rm-man.sit.is-tap > .rm-head {
+  animation: rmLook 1.2s ease-in-out;
+}
+.rm .rm-man.lie.is-tap .rm-head {
+  animation: rmStartle 1.2s ease-in-out;
+}
+.rm .rm-man.lie.is-tap .rm-blanket {
+  animation: rmJolt 1.2s ease-in-out;
+}
+.rm .rm-man.lie.is-saying .rm-z {
+  animation: none;
 }
 .rm .rm-chair {
   animation: rmIn 500ms ease-out both;
 }
-.rm.is-greeting .rm-man:not(.lie):not(.rm-chair) {
+.rm .rm-chair > .rm-arm.f {
+  animation: rmWave 1.2s ease-in-out 0.4s both;
+}
+.rm .rm-chair > .rm-arm.f > .rm-fore {
+  animation: rmWaveF 1.2s ease-in-out 0.4s both;
+}
+/* После обхода жители приветствуют Председателя: подпрыгивают и машут */
+.rm.is-greeting .rm-man:not(.lie):not(.rm-chair):not(.walk) {
   animation: rmGreet 520ms ease-out 2;
+}
+.rm.is-greeting .rm-man:not(.lie):not(.rm-chair) > .rm-arm.f {
+  animation: rmWave 1.1s ease-in-out;
+}
+
+/* Фраза жителя: облачко над головой, внутри сцены */
+.rm-say {
+  position: absolute;
+  z-index: 3;
+  max-width: min(72%, 260px);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  box-shadow:
+    0 0 0 2px var(--paper-ink),
+    0 4px 0 rgba(0, 0, 0, 0.25);
+  font-family: var(--f-text);
+  font-size: 14px;
+  line-height: 1.3;
+  text-wrap: pretty;
+  pointer-events: none;
+  transform-origin: var(--tx, 50%) 100%;
+  animation: rmSayIn 180ms ease-out both;
+}
+.rm-say::before,
+.rm-say::after {
+  content: "";
+  position: absolute;
+  left: var(--tx, 50%);
+  top: 100%;
+  translate: -50% 0;
+  clip-path: polygon(0 0, 100% 0, 35% 100%);
+}
+.rm-say::before {
+  width: 16px;
+  height: 11px;
+  background: var(--paper-ink);
+}
+.rm-say::after {
+  width: 11px;
+  height: 7px;
+  margin-top: -0.5px;
+  background: var(--paper);
+}
+.rm-say.is-low::before,
+.rm-say.is-low::after {
+  display: none;
+}
+.rm-say.is-out {
+  animation: rmSayOut 200ms ease-in both;
+}
+
+/* Телефон: без смены страниц и «z», только позы и дыхание */
+.perf-lite .rm .rm-man.lie .rm-z,
+.perf-lite .rm .rm-man.do-read .rm-page {
+  animation: none;
 }
 
 /* Жилой модуль */
@@ -829,13 +1169,39 @@
 }
 
 /* Кадры анимаций сцены */
-@keyframes rmWork {
+/* Жители: поза — в transform, движение — rotate/translate/scale поверх неё */
+@keyframes rmBob {
+  50% {
+    translate: 0 1px;
+  }
+}
+@keyframes rmHammer {
   0%,
   100% {
-    transform: none;
+    rotate: 0deg;
   }
+  40% {
+    rotate: -35deg;
+  }
+  55% {
+    rotate: 10deg;
+  }
+}
+@keyframes rmHammerF {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  40% {
+    rotate: -30deg;
+  }
+  55% {
+    rotate: 8deg;
+  }
+}
+@keyframes rmHold {
   50% {
-    transform: translateY(2px) rotate(-6deg);
+    rotate: 6deg;
   }
 }
 @keyframes rmWalk {
@@ -848,27 +1214,308 @@
     translate: -46px 0;
   }
 }
-@keyframes rmTalk {
+@keyframes rmStep {
+  from {
+    rotate: -16deg;
+  }
+  to {
+    rotate: 16deg;
+  }
+}
+@keyframes rmKnee {
+  from {
+    rotate: 16deg;
+  }
+  to {
+    rotate: 0deg;
+  }
+}
+@keyframes rmGesture {
   0%,
   100% {
-    transform: rotate(0deg);
+    rotate: 0deg;
+  }
+  30% {
+    rotate: -25deg;
   }
   50% {
-    transform: rotate(3deg);
+    rotate: -8deg;
+  }
+  70% {
+    rotate: -30deg;
+  }
+}
+@keyframes rmGestureF {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  30% {
+    rotate: -40deg;
+  }
+  50% {
+    rotate: -10deg;
+  }
+  70% {
+    rotate: -45deg;
+  }
+}
+@keyframes rmTalkHead {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  30% {
+    rotate: 5deg;
+  }
+  70% {
+    rotate: -4deg;
+  }
+}
+@keyframes rmSip {
+  0%,
+  35%,
+  80%,
+  100% {
+    rotate: 0deg;
+  }
+  45%,
+  65% {
+    rotate: -30deg;
+  }
+}
+@keyframes rmSipF {
+  0%,
+  35%,
+  80%,
+  100% {
+    rotate: 0deg;
+  }
+  45%,
+  65% {
+    rotate: -60deg;
+  }
+}
+@keyframes rmSipHead {
+  0%,
+  35%,
+  80%,
+  100% {
+    rotate: 0deg;
+  }
+  45%,
+  65% {
+    rotate: -9deg;
+  }
+}
+@keyframes rmPage {
+  0%,
+  40% {
+    scale: 1 1;
+    opacity: 1;
+  }
+  55% {
+    scale: -1 1;
+    opacity: 1;
+  }
+  65% {
+    scale: -1 1;
+    opacity: 0;
+  }
+  66% {
+    scale: 1 1;
+    opacity: 0;
+  }
+  80%,
+  100% {
+    scale: 1 1;
+    opacity: 1;
+  }
+}
+@keyframes rmDoze {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  55% {
+    rotate: 14deg;
+  }
+  62% {
+    rotate: 17deg;
+  }
+  68% {
+    rotate: 0deg;
+  }
+}
+@keyframes rmRead {
+  50% {
+    rotate: 7deg;
+  }
+}
+@keyframes rmDangle {
+  from {
+    rotate: -14deg;
+  }
+  to {
+    rotate: 16deg;
+  }
+}
+@keyframes rmBreathSit {
+  50% {
+    translate: 0 -0.5px;
   }
 }
 @keyframes rmBreathe {
   0%,
   100% {
-    transform: scaleY(1);
+    scale: 1 1;
   }
   50% {
-    transform: scaleY(1.06);
+    scale: 1 1.09;
+  }
+}
+@keyframes rmTossBody {
+  0%,
+  78%,
+  92%,
+  100% {
+    translate: 0 0;
+  }
+  82% {
+    translate: -1px -1.5px;
+  }
+  88% {
+    translate: 1px 0.5px;
+  }
+}
+@keyframes rmTossHead {
+  0%,
+  78%,
+  93%,
+  100% {
+    rotate: 0deg;
+  }
+  82% {
+    rotate: -14deg;
+  }
+  88% {
+    rotate: 8deg;
+  }
+}
+@keyframes rmZ {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+    scale: 0.6;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 9px -14px;
+    scale: 1.25;
+  }
+}
+/* Реакция на нажатие: рука поднимается над головой из любой позы (--r — поза части) */
+@keyframes rmWave {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25%,
+  80% {
+    rotate: calc(-160deg - var(--r, 0deg));
+  }
+}
+@keyframes rmWaveF {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25%,
+  80% {
+    rotate: calc(0deg - var(--r, 0deg));
+  }
+  40%,
+  70% {
+    rotate: calc(30deg - var(--r, 0deg));
+  }
+  55% {
+    rotate: calc(-20deg - var(--r, 0deg));
+  }
+}
+@keyframes rmNod {
+  0%,
+  45%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 0 1.4px;
+  }
+  65% {
+    translate: 0 1.2px;
+  }
+}
+@keyframes rmLook {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25%,
+  75% {
+    rotate: -12deg;
+  }
+}
+@keyframes rmStartle {
+  0%,
+  100% {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+  15% {
+    rotate: -30deg;
+    translate: 0 -2px;
+  }
+  60% {
+    rotate: -24deg;
+    translate: 0 -1.5px;
+  }
+}
+@keyframes rmJolt {
+  0%,
+  50%,
+  100% {
+    translate: 0 0;
+  }
+  8% {
+    translate: 0 -2.5px;
+  }
+  20% {
+    translate: 1.5px 0;
+  }
+  35% {
+    translate: -1px 0;
   }
 }
 @keyframes rmGreet {
   40% {
-    transform: translateY(-6px);
+    translate: 0 -6px;
+  }
+}
+@keyframes rmSayIn {
+  from {
+    opacity: 0;
+    scale: 0.85;
+    translate: 0 4px;
+  }
+}
+@keyframes rmSayOut {
+  to {
+    opacity: 0;
+    scale: 0.92;
+    translate: 0 -3px;
   }
 }
 @keyframes rmIn {
@@ -954,9 +1601,19 @@
     transition-delay: 0ms !important;
   }
   .rm .p,
+  .rm-say,
   .room-voice.is-new,
   .room-visit-done.is-new,
   .room-visit-done.is-new svg path {
     animation: none !important;
+  }
+  .rm .rm-man.lie .rm-z {
+    opacity: 0.7;
+  }
+  .rm .rm-man.lie .rm-z.z2 {
+    translate: 5px -6px;
+  }
+  .rm .rm-man.lie .rm-z.z3 {
+    translate: 10px -12px;
   }
 }

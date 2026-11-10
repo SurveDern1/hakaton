@@ -136,6 +136,19 @@ for (const [i, l] of rooms.lines.entries()) {
   if (l.b && !balance.buildings[l.b]) errors.push(`${where}: неизвестное здание ${l.b}`);
   readReq(l.requires, where);
 }
+// Фразы на нажатие: известные поза, здание, настроение; для каждой позы есть фраза без здания
+const ACTS = ['work', 'walk', 'sit', 'lie', 'talk'];
+for (const [i, t] of (rooms.tap || []).entries()) {
+  const where = `rooms.json, фраза на нажатие ${i + 1}`;
+  if (!t.text) errors.push(`${where}: нет text`);
+  if (t.act && !ACTS.includes(t.act)) errors.push(`${where}: неизвестная поза ${t.act}`);
+  if (t.mood && !rooms.moods[t.mood]) errors.push(`${where}: неизвестное настроение ${t.mood}`);
+  if (t.b && !balance.buildings[t.b]) errors.push(`${where}: неизвестное здание ${t.b}`);
+  readReq(t.requires, where);
+}
+for (const act of ACTS)
+  if (!(rooms.tap || []).some((t) => t.act === act && !t.b && !t.mood && !t.requires))
+    errors.push(`rooms.json → tap: нет общей фразы для позы ${act}`);
 for (const id of Object.keys(balance.buildings)) {
   if (!balance.rooms?.visit?.[id]) errors.push(`balance.rooms.visit: нет обхода для здания ${id}`);
 }

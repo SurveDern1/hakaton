@@ -15,7 +15,7 @@ import {
   slotOutput,
   staffing,
 } from './tower';
-import type { Effects, GameData, GameState, RoomLine, RoomMood } from './types';
+import type { Effects, GameData, GameState, RoomAct, RoomLine, RoomMood, RoomTap } from './types';
 
 /** Настроения от важного к фону: первое с репликой даёт голос комнаты. */
 export const ROOM_MOODS: readonly RoomMood[] = [
@@ -214,4 +214,38 @@ export function visitRoom(state: GameState, data: GameData, tier: number, slot: 
 /** Ответ жителей на обход. */
 export function visitReply(data: GameData, id: string): { who: string; text: string } | null {
   return data.rooms.visit[id] ?? data.rooms.visit['*'] ?? null;
+}
+
+/**
+ * Фраза жителя, на которого нажали в комнате. Подходят фразы без условия или с совпавшим зданием,
+ * позой, настроением и флагами; чем больше совпало, тем раньше фраза в очереди. Берутся самые точные
+ * (не меньше трёх, если есть), n — номер нажатия: повторное нажатие даёт следующую фразу. Баланс не
+ * трогает: бонус даёт только обход.
+ */
+export function tapLine(
+  state: GameState,
+  data: GameData,
+  id: string,
+  moods: readonly RoomMood[],
+  act: RoomAct,
+  n: number,
+): RoomTap | null {
+  const score = (t: RoomTap) => (t.b ? 2 : 0) + (t.mood ? 2 : 0) + (t.act ? 1 : 0) + (t.requires ? 1 : 0);
+  const fits = (data.rooms.tap ?? [])
+    .filter(
+      (t) =>
+        (!t.b || t.b === id) &&
+        (!t.act || t.act === act) &&
+        (!t.mood || moods.includes(t.mood)) &&
+        checkRequires(t.requires, state),
+    )
+    .map((t, i) => ({ t, i, s: score(t) }))
+    .sort((a, b) => b.s - a.s || a.i - b.i);
+  if (!fits.length) return null;
+  let pool = fits;
+  for (let min = fits[0]?.s ?? 0; min >= 0; min--) {
+    pool = fits.filter((f) => f.s >= min);
+    if (pool.length >= 3) break;
+  }
+  return pool[Math.abs(n) % pool.length]?.t ?? null;
 }

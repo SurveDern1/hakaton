@@ -5,13 +5,24 @@
 // тот же расчёт, что ночью), настроение и голос жителя. «Зайти к людям» — visitRoom через GameLoop.act:
 // раз в день, эффект сразу (числа над плитками HUD), ответ жителя, отметка «Вы зашли». Закрытие —
 // Esc, ×, клик мимо, смена фазы; карточка улетает обратно в слот, камера возвращается.
-import { type GameData, type RoomInfo, type RoomMood, roomInfo, visitReply, visitRoom } from '../core';
+// Житель — кнопка из частей тела (room-model → body): нажатие или Enter/Пробел → реакция по позе
+// (класс is-tap, room.css) и облачко с фразой tapLine из data/rooms.json → tap; на баланс не влияет.
+import {
+  type GameData,
+  type RoomAct,
+  type RoomInfo,
+  type RoomMood,
+  roomInfo,
+  tapLine,
+  visitReply,
+  visitRoom,
+} from '../core';
 import type { GameLoop } from '../game/loop';
 import type { GameStore } from '../game/store';
 import { etherLevel, partStyle } from '../scenes/tower-model';
 import type { StatusLine } from './feedback';
 import { dispText, fmtNum, GENITIVE, h, sgn, tierName } from './format';
-import { buildRoom, ROOM_W, roomInputFromInfo, roomWall } from './room-model';
+import { buildRoom, type Limb, ROOM_W, type RoomPart, roomInputFromInfo, roomWall } from './room-model';
 import './room.css';
 
 export interface RoomViewOptions {
@@ -60,6 +71,11 @@ const T_FLY = 260;
 const T_CLOSE = 200;
 const T_BUSY = 320;
 const T_GREET = 1100;
+/** Реакция жителя на нажатие; облачко фразы держится по длине текста. */
+const T_TAP = 1200;
+const T_SAY_MIN = 2400;
+const T_SAY_MAX = 5000;
+const T_SAY_OUT = 200;
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const factorText = (f: number) => `×${fmtNum(Math.round(f * 100) / 100)}`;
@@ -101,18 +117,116 @@ export function mountRoomView(root: HTMLElement, opts: RoomViewOptions): RoomVie
     return `translate(${r.left - c.left}px, ${r.top - c.top}px) scale(${sx}, ${sy})`;
   }
 
+  function limbEl(l: Limb): HTMLElement {
+    const d = document.createElement('div');
+    d.className = `p ${l.c}`;
+    // --r — поза части: CSS берёт её в transform и считает от неё реакцию на нажатие
+    d.setAttribute(
+      'style',
+      `left:${l.x}px;top:${l.y}px;width:${l.w}px;height:${l.h}px;--r:${l.r ?? 0}deg;` +
+        (l.o ? `transform-origin:${l.o};` : ''),
+    );
+    if (l.t) d.textContent = l.t;
+    for (const k of l.kids ?? []) d.append(limbEl(k));
+    return d;
+  }
+
+  function partEl(p: RoomPart): HTMLElement {
+    const d = document.createElement('div');
+    d.className = `p ${p.c}`;
+    d.setAttribute('style', partStyle(p));
+    if (p.t) d.textContent = p.t;
+    const fig = p.fig;
+    if (!fig) {
+      d.setAttribute('aria-hidden', 'true');
+      return d;
+    }
+    for (const l of fig.body) d.append(limbEl(l));
+    if (fig.tap) {
+      d.setAttribute('role', 'button');
+      d.tabIndex = 0;
+      d.setAttribute('aria-label', fig.label);
+      d.dataset.fig = String(fig.i);
+      d.dataset.act = fig.act;
+    } else d.setAttribute('aria-hidden', 'true');
+    return d;
+  }
+
   function scene(info: RoomInfo): HTMLElement {
     const s = store.state;
     const model = buildRoom(roomInputFromInfo(info, s, etherLevel(s, data.balance)));
-    const tw = h('div', { class: 'tw rm', 'aria-hidden': 'true' });
-    for (const p of model.parts) {
-      const d = document.createElement('div');
-      d.className = `p ${p.c}`;
-      d.setAttribute('style', partStyle(p));
-      if (p.t) d.textContent = p.t;
-      tw.append(d);
-    }
+    const tw = h('div', { class: 'tw rm', role: 'group', 'aria-label': `${info.name}: жители` });
+    for (const p of model.parts) tw.append(partEl(p));
+    tw.addEventListener('click', (e) => {
+      const el = e.target instanceof Element ? e.target.closest<HTMLElement>('.rm-man[role="button"]') : null;
+      if (el) tap(el);
+    });
+    tw.addEventListener('keydown', (e) => {
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (!el?.matches('.rm-man[role="button"]') || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      el.click();
+    });
     return tw;
+  }
+
+  /** Сколько раз нажимали на жителя: следующее нажатие — следующая фраза. */
+  const taps = new Map<number, number>();
+  let say: { el: HTMLElement; hide: number } | null = null;
+
+  function tap(el: HTMLElement) {
+    if (!at) return;
+    const info = roomInfo(store.state, data, at.tier, at.slot);
+    if (!info) return;
+    const i = Number(el.dataset.fig);
+    const act = (el.dataset.act ?? 'work') as RoomAct;
+    const n = taps.get(i) ?? 0;
+    taps.set(i, n + 1);
+    const line = tapLine(store.state, data, info.id, info.moods, act, n + i * 2);
+    // Реакция идёт до конца: повторное нажатие не перезапускает её, только меняет фразу
+    if (!el.classList.contains('is-tap')) {
+      el.classList.add('is-tap', 'is-saying');
+      window.setTimeout(() => el.classList.remove('is-tap'), T_TAP);
+    }
+    if (line) showSay(el, line.text);
+  }
+
+  function hideSay(now = false) {
+    if (!say) return;
+    const { el, hide } = say;
+    window.clearTimeout(hide);
+    say = null;
+    const fig = el.dataset.for ? card.querySelector(`.rm-man[data-fig="${el.dataset.for}"]`) : null;
+    fig?.classList.remove('is-saying');
+    if (now || reducedMotion()) el.remove();
+    else {
+      el.classList.add('is-out');
+      window.setTimeout(() => el.remove(), T_SAY_OUT);
+    }
+  }
+
+  /** Облачко над головой жителя, внутри сцены: по центру над ним, но не за краем. */
+  function showSay(fig: HTMLElement, text: string) {
+    const stage = card.querySelector<HTMLElement>('.room-stage');
+    if (!stage) return;
+    hideSay(true);
+    const el = h('div', { class: 'rm-say', role: 'status' }, text);
+    el.dataset.for = fig.dataset.fig ?? '';
+    stage.append(el);
+    const sr = stage.getBoundingClientRect();
+    const fr = fig.getBoundingClientRect();
+    const cx = fr.left + fr.width / 2 - sr.left;
+    const w = el.offsetWidth;
+    const bh = el.offsetHeight;
+    const left = Math.max(6, Math.min(sr.width - w - 6, cx - w / 2));
+    const top = Math.max(4, fr.top - sr.top - bh - 8);
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.setProperty('--tx', `${Math.max(10, Math.min(w - 10, cx - left))}px`);
+    if (top + bh > fr.top - sr.top) el.classList.add('is-low');
+    const hold = Math.max(T_SAY_MIN, Math.min(T_SAY_MAX, 1400 + text.length * 55));
+    fig.classList.add('is-saying');
+    say = { el, hide: window.setTimeout(() => hideSay(), hold) };
   }
 
   function peopleText(info: RoomInfo): HTMLElement {
@@ -294,6 +408,7 @@ export function mountRoomView(root: HTMLElement, opts: RoomViewOptions): RoomVie
       : null;
 
     const prev = card.querySelector('.room-stage');
+    hideSay(true);
     card.replaceChildren(
       h('div', { class: 'room-top' }, head, closeBtn),
       stage,
@@ -322,6 +437,7 @@ export function mountRoomView(root: HTMLElement, opts: RoomViewOptions): RoomVie
     at = { tier, slot, anchor };
     reply = null;
     justVisited = false;
+    taps.clear();
     layer.hidden = false;
     layer.classList.remove('is-open', 'is-leaving');
     card.classList.remove('is-flying', 'is-closing');
@@ -351,6 +467,7 @@ export function mountRoomView(root: HTMLElement, opts: RoomViewOptions): RoomVie
     const anchor = opts.slotElement(at.tier, at.slot) ?? at.anchor;
     at = null;
     busy = false;
+    hideSay(true);
     ro?.disconnect();
     ro = null;
     opts.focus(null);

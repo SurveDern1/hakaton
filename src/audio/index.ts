@@ -366,12 +366,16 @@ export function initAudio(opts: { root: HTMLElement; store: GameStore; loop: Gam
     'click',
     (ev) => {
       const target =
-        ev.target instanceof Element ? ev.target.closest('button, [role="tab"], [role="menuitem"]') : null;
+        ev.target instanceof Element
+          ? ev.target.closest('button, [role="tab"], [role="menuitem"], .rm-man[role="button"]')
+          : null;
       if (!target || target.closest('.snd-toggle, .snd-hud')) return;
       if (target.getAttribute('aria-disabled') === 'true') return play('denied');
       // У этих звук свой: выбор — печать по is-chosen, стройка и декрет — по состоянию
       if (target.matches('[data-choice], .bm-opt, [data-act="decree"]')) return;
       if (target.matches('.panel-end')) return play('endDay');
+      // Житель в комнате изнутри: тихий звук, как у подсказки
+      if (target.matches('.rm-man')) return play('hint');
       if (target.matches('.tab, [role="tab"]')) return play('tab');
       play('click');
     },

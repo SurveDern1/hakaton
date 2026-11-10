@@ -262,11 +262,25 @@ export interface RoomLine {
   text: string;
 }
 
-/** data/rooms.json: подписи настроений, реплики и ответы на обход. */
+/** Поза жителя в комнате изнутри. */
+export type RoomAct = 'work' | 'walk' | 'sit' | 'lie' | 'talk';
+
+/** Фраза жителя, когда на него нажали: здание, поза и настроение сужают выбор. */
+export interface RoomTap {
+  b?: string;
+  act?: RoomAct;
+  mood?: RoomMood;
+  requires?: Requires;
+  text: string;
+}
+
+/** data/rooms.json: подписи настроений, реплики, фразы на нажатие и ответы на обход. */
 export interface RoomsFile {
   version: number;
   moods: Record<RoomMood, { label: string; hint: string }>;
   lines: RoomLine[];
+  /** Фраза жителя по нажатию на него в комнате. */
+  tap: RoomTap[];
   /** Ответ на обход: id здания или «*». */
   visit: Record<string, { who: string; text: string }>;
 }

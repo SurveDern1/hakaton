@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { gameData as data } from './data';
 import { forecastNight } from './night';
-import { ROOM_MOODS, roomInfo, visitBlocker, visitReply, visitRoom } from './rooms';
+import { ROOM_MOODS, roomInfo, tapLine, visitBlocker, visitReply, visitRoom } from './rooms';
 import { createInitialState } from './state';
-import type { GameState } from './types';
+import type { GameState, RoomMood } from './types';
 
 const fresh = (): GameState => createInitialState(data.balance, 'rooms');
 
@@ -107,5 +107,41 @@ describe('обход', () => {
       expect(Object.keys(data.balance.rooms.visit[id] ?? {}).length, id).toBeGreaterThan(0);
       expect(visitReply(data, id)?.text, id).toBeTruthy();
     }
+  });
+});
+
+describe('tapLine', () => {
+  const acts = ['work', 'walk', 'sit', 'lie', 'talk'] as const;
+
+  it('у каждой позы в каждом здании есть фраза, повторное нажатие даёт другую', () => {
+    const s = fresh();
+    for (const b of Object.keys(data.balance.buildings))
+      for (const act of acts) {
+        const a = tapLine(s, data, b, ['calm'], act, 0);
+        const c = tapLine(s, data, b, ['calm'], act, 1);
+        expect(a?.text, `${b} ${act}`).toBeTruthy();
+        expect(c?.text, `${b} ${act}`).not.toBe(a?.text);
+      }
+  });
+
+  it('сначала фразы своего здания, позы и настроения; чужие не попадают', () => {
+    const s = fresh();
+    const texts = (b: string, act: (typeof acts)[number], moods: RoomMood[]) =>
+      [0, 1, 2, 3, 4, 5].map((n) => tapLine(s, data, b, moods, act, n)?.text);
+    const own = data.rooms.tap.filter((t) => t.b === 'infirmary' && t.act === 'lie').map((t) => t.text);
+    expect(texts('infirmary', 'lie', ['sick'])).toEqual(expect.arrayContaining(own));
+    for (const t of texts('farm', 'sit', ['calm'])) {
+      const line = data.rooms.tap.find((x) => x.text === t);
+      expect(line?.b === undefined || line?.b === 'farm').toBe(true);
+      expect(line?.act === undefined || line?.act === 'sit').toBe(true);
+      expect(line?.mood).toBeUndefined();
+    }
+  });
+
+  it('нажатие не меняет состояние', () => {
+    const s = fresh();
+    const before = JSON.stringify(s);
+    tapLine(s, data, 'housing', ['calm'], 'lie', 3);
+    expect(JSON.stringify(s)).toBe(before);
   });
 });
