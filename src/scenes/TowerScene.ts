@@ -79,6 +79,8 @@ export class TowerScene extends Phaser.Scene {
   private held = false;
   /** Слот, на который наехала камера (окно комнаты); null — общий план. */
   private focus: { tier: number; slot: number } | null = null;
+  /** Башня — отдельный слой, пока едет камера (см. setMovingLayer). */
+  private movingLayer = false;
 
   constructor(
     private source: TowerSource,
@@ -259,11 +261,24 @@ export class TowerScene extends Phaser.Scene {
       c.y += (y - c.y) * k;
       c.zoom += (z - c.zoom) * k;
     }
+    this.setMovingLayer(moving);
     const cam = this.cameras.main;
     cam.setZoom(c.zoom);
     cam.centerOn(c.x, c.y);
     this.drawSky();
     return moving;
+  }
+
+  /**
+   * Пока камера едет (наезд на комнату и обратно, подгонка кадра), башня — отдельный слой
+   * will-change: transform: браузер масштабирует готовую картинку, а не растрирует сотни деталей
+   * заново в каждом кадре (на телефоне это и давало рывки). Остановилась — слой снят, башня один раз
+   * перерисовывается чётко в итоговом масштабе.
+   */
+  private setMovingLayer(on: boolean): void {
+    if (on === this.movingLayer || !this.dom) return;
+    this.movingLayer = on;
+    this.dom.root.style.willChange = on ? 'transform' : '';
   }
 
   private reportMist(hidden: boolean): void {
