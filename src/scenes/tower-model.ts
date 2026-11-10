@@ -770,7 +770,7 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     }
   const splash = e > 0.15 && gapPx - 70 <= 330;
   // Магнитные турбины: медная обмотка кольца, ротор с бегущими лопастями, гудящее свечение катушек,
-  // расходящиеся петли поля и короткие разряды на концах кольца. Всё от эфира.
+  // расходящиеся петли поля и разряды молний на кольце и под ним. Всё от эфира.
   const rotor = `animation-duration:${(0.45 / Math.max(e, 0.08)).toFixed(2)}s;`;
   for (const side of [-1, 1]) {
     const ex = side * 200;
@@ -787,8 +787,29 @@ export function buildTower(s: TowerInput, opts: { labels?: boolean } = {}): Towe
     px('duct', ex - 72, 52, 144, 16);
     px('prop', ex - 66, 57, 132, 6, rotor);
     if (e > 0.15) {
-      px('arc', ex - 82, 46, 10, 22, `${dur(1.7)}animation-delay:${(-0.4 * (side + 2) * pace).toFixed(2)}s;`);
-      px('arc', ex + 72, 46, 10, 22, `${dur(2.3)}animation-delay:${(-0.9 * (side + 2) * pace).toFixed(2)}s;`);
+      // Разряды: с носа гондолы на край кольца (оба конца) и из-под кольца в струю. На место — вспышка
+      // и три формы канала с одной длительностью, сдвинутые на треть цикла (.tw .bolt в sedmaya.css).
+      const lag = side < 0 ? 0 : 0.85;
+      const strike = (T: number, k: number) =>
+        `animation-duration:${T}s;animation-delay:${(-(k * T) / 3 - lag).toFixed(2)}s;`;
+      const site = (
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+        shapes: string[],
+        flip: boolean,
+        T: number,
+      ) => {
+        for (const [k, s] of shapes.entries())
+          px(`bolt ${s}${flip ? ' flip' : ''}`, x, y, w, h, strike(T, k));
+      };
+      px('bolt-flash', ex - 118, 22, 76, 56, strike(4.6, 0));
+      px('bolt-flash', ex + 42, 22, 76, 56, strike(5.5, 0));
+      px('bolt-flash', ex - 56, 52, 112, 44, strike(7.1, 0));
+      site(ex - 110, 24, 64, 56, ['e1', 'e2', 'e3'], false, 4.6);
+      site(ex + 46, 24, 64, 56, ['e4', 'e5', 'e6'], true, 5.5);
+      site(ex - 34, 64, 68, 76, ['d1', 'd2', 'd3'], side > 0, 7.1);
     }
   }
   // Киль: корпус с гранями, красным поясом на заклёпках и светящимися иллюминаторами. Сопло —

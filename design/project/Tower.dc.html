@@ -501,7 +501,7 @@ function renderTower(s, o) {
   }
   var splash = e > 0.15 && mY - botY - 70 <= 330;
   // Магнитные турбины: медная обмотка кольца, ротор с бегущими лопастями, гудящее свечение катушек,
-  // расходящиеся петли поля и короткие разряды на концах кольца. Всё от эфира.
+  // расходящиеся петли поля и разряды молний на кольце и под ним. Всё от эфира.
   var rotor = 'animation-duration:' + (0.45 / Math.max(e, 0.08)).toFixed(2) + 's;';
   [-1, 1].forEach(function (side) {
     var ex = CX + side * 200;
@@ -518,8 +518,19 @@ function renderTower(s, o) {
     px(tower, 'duct', ex - 72, botY + 52, 144, 16);
     px(tower, 'prop', ex - 66, botY + 57, 132, 6, rotor);
     if (e > 0.15) {
-      px(tower, 'arc', ex - 82, botY + 46, 10, 22, dur(1.7) + 'animation-delay:' + (-0.4 * (side + 2) * pace).toFixed(2) + 's;');
-      px(tower, 'arc', ex + 72, botY + 46, 10, 22, dur(2.3) + 'animation-delay:' + (-0.9 * (side + 2) * pace).toFixed(2) + 's;');
+      // Разряды: с носа гондолы на край кольца (оба конца) и из-под кольца в струю. На место — вспышка
+      // и три формы канала с одной длительностью, сдвинутые на треть цикла (.tw .bolt в sedmaya.css).
+      var lag = side < 0 ? 0 : 0.85;
+      var strike = function (T, k) { return 'animation-duration:' + T + 's;animation-delay:' + (-(k * T) / 3 - lag).toFixed(2) + 's;'; };
+      var site = function (x, y, w, h, shapes, flip, T) {
+        shapes.forEach(function (s, k) { px(tower, 'bolt ' + s + (flip ? ' flip' : ''), x, y, w, h, strike(T, k)); });
+      };
+      px(tower, 'bolt-flash', ex - 118, botY + 22, 76, 56, strike(4.6, 0));
+      px(tower, 'bolt-flash', ex + 42, botY + 22, 76, 56, strike(5.5, 0));
+      px(tower, 'bolt-flash', ex - 56, botY + 52, 112, 44, strike(7.1, 0));
+      site(ex - 110, botY + 24, 64, 56, ['e1', 'e2', 'e3'], false, 4.6);
+      site(ex + 46, botY + 24, 64, 56, ['e4', 'e5', 'e6'], true, 5.5);
+      site(ex - 34, botY + 64, 68, 76, ['d1', 'd2', 'd3'], side > 0, 7.1);
     }
   });
   // Киль: корпус с гранями, красным поясом на заклёпках и светящимися иллюминаторами. Сопло —

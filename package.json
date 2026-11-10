@@ -17,6 +17,7 @@
     "check:design": "node tools/export-design.js --check",
     "design": "node tools/export-design.js --serve",
     "icons": "node tools/make-icons.js",
+    "bolts": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/make-bolts.mjs --write",
     "check:motion": "node tools/check-motion.mjs",
     "check:sound": "node tools/check-sound.mjs",
     "check:scroll": "node tools/check-scroll.mjs",
