@@ -46,6 +46,9 @@ const ZOOM_EPS = 0.0005;
 const IDLE_FRAMES = 3;
 /** Как часто спящая сцена проверяет отступы интерфейса (раскрытая панель и т. п.). */
 const IDLE_POLL_MS = 250;
+/** Наезд на комнату: слот занимает примерно 1/FOCUS_SHARE кадра, но не крупнее FOCUS_ZOOM_MAX. */
+const FOCUS_SHARE = 2.6;
+const FOCUS_ZOOM_MAX = 2.4;
 
 interface Frame {
   t: number;
@@ -74,6 +77,8 @@ export class TowerScene extends Phaser.Scene {
   private insetsKey = '';
   /** Сцену держат спящей снаружи (hold): wake ничего не делает. */
   private held = false;
+  /** Слот, на который наехала камера (окно комнаты); null — общий план. */
+  private focus: { tier: number; slot: number } | null = null;
 
   constructor(
     private source: TowerSource,
@@ -223,24 +228,36 @@ export class TowerScene extends Phaser.Scene {
     // Центр свободной области смещён от центра экрана на разницу отступов
     const dx = (ins.left - ins.right) / 2;
     const dy = (ins.top - ins.bottom) / 2;
-    const x = b.x + b.w / 2 - dx / zoom;
-    const y = cy - dy / zoom;
+    let x = b.x + b.w / 2 - dx / zoom;
+    let y = cy - dy / zoom;
     this.reportMist(b.y + visH < m.gapPx - 20);
+    // Окно комнаты: камера наезжает на слот, пока окно открыто (плавно — тем же запаздыванием)
+    let z = zoom;
+    const fs = this.focus && m.slots.find((r) => r.tier === this.focus?.tier && r.slot === this.focus?.slot);
+    if (fs) {
+      z = Phaser.Math.Clamp(
+        Math.min(vw / (fs.w * FOCUS_SHARE), vh / (fs.h * FOCUS_SHARE)),
+        zoom,
+        FOCUS_ZOOM_MAX,
+      );
+      x = fs.x + fs.w / 2 - dx / z;
+      y = fs.y + fs.h / 2 - dy / z;
+    }
 
     const c = this.cam;
     const near =
-      Math.abs(x - c.x) < CAMERA_EPS && Math.abs(y - c.y) < CAMERA_EPS && Math.abs(zoom - c.zoom) < ZOOM_EPS;
+      Math.abs(x - c.x) < CAMERA_EPS && Math.abs(y - c.y) < CAMERA_EPS && Math.abs(z - c.zoom) < ZOOM_EPS;
     const moving = c.ready && !near && !snap && !this.reduced;
     if (!moving) {
       c.x = x;
       c.y = y;
-      c.zoom = zoom;
+      c.zoom = z;
       c.ready = true;
     } else {
       const k = 1 - Math.exp(-delta / CAMERA_LAG_MS);
       c.x += (x - c.x) * k;
       c.y += (y - c.y) * k;
-      c.zoom += (zoom - c.zoom) * k;
+      c.zoom += (z - c.zoom) * k;
     }
     const cam = this.cameras.main;
     cam.setZoom(c.zoom);
@@ -284,6 +301,13 @@ export class TowerScene extends Phaser.Scene {
 
   selectSlot(tier: number | null, slot = 0): void {
     this.dom?.select(tier, slot);
+  }
+
+  /** Наехать камерой на слот (окно комнаты); null — вернуть общий план. */
+  focusSlot(tier: number | null, slot = 0): void {
+    this.focus = tier == null ? null : { tier, slot };
+    // Камера в покое могла уснуть: будим, чтобы она поехала к слоту
+    this.wake();
   }
 
   slotElement(tier: number, slot: number): HTMLElement | null {

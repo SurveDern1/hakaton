@@ -26,6 +26,8 @@ export interface BuildMenuOptions {
   flash(key: string, delta: number): void;
   /** Подсветка выбранного слота на башне. */
   select(tier: number | null, slot?: number): void;
+  /** «Заглянуть внутрь»: открыть окно комнаты (src/ui/room.ts). */
+  onLook?(tier: number, slot: number, anchor: HTMLElement): void;
 }
 
 export interface BuildMenu {
@@ -148,6 +150,15 @@ export function mountBuildMenu(root: HTMLElement, opts: BuildMenuOptions): Build
           h('span', { class: 'bm-desc' }, def ? buildingText(def) : ''),
         ),
       );
+      if (opts.onLook) {
+        const look = h('button', { type: 'button', class: 'btn small bm-act bm-look' }, 'Заглянуть внутрь');
+        const there = at;
+        look.addEventListener('click', () => {
+          close();
+          opts.onLook?.(tier, slot, there.anchor);
+        });
+        body.push(look);
+      }
       if (def?.fixed) body.push(h('p', { class: 'bm-note' }, 'Встроено в башню, не сносится.'));
       else {
         const del = h(

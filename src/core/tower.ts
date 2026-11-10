@@ -92,6 +92,66 @@ export function staffing(state: GameState, balance: Balance): Map<string, { have
   return out;
 }
 
+/** Множители выработки на эту ночь: декреты для уловителей, вражда Института для лазарета. */
+export interface ProductionFactors {
+  catcher: number;
+  infirmary: number;
+}
+
+export function productionFactors(state: GameState, balance: Balance): ProductionFactors {
+  let catcher = 1;
+  for (const id of state.decrees) catcher *= balance.decrees.list[id]?.catcherFactor ?? 1;
+  const infirmary =
+    factionStance(state, balance, 'institute') === 'enemy'
+      ? Number(balance.factions.passive.institute.enemy.infirmaryFactor ?? 1)
+      : 1;
+  return { catcher, infirmary };
+}
+
+/** Выработка здания в слоте за ночь (без округления) и из чего она сложилась. */
+export interface SlotOutput {
+  /** Выработка по данным здания, без множителей. */
+  base: Effects;
+  effects: Record<string, number>;
+  factor: number;
+  staff: { have: number; need: number } | null;
+  inMist: boolean;
+}
+
+/**
+ * Шаг 4 ночного расчёта для одного слота: рабочие × Мгла на ярусе × декреты и бонус Корня ×
+ * лазарет. null — в слоте нет здания с выработкой или ярус заброшен.
+ */
+export function slotOutput(
+  state: GameState,
+  balance: Balance,
+  tierIndex: number,
+  slot: number,
+  ctx: {
+    staff?: Map<string, { have: number; need: number }>;
+    factors?: ProductionFactors;
+    inMist?: boolean;
+  } = {},
+): SlotOutput | null {
+  const tier = state.tiers[tierIndex];
+  const id = tier?.slots[slot];
+  const def = id ? balance.buildings[id] : undefined;
+  if (!tier || tier.abandoned || !id || !def?.perNight) return null;
+  const st = (ctx.staff ?? staffing(state, balance)).get(`${tierIndex}:${slot}`) ?? null;
+  const f = ctx.factors ?? productionFactors(state, balance);
+  const inMist = ctx.inMist ?? isTierInMist(state, balance, tierIndex);
+  let factor = st ? st.have / st.need : 1;
+  if (inMist) factor *= balance.tower.mistTierBuildingFactor;
+  if (id === 'catcher') {
+    factor *= f.catcher;
+    if (tier.kind === 'root') factor *= 1 + (def.rootBonus ?? 0);
+  }
+  if (id === 'infirmary') factor *= f.infirmary;
+  const effects: Record<string, number> = {};
+  for (const [k, v] of Object.entries(def.perNight)) effects[k] = (v ?? 0) * factor;
+  return { base: def.perNight, effects, factor, staff: st, inMist };
+}
+
 /** Активные модификаторы ночи (отсрочка `startInNights` уже прошла). */
 function liveModifiers(state: GameState) {
   return state.modifiers.filter((m) => !m.startInNights || m.startInNights <= 0);

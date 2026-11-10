@@ -15,7 +15,7 @@ export const RES_NAMES: Record<string, string> = {
 };
 
 /** Родительный падеж для «+7 еды». */
-const GENITIVE: Record<string, string> = {
+export const GENITIVE: Record<string, string> = {
   pop: 'жителей',
   food: 'еды',
   ether: 'эфира',

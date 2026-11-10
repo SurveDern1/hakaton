@@ -27,6 +27,7 @@ import { mountPanel } from './ui/panel';
 import { mountPaper } from './ui/paper';
 import { showRadioSplash } from './ui/radio-splash';
 import { mistNote, morningReport, showReportCard } from './ui/report';
+import { mountRoomView } from './ui/room';
 import { showStart } from './ui/start';
 import { showVerdict, verdictStats } from './ui/verdict';
 import './scenes/tower.css';
@@ -165,6 +166,15 @@ const hud = mountHud(ui, {
   onMenu: () => toggleMenu(),
 });
 const panel = mountPanel(ui, { store, data, loop, status, flash });
+const room = mountRoomView(ui, {
+  store,
+  data,
+  loop,
+  status,
+  flash,
+  focus: (tier, slot) => towerScene.focusSlot(tier, slot),
+  slotElement: (tier, slot) => towerScene.slotElement(tier, slot),
+});
 const menu = mountBuildMenu(ui, {
   store,
   data,
@@ -172,6 +182,7 @@ const menu = mountBuildMenu(ui, {
   status,
   flash,
   select: (tier, slot) => towerScene.selectSlot(tier, slot),
+  onLook: (tier, slot, anchor) => room.open(tier, slot, anchor),
 });
 ui.append(gameMenu, floats);
 // Подсказки первых дней и по случаю (src/tutorial): наблюдают экран, состояние игры не меняют.
@@ -227,6 +238,7 @@ async function newGameWithIntro() {
   if (intro) await playCovering(intro);
   ui?.classList.remove('is-bare');
   void loop.newGame();
+  openDebugRoom();
 }
 
 // Открытие по ссылке: заставка «Включить радио» (если звук не выключен), затем стартовый экран
@@ -256,10 +268,19 @@ function start(radio = false) {
       ui?.classList.remove('is-bare');
       loop.continueGame(state);
       status.say(`Продолжаем: день ${state.day}`, 'info');
+      openDebugRoom();
     },
   });
   const call = layer.querySelector<HTMLElement>('.start-call');
   if (radio && call) sound.radioIntro(call);
+}
+
+// Проверка окна комнаты: ?room=1:2 (ярус:слот, с нуля) — открыть после «Продолжить» или новой игры.
+function openDebugRoom() {
+  const [t, sl] = (params.get('room') ?? '').split(':').map(Number);
+  if (t === undefined || sl === undefined || Number.isNaN(t) || Number.isNaN(sl)) return;
+  const tryOpen = () => (loop.phase === 'day' ? room.open(t, sl) : window.setTimeout(tryOpen, 200));
+  tryOpen();
 }
 
 // Проверка комикса: ?comic=intro, ?comic=outro_harbor — после него стартовый экран.
@@ -313,6 +334,7 @@ Object.assign(window, {
     loop,
     events,
     panel,
+    room,
     comic: (id: string) => {
       const c = getComic(id);
       return c ? playComic(ui, c) : Promise.resolve();
