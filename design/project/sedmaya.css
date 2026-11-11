@@ -31,6 +31,14 @@
 }
 
 .sd { position: relative; font-family: var(--f-ui); color: var(--text); background: var(--ink); }
+/* Холст макетов: башни и пульс кнопки стоят, пока над экраном нет указателя. Иначе на холсте одновременно
+   идут тысячи анимаций полутора десятков башен и он еле двигается (npm run perf:design); пульс перерисовывал
+   бы весь экран с башней. Наведите на экран — он оживёт; .is-live — оживить без наведения. Одноразовые
+   появления (.tut*) не трогаем: на паузе они остались бы невидимыми. Только макеты: в игре нет .sd и .tw-dc. */
+.sd:not(:hover):not(.is-live) .pulse,
+.sd:not(:hover):not(.is-live) .tw *, .sd:not(:hover):not(.is-live) .tw *::before, .sd:not(:hover):not(.is-live) .tw *::after,
+.tw-dc:not(.sd .tw-dc):not(:hover):not(.is-live) *, .tw-dc:not(.sd .tw-dc):not(:hover):not(.is-live) *::before,
+.tw-dc:not(.sd .tw-dc):not(:hover):not(.is-live) *::after { animation-play-state: paused !important; }
 /* Зерно печати: мелкий шум поверх всего экрана (макета .sd или блока .grain), как у плаката на бумаге.
    Режим overlay — светлые места чуть темнеют, тёмные чуть светлеют, цвет не меняется. Клики проходят. */
 :root { --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); --grain-o: .22; }

@@ -26,6 +26,7 @@
     "perf": "node tools/perf-probe.mjs",
     "perf:comic": "node tools/comic-probe.mjs",
     "perf:room": "node tools/room-probe.mjs",
+    "perf:design": "node tools/perf-design.mjs",
     "sounds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/make-sounds.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run check:data && npm run check:design",
     "sim": "node tools/sim.mjs"
