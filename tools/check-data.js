@@ -87,6 +87,11 @@ for (const [k, v] of Object.entries(endings.verdicts || {})) {
   if (!fs.existsSync(path.join(__dirname, '..', 'public', v.image))) errors.push(`итог ${k}: нет файла public/${v.image}`);
 }
 if (!endings.verdicts?.win || !endings.verdicts?.lose) errors.push('endings.json: нужны verdicts.win и verdicts.lose');
+// Картинки кристаллов памяти: путь без ведущего /, файл в public/
+for (const m of endings.memories || []) {
+  if (m.image && (m.image.startsWith('/') || !fs.existsSync(path.join(__dirname, '..', 'public', m.image))))
+    errors.push(`кристалл ${m.id}: нет файла public/${m.image}`);
+}
 
 // Комиксы: картинки кадров лежат в public/ (сетки и эпилоги проверяет src/comics/comics.test.ts)
 const comics = load('comics.json');

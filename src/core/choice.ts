@@ -100,7 +100,7 @@ export interface ChoiceResult {
   tower: TowerResult | null;
   /** Новые записи стенгазеты. */
   log: string[];
-  memory?: { id: number; who: string; text: string };
+  memory?: { id: number; who: string; text: string; image?: string };
   ending?: EndingPath;
 }
 

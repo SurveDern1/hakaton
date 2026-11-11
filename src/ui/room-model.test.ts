@@ -20,7 +20,9 @@ describe('buildRoom', () => {
   it('у каждого здания из данных есть комната; рабочих столько, сколько работает', () => {
     for (const b of Object.keys(data.balance.buildings)) {
       const m = buildRoom({ ...base, b, people: 2 });
-      expect(m.parts.length, b).toBeGreaterThan(5);
+      // У комнаты-картинки стены и мебель — одна деталь, рисунок художницы
+      const art = m.parts.some((p) => p.c.startsWith('rm-art'));
+      expect(m.parts.length, b).toBeGreaterThan(art ? 3 : 5);
       expect(m.figures, b).toBe(men(m.parts).length);
     }
     for (const b of ['farm', 'catcher', 'salvage', 'guard'])
@@ -52,6 +54,26 @@ describe('buildRoom', () => {
     expect(cls(['hungry'])).toContain('rm-bowl empty');
     expect(cls(['festive'])).toContain('garland');
     expect(cls(['calm'])).not.toMatch(/rm-mist|flicker|garland/);
+  });
+
+  it('лазарет — картинка художницы: окно-прорезь с Мглой, жители крупнее, больных по здоровью', () => {
+    const room = (over: Partial<RoomInput>) => buildRoom({ ...base, b: 'infirmary', people: 2, ...over });
+    const cls = (over: Partial<RoomInput>) => room(over).parts.map((p) => p.c);
+    const calm = cls({});
+    expect(calm).toContain('rm-art infirmary');
+    expect(calm).toContain('rm-view bare');
+    expect(calm.join(' ')).not.toMatch(/rm-wall|rm-ceil|rm-floor|rm-bed/);
+    expect(cls({ moods: ['mist', 'unrest'] })).toEqual(
+      expect.arrayContaining(['rm-view mist bare', 'rm-boards', 'rm-scrawl']),
+    );
+    const patients = (health: number, moods: RoomInput['moods'] = ['calm']) =>
+      room({ health, moods }).parts.filter((p) => p.fig?.label.startsWith('Больн')).length;
+    expect([patients(80), patients(40), patients(10, ['sick'])]).toEqual([1, 2, 3]);
+    const m = room({ visited: true });
+    for (const p of m.parts.filter((x) => x.fig)) expect(p.s, p.k).toContain('transform:scale(3)');
+    // Картинка под жителями: сначала фон, потом люди
+    const art = m.parts.findIndex((p) => p.c.startsWith('rm-art'));
+    expect(m.parts.findIndex((p) => p.fig)).toBeGreaterThan(art);
   });
 
   it('Председатель в комнате после обхода', () => {

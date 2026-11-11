@@ -142,7 +142,8 @@ export interface EndingsFile {
   /** «Характеристика на Председателя»: группы строк, из каждой — первая подходящая. */
   reference: ReferenceLine[][];
   awards: Award[];
-  memories: { id: number; who: string; text: string }[];
+  /** Кристаллы памяти; image — картинка-воспоминание из public/ (без ведущего /). */
+  memories: { id: number; who: string; text: string; image?: string }[];
 }
 
 export interface BuildingDef {

@@ -342,16 +342,26 @@ export function mountEventWindow(root: HTMLElement, opts: EventWindowOptions): E
     // нет (фракции, другая вкладка) или что закрыто самой карточкой (шкалы нижней панели телефона), —
     // строкой «Доверие +8» в карточке, чтобы числа не ложились на портрет и текст реплики.
     const deltas = deltasOf(result);
-    const who = result.reply ? portraitOf(result.reply.who) : null;
+    const mem = result.memory;
+    // Кристалл памяти: картинка-воспоминание во всю ширину и голос из кристалла вместо реплики
+    const who = mem ? null : result.reply ? portraitOf(result.reply.who) : null;
     // Кадр комикса как в прологе: предмет-знак персонажа (reply-art.ts), облачко реплики с хвостиком к нему
     // и охристая подпись-итог. Порядок проявления — в event-window.css (evReply*, ra-*).
     const card = el(
       'div',
-      { class: `ev-reply${who ? '' : ' no-who'}` },
+      { class: `ev-reply${who ? '' : ' no-who'}${mem ? ' ev-memory' : ''}` },
       who && result.reply && svgNode(replyArt(result.reply.who), `ev-reply-face tone-${who.tone}`),
+      mem?.image && el('img', { class: 'ev-memory-art', src: mem.image, alt: '' }),
       el(
         'div',
         { class: 'ev-reply-body' },
+        mem &&
+          el(
+            'div',
+            { class: 'ev-reply-bubble ev-memory-voice' },
+            el('span', { class: 'ev-reply-who' }, `Кристалл памяти · ${mem.who}`),
+            el('p', { class: 'ev-reply-text' }, el('span', {}, `«${mem.text}»`)),
+          ),
         who &&
           result.reply &&
           el(

@@ -38,6 +38,21 @@ const WALL: Record<string, string> = {
 };
 const ALIAS: Record<string, string> = { salvage: 'scrap', red_corner: 'corner' };
 
+/**
+ * Комната-картинка: фон нарисовала художница (src/ui/art/<здание>.svg, кадр ROOM_W × ROOM_H, стены,
+ * мебель, пол), поверх — жители и настроения. k — во сколько раз житель крупнее обычного, чтобы
+ * совпасть с мебелью картинки; feet — где стоят ноги у переднего края пола; view — прорезь окна
+ * в картинке, под ней небо или Мгла (rm-view bare).
+ */
+interface RoomArt {
+  k: number;
+  feet: number;
+  view: readonly [number, number, number, number];
+}
+const ART: Record<string, RoomArt> = {
+  infirmary: { k: 3, feet: 231, view: [90.1, 27.2, 73.4, 73.4] },
+};
+
 export interface RoomInput {
   /** id здания из данных. */
   b: string;
@@ -128,6 +143,10 @@ export function buildRoom(s: RoomInput): RoomModel {
   const dark = has('dark');
   const hiSol = s.solidarity >= 70;
   const seed = s.seed * 37;
+  const art = ART[b];
+  /** Пол, на котором стоят: у картинки — свой, ближе к краю кадра. */
+  const feet = art?.feet ?? FLOOR;
+  const zoom = art ? `transform:scale(${art.k});` : '';
   let figIdx = 0;
 
   function P(
@@ -161,10 +180,12 @@ export function buildRoom(s: RoomInput): RoomModel {
       idle: opt.idle ?? (act === 'sit' ? pick(SIT_IDLE, 7) : ''),
       phones: !!opt.phones,
     };
+    const cc =
+      cls === 'medic' ? '#FBF0D6' : cls === 'guard' ? '#255D6B' : cls === 'patient' ? '#8EABAE' : col;
     const vars =
-      `--cc:${cls === 'medic' ? '#FBF0D6' : cls === 'guard' ? '#255D6B' : col};--pt:${hiSol ? '#2C4649' : '#0F2427'};` +
+      `--cc:${cc};--pt:${hiSol ? '#2C4649' : '#0F2427'};` +
       `--sk:${pick(SKIN, 3)};--hr:${pick(HAIR, 9)};--sc:${pick(SCARF, 11)};--bl:${pick(BLANKET, 17)};` +
-      `--dl:-${(h(0) * 4).toFixed(1)}s;`;
+      `--dl:-${(h(0) * 4).toFixed(1)}s;${zoom}`;
     const what = [act, cls, look.idle ? `do-${look.idle}` : '', look.hat === 'scarf' ? 'she' : '']
       .filter(Boolean)
       .join(' ');
@@ -185,20 +206,32 @@ export function buildRoom(s: RoomInput): RoomModel {
   }
 
   // Комната: стена, окна наружу, потолок, пол
-  P(`rm-wall s${S}`, 0, 0, ROOM_W, FLOOR, `--bc:${WALL[b] ?? '#8E7A6A'};`);
   const view = `rm-view${has('mist') ? ' mist' : ''}${has('frost') ? ' frost' : ''}`;
-  const windows: [number, number][] =
-    b === 'core' || b === 'observatory'
-      ? []
-      : b === 'housing'
-        ? [[160, 48]]
-        : [
-            [24, 46],
-            [ROOM_W - 82, 46],
-          ];
-  for (const [wx, wy] of windows) {
-    P(view, wx, wy, 58, 56);
-    if (has('unrest') && hash01(seed + wx) > 0.4) P('rm-boards', wx - 4, wy + 14, 66, 30);
+  if (art) {
+    // Небо — под прорезью окна картинки, рама и стены — сама картинка
+    const [vx, vy, vw, vh] = art.view;
+    P(`${view} bare`, vx, vy, vw, vh);
+    P(`rm-art ${b}`, 0, 0, ROOM_W, ROOM_H);
+    if (has('unrest')) {
+      P('rm-boards', vx - 4, vy + vh * 0.25, vw + 8, vh * 0.5);
+      // Надпись — на свободной стене картинки, за жителями
+      P('rm-scrawl', 194, 72, 96, 30, '', 'ВСЁ ОБЩЕЕ?');
+    }
+  } else {
+    P(`rm-wall s${S}`, 0, 0, ROOM_W, FLOOR, `--bc:${WALL[b] ?? '#8E7A6A'};`);
+    const windows: [number, number][] =
+      b === 'core' || b === 'observatory'
+        ? []
+        : b === 'housing'
+          ? [[160, 48]]
+          : [
+              [24, 46],
+              [ROOM_W - 82, 46],
+            ];
+    for (const [wx, wy] of windows) {
+      P(view, wx, wy, 58, 56);
+      if (has('unrest') && hash01(seed + wx) > 0.4) P('rm-boards', wx - 4, wy + 14, 66, 30);
+    }
   }
 
   // Мебель и работа — по зданию
@@ -289,6 +322,14 @@ export function buildRoom(s: RoomInput): RoomModel {
     P('rm-papers', 132, FLOOR - 46, 38, 8);
     P('rm-papers', 226, FLOOR - 46, 30, 8);
     P('rm-lampdesk', 196, FLOOR - 62, 14, 22);
+  } else if (b === 'infirmary' && art) {
+    // Койка, капельница и шкаф — на картинке. Один больной лежит, остальные ждут приёма по талонам:
+    // сидит у изножья, стоит у шторы. Санитар — у шкафа с лекарствами, второй ходит вдоль койки.
+    const ill = has('sick') ? 3 : s.health < 50 ? 2 : 1;
+    man(146, 166, 'lie', 'patient');
+    if (ill > 1) man(266, feet + 2, 'sit', 'patient', { idle: 'nod' });
+    if (ill > 2) man(30, feet, 'talk', 'patient');
+    for (let i = 0; i < Math.min(2, workers); i++) man(i ? 214 : 322, feet, i ? 'walk' : 'work', 'medic');
   } else if (b === 'infirmary') {
     const ill = has('sick') ? 3 : s.health < 50 ? 2 : 1;
     for (let i = 0; i < 3; i++) {
@@ -360,13 +401,14 @@ export function buildRoom(s: RoomInput): RoomModel {
       tap: false,
       body: body('work', look),
     };
-    const vars = '--cc:#C93C41;--pt:#2B241F;--sk:#E2B48C;--hr:#2B241F;';
-    P('rm-man rm-chair', ROOM_W - 40, FLOOR - MAN_H, MAN_W, MAN_H, vars, '', chair);
+    const vars = `--cc:#C93C41;--pt:#2B241F;--sk:#E2B48C;--hr:#2B241F;${zoom}`;
+    // Крупный (в комнате-картинке) встаёт левее, чтобы машущая рука не уходила за край
+    P('rm-man rm-chair', ROOM_W - (art ? 58 : 40), feet - MAN_H, MAN_W, MAN_H, vars, '', chair);
   }
 
-  // Потолок, лампа и пол
-  P(`rm-ceil s${S}`, 0, 0, ROOM_W, CEIL);
-  if (b !== 'core' && b !== 'farm') {
+  // Потолок, лампа и пол (у картинки они свои)
+  if (!art) P(`rm-ceil s${S}`, 0, 0, ROOM_W, CEIL);
+  if (!art && b !== 'core' && b !== 'farm') {
     P('rm-cord', ROOM_W / 2 - 1, CEIL, 2, 18);
     P(`rm-bulb${dark ? ' flicker' : ''}`, ROOM_W / 2 - 9, CEIL + 16, 18, 12);
     P(
@@ -378,11 +420,11 @@ export function buildRoom(s: RoomInput): RoomModel {
       op(0.25 + 0.6 * e),
     );
   }
-  P(`rm-floor s${S}`, 0, FLOOR, ROOM_W, ROOM_H - FLOOR);
+  if (!art) P(`rm-floor s${S}`, 0, FLOOR, ROOM_W, ROOM_H - FLOOR);
 
   // Настроение — слоями поверх
   if (has('festive')) P('garland', 20, CEIL + 4, ROOM_W - 40, 16);
-  if (has('unrest')) P('rm-scrawl', 130, 120, 90, 30, '', 'ВСЁ ОБЩЕЕ?');
+  if (has('unrest') && !art) P('rm-scrawl', 130, 120, 90, 30, '', 'ВСЁ ОБЩЕЕ?');
   if (has('mist')) {
     P('rm-mist', -40, FLOOR - 70, ROOM_W + 80, 110);
     P('rm-mist m1', -60, FLOOR - 40, ROOM_W + 120, 90);
@@ -443,7 +485,7 @@ const DOING: Record<RoomAct, string> = {
 /** Подпись кнопки жителя: «Жилец, спит». */
 function figLabel(b: string, act: RoomAct, cls: string, she: boolean): string {
   if (cls === 'medic') return `${she ? 'Санитарка' : 'Санитар'}, ${DOING[act]}`;
-  if (b === 'infirmary' && act === 'lie') return `${she ? 'Больная' : 'Больной'}, лежит`;
+  if (b === 'infirmary') return `${she ? 'Больная' : 'Больной'}, ${act === 'lie' ? 'лежит' : DOING[act]}`;
   if (b === 'housing') return `${she ? 'Жительница' : 'Жилец'}, ${DOING[act]}`;
   return `${WHO[b] ?? 'Житель'}, ${DOING[act]}`;
 }

@@ -90,7 +90,16 @@ export function showFinal(root: HTMLElement, state: GameState, opts: FinalOption
     'div',
     { class: 'fin-archive', hidden: true, id: 'fin-archive' },
     ...(memories.length
-      ? memories.map((m) => h('p', { class: 'serif' }, h('b', {}, `${portraitOf(m.who).name}: `), m.text))
+      ? memories.map((m) =>
+          m.image
+            ? h(
+                'figure',
+                { class: 'fin-memory' },
+                h('img', { src: m.image, alt: '' }),
+                h('figcaption', { class: 'serif' }, h('b', {}, `${m.who}: `), m.text),
+              )
+            : h('p', { class: 'serif' }, h('b', {}, `${m.who}: `), m.text),
+        )
       : [h('p', { class: 'serif' }, 'Кристаллов памяти не нашли.')]),
   );
   const again = h('button', { type: 'button', class: 'btn fin-again' }, 'Начать новую пятилетку');

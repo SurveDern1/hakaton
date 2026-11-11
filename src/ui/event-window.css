@@ -337,6 +337,40 @@
 .ev-reply.is-leaving {
   animation: evReplyOut 220ms ease-in both;
 }
+/* Кристалл памяти: чужое воспоминание — чистая картинка художницы кадром сверху, под ней голос
+   из кристалла. Кадр проявляется из голубого свечения эфира. */
+.ev-reply.ev-memory {
+  max-width: 400px;
+}
+.ev-memory-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 719 / 474;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px var(--comic-ink);
+  animation: evMemoryIn 900ms ease-out 120ms both;
+}
+.ev-memory-voice .ev-reply-who {
+  color: var(--ether-deep);
+}
+/* Голос идёт из кристалла, не от человека на картинке: облачко без хвостика */
+.ev-memory-voice::before {
+  display: none;
+}
+@keyframes evMemoryIn {
+  from {
+    opacity: 0;
+    filter: blur(6px) saturate(0.2) brightness(1.6);
+  }
+  60% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ev-memory-art {
+    animation: none;
+  }
+}
 
 /* Картинка-знак персонажа: кадр в чернильной рамке, зерно и светлые крапины бумаги поверх, как на листах художника */
 .ev-reply-face {

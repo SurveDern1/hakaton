@@ -1091,6 +1091,22 @@
   font-size: 16px;
   line-height: 1.5;
 }
+/* Кристалл с картинкой-воспоминанием (endings.json → memories[].image) */
+.fin-memory {
+  margin: 4px 0 14px;
+  max-width: 60ch;
+}
+.fin-memory img {
+  display: block;
+  width: min(100%, 360px);
+  aspect-ratio: 719 / 474;
+  box-shadow: 0 0 0 2px rgba(251, 240, 214, 0.55);
+}
+.fin-memory figcaption {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.5;
+}
 
 /* ---------- Старт ---------- */
 .start {
